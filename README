@@ -1,0 +1,19 @@
+This is the Flexible Rare Event Sampling Harness System (FRESHS)
+
+FRESHS is a sampling harness system to carry out rare event simulations, using algorithms such as SPRES or FFS.
+
+FRESHS is simulation-agnostic: it is tested against popular simulation programs (GROMACS, LAMPPS, ESPResSo) 
+but you should find it easy to connect it to your own programs without recompiling them using our plug-in system. 
+
+For details please refer to our homepage http://www.freshs.org/
+For an introduction see the file INSTALL
+
+Directory overview
+------------------
+
+client      The code of the FRESHS clients
+doc         Documentation
+harnesses   The harness scripts of the simulations
+scripts     Analysis and helper programs
+server      The code of the FRESHS server
+test        Code for testing

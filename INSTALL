@@ -1,0 +1,51 @@
+QUICK START
+-----------
+
+Please prepare your job_script which should be capable of storing and loading configuration snapshots and of returning the relevant metadata for the particular sampling method (at least reaction coordinate and calculation steps/time).
+
+* SERVER
+-----------
+
+Open a terminal and start the server (you may edit the configuration file first):
+
+cd server
+python main_server.py -c server-sample.conf
+
+
+* CLIENT(S)
+-----------
+
+Open another terminal and start the client, e.g.:
+
+cd client
+python main_client.py -c client-sample.conf
+
+Thereby, the executable of your simulation and the harness script are read from the configuration file. According to your resources, you can connect multiple clients to the server.
+
+
+* MPI
+-----------
+
+If you'd like to use a prefix for your executable, e.g. mpirun, then use
+
+python main_client.py -c client-sample.conf -e "mpirun -np 8"
+
+
+* NICENESS
+-----------
+
+If you run your simulation on the local machine and you'd like to nice the jobs, there is an option in the client's configuration file:
+
+# set niceness of executable, 0 = disable
+nice_job = 19
+
+
+* TUNNEL
+-----------
+
+If you need a secure ssh tunnel to your local machine, the ssh tunnel can be enabled and the tunnelcommand can be specified in the configuration file of the client:
+
+# ssh tunnel
+ssh_tunnel = 1
+# ssh tunnelcommand
+ssh_tunnelcommand = ssh -N -L 10000:localhost:10000 tunneluser@tunnelhost
