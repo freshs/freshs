@@ -18,11 +18,20 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston,
 # MA 02111-1307 USA
 
-from particle import particle
-from optparse import OptionParser
+
+
 import asyncore
+import os
 
+reldir = os.path.dirname(__file__)
+if not reldir:
+    reldir = '.'
+else:
+    # Append paths
+    sys.path.append(reldir)
 
+from optparse import OptionParser
+from particle import particle
 
 parser = OptionParser()
 parser.add_option("-p", "--port", dest="port", help="port to connect on", metavar="port", type=int, default=10000)

@@ -39,7 +39,7 @@ import time
 
 ##import wrappers for simulation programs
 from  particle_ffs   import particle_ffs
-from  particle_spres import particle_spres
+#from  particle_spres import particle_spres
 
 class particle(asyncore.dispatcher):
     def __init__(self,host,port,barrier,timeout):
@@ -69,7 +69,7 @@ class particle(asyncore.dispatcher):
         ##init handlers for both sampling algorithms: these classes are near-stateless
         ##so there is little overhead for this.
         self.ffs       = particle_ffs(self)
-        self.spres     = particle_spres(self)
+        #self.spres     = particle_spres(self)
         
     ###define some functions for comms/book-keeping.
     def handle_error(self):
