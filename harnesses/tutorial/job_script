@@ -1,0 +1,287 @@
+#!/bin/sh
+
+#
+# get_rc_aggregation
+# ---------------------
+#
+# Get an rc value based on cluster sizes
+#
+#############################################################
+proc get_rc_aggregation { r_contact n_part } {
+
+    ##get the size of the largest cluster
+    set lastId [expr int($n_part - 1)]
+    set agreturn [analyze aggregation $r_contact 0 $lastId]
+    set rc [lindex $agreturn 1]
+
+    puts "Set RC: $rc"
+
+    return $rc
+
+}
+
+###Debug flag: set 1 to turn on extra output. (Not threadsafe).
+set debug 0
+
+foreach {option value} $argv {
+  switch -glob -- $option {
+    -tmpdir             {set tmpdir $value }
+    -initial_config     {set INPUT_CONFIG $value }
+    -in_fifoname        {set INPUT_CONFIG $value }
+    -back_fifoname      {set OUTPUT_CONFIG $value }
+    -metadata_fifoname  {set OUTPUT_METADATA $value }
+    -halt_steps         {set HALT_STEPS $value }
+    -check_rc_every     {set CHECK_RC_EVERY $value }
+    -seed               {set SEED $value }
+    -halt_rc_upper      {set HALT_RC_UPPER $value }
+    -halt_rc_lower      {set HALT_RC_LOWER $value }
+    -clientname         {set clientname $value }
+    -timestamp          {set timestamp $value }
+    -uuid               {set uuid $value }
+    default             {puts "Additional not-used parameter $option"}
+  }
+}
+
+set warnCount 0
+set warnMax  10
+
+#############################################################
+#  Parameters                                               #
+#############################################################
+
+##make sure that each job is different
+puts "Setting seed $SEED"
+t_random seed $SEED
+
+# System parameters
+#############################################################
+
+##easiest if n_part is the cube of some number
+##was 824 in RtW..Frenkel 1999.
+set n_part           1000       
+set t_coex              0.741   
+set pressure_liquid     0.012   
+set barostat_mass       0.0005
+
+set lj1_sig             1.0
+set reduced_density     0.1
+set t_gas               1.4
+
+set v_per_p [expr 1.0 / $reduced_density]
+set box_v   [expr $n_part * $v_per_p]
+set box_l   [expr pow($box_v,1.0/3.0)]
+
+
+# Interaction parameters 
+#############################################################
+
+set lj1_eps     1.0
+set lj1_cut     2.5 
+set lj1_shift   [calc_lj_shift $lj1_sig $lj1_cut]
+set r_contact   [expr $lj1_sig * 1.5]
+
+
+# Integration parameters
+#############################################################
+setmd time_step 0.01
+setmd skin      2.0
+
+#############################################################
+set tcl_precision 6
+
+#############################################################
+#  Setup System                                             #
+#############################################################
+
+# Interaction setup
+#############################################################
+
+puts "Setting box $box_l cubed."
+setmd box_l $box_l $box_l $box_l
+inter 0 0 lennard-jones $lj1_eps $lj1_sig $lj1_cut $lj1_shift 0
+##setmd max_num_cells 4096
+
+##read coordinates 
+puts "MD: opening input pipe $INPUT_CONFIG"
+set input_channel [open $INPUT_CONFIG {RDONLY NONBLOCK}]
+fconfigure $input_channel -blocking 1
+
+#############################################################
+#      Read in a config                                     #
+#############################################################
+puts "MD: waiting for data"
+###this block expects info of the format:
+# N_PARTICLES
+# x1 y1 z1
+# x2 y2 z2 ... etc.
+
+set chars_read [ gets $input_channel expect_count ]
+puts "read first line, expecting: $expect_count"
+
+set chars_read [ gets $input_channel first_line ]
+puts "read first coords line: $first_line"
+
+###this flag controls whether coords are saved to file
+###or sent back to FRESHS as a string
+set COORDS_FROM_FILE 0
+set COORDS_TO_FILE   0
+if { [string match f1* "$first_line"] == 1 } {
+    set COORDS_FROM_FILE 1
+    set records [split $first_line " "]
+    set in_fileName  [lindex $records 1]
+    puts "Client reading from file: $in_fileName"
+}
+if { [string match *f2* "$first_line"] == 1 } {
+    set COORDS_TO_FILE 1
+    set records [split $first_line " "]
+    set out_fileName  [lindex $records 3]
+    puts "Client writing to file: $out_fileName"
+}
+
+
+##use a cheap hack to see if we are reading from a file or a pipe:
+##the file has the word "header" on the first line
+if { $COORDS_FROM_FILE == 1 } {
+
+    ###for this example, we will just generate initial coordinates
+    ###and let the thermostat randomise them...the input file is just a dummy.
+    set x 0.0
+    set y 0.0
+    set z 0.0
+    set delta [expr pow($v_per_p, 1.0/3.0)]
+    set box_n [expr $box_l/$delta]
+    set count 0
+
+    puts "Creating new system, box length: $box_l"
+    puts "Initial particle separation: $delta"
+
+    for {set i 0} { $i < $box_n} {incr i} {
+        for {set j 0} { $j < $box_n} {incr j} {
+            for {set k 0} { $k < $box_n} {incr k} {
+            
+                set x [expr $i * $delta]
+                set y [expr $j * $delta]
+                set z [expr $k * $delta]
+                
+        ##fix particle position
+        part  $count pos $x $y $z
+        incr   count
+        ##puts "$count $x $y $z of $n_part"
+
+            }
+        }
+    }
+
+    ##for the first `equil' segment, we are at high temperature
+    puts "p_liq: $pressure_liquid, baro_mass: $barostat_mass, t_gas: $t_gas"
+
+    set P 0.0
+    thermostat langevin $t_gas 1.0
+
+
+} else {
+    set count 0
+    set block_or_eof $first_line
+    while {  $count < $n_part } {
+                if { $chars_read > 0 } {
+                    ##set the coords
+                    set fields [split $block_or_eof " "]
+                    set l [llength $fields]
+                    if  { $l == 1 } {
+                        setmd box_l [lindex $fields 0] [lindex $fields 0] [lindex $fields 0]
+                    } elseif  { $l == 3 } {
+                        part $count pos [lindex $fields 0]  [lindex $fields 1] [lindex $fields 2]
+                        set count [expr $count + 1 ]
+                    } elseif { $l == 6 } {
+                        part $count pos [lindex $fields 0]  [lindex $fields 1] [lindex $fields 2] 
+                        part $count v   [lindex $fields 3]  [lindex $fields 4] [lindex $fields 5] 
+                        set count [expr $count + 1 ]
+                    } else {
+                      if { $warnCount < $warnMax } {
+                        puts "simulation process received unexpected input: ${l} fields in line"
+                        puts "simulation process received unexpected input: _${block_or_eof}_"
+                        puts "field 0: "
+                        puts [lindex $fields 0]
+                        puts "field 6: "
+                        puts [lindex $fields 6]
+                        set warnCount [expr $warnCount + 1 ]
+                      }
+                    }
+                } else {
+		    puts "Got EOF at count: $count , of expected: $n_part"
+		    break
+                }
+		if { $count <= 3 } {
+			puts "MD line count: $count , read:  $fields  "
+		}
+                set chars_read [ gets $input_channel block_or_eof ]
+    }
+    set P $pressure_liquid
+    thermostat langevin $t_coex 1.0
+
+}
+puts "MD: Coords now set."
+
+##define the (trivial) topology
+for {set i 0} { $i < $n_part} {incr i} {
+    set topo_chain 0
+    lappend topo_chain [expr $i]
+    lappend topo $topo_chain
+}
+eval analyze set $topo
+analyze set "topo_part_sync"
+
+if { $debug == 1 } {
+        set debugF [open "espresso_debug.vtf" "w"]
+        writevsf $debugF
+        writevcf $debugF
+}
+
+#############################################################
+#      Integration                                          #
+#############################################################
+
+##for the nucleation run, we are at a coexistence temperature gas-liquid
+if {  $P > 0.0 } {
+   integrate set npt_isotropic $pressure_liquid $barostat_mass 1 1 1 -cubic_box
+} else {
+   integrate set nvt
+}
+
+integrate $HALT_STEPS
+set rc    [get_rc_aggregation $r_contact $n_part]
+            
+
+#############################################################
+puts "MD: opening output pipe $OUTPUT_CONFIG"
+set output_channel [open $OUTPUT_CONFIG {WRONLY}]
+
+puts "MD: writing the coords"
+#fconfigure $output_channel -blocking 1
+
+    ##write out the final coords
+    set count 0
+    puts $output_channel $box_l
+    while {  $count < $n_part } {
+        set crds_vels [part $count print pos v]
+        puts $output_channel $crds_vels
+        set count [expr $count + 1 ]
+    }
+    flush $output_channel
+    close $output_channel   
+
+    puts "MD: opening output RC data $OUTPUT_METADATA"
+    set output_metadata_channel [open $OUTPUT_METADATA {WRONLY}]
+    set t [setmd time]
+    puts $output_metadata_channel [format "{\"rc\": %.4f, \"steps\": %i, \"time\": %.4f}" $rc $HALT_STEPS $t]
+    puts "MD: sent: "
+    puts [format "{\"rc\": %.4f, \"steps\": %i, \"time\": %.4f}" $rc $HALT_STEPS $t]
+    flush $output_metadata_channel
+    close $output_metadata_channel   
+    close $input_channel
+    
+
+puts "\n Simulation Finished \n"
+exit
+
+

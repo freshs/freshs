@@ -1,0 +1,198 @@
+# Copyright (c) 2013 Kai Kratzer, University of Stuttgart,
+# Allmandring 3, 70569 Stuttgart, Germany; all rights
+# reserved unless otherwise stated.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+# MA 02111-1307 USA
+ 
+# example for writing a snapshot
+proc save_snapshot {fn} {
+    set f_out [open "$fn" "w"]
+    #blockfile $f_out write tclvariable md_int_steps
+    blockfile $f_out write variable box_l
+    #blockfile $f_out write interactions
+    #blockfile $f_out write constraints
+    blockfile $f_out write particles {id pos type q v f}
+    #blockfile $f_out write bonds all
+    close $f_out
+}
+ 
+# example for loading a snapshot
+proc load_snapshot {fn} {
+    set f_in [open "$fn" "r"]
+    # read all parameters which were stored by save_snapshot
+    while { [blockfile $f_in read auto] != "eof" } {}
+    close $f_in
+}
+ 
+# routine for setting the seed on each node
+proc set_seed {} {
+    global ran_seed
+    set cmd "t_random seed"
+    for {set i 0} {$i < [setmd n_nodes]} { incr i } { lappend cmd [expr $ran_seed + $i] }
+    eval $cmd
+    expr srand($ran_seed)
+}
+ 
+# calculate the reaction coordinate
+proc calc_rc {} {
+ 
+}
+ 
+# init system in A and equilibrate
+proc init_A() {
+ 
+}
+ 
+# init the system only for loading snapshot
+proc init_basic() {
+ 
+}
+ 
+# parse arguments
+foreach {option value} $argv {
+  switch -glob -- $option {
+    -tmpdir             {set tmpdir $value }
+    -initial_config     {set initial_config $value }
+    -in_fifoname        {set in_fifoname $value }
+    -back_fifoname      {set back_fifoname $value }
+    -metadata_fifoname  {set metadata_fifoname $value }
+    -halt_steps         {set halt_steps $value }
+    -check_rc_every     {set check_rc_every $value }
+    -A                  {set A $value }
+    -B                  {set B $value }
+    -random_points      {set random_point $value }
+    -seed               {set ran_seed $value }
+    -next_interface     {set next_interface $value }
+    -act_lambda         {set act_lambda $value }
+    -jobtype            {set jobtype $value }
+    -rp_id              {set rp_id $value }
+    -max_steps          {set max_steps $value }
+    -clientname         {set clientname $value }
+    -timestamp          {set timestamp $value }
+    -uuid               {set uuid $value }
+    -storedir           {set storedir $value }
+    -timestep           {set timestep $value }
+    -pressure           {set p_ext $value }
+    default             {puts "Additional not-used parameter $option"}
+  }
+}
+ 
+ 
+# check if escape_flux and set helper variable
+if {$jobtype == "1" } {
+    set escape_flux 1
+} else {
+    set escape_flux 0
+}
+ 
+if {$initial_config == "None"} {
+    init_basic
+    puts "Loading snapshot."
+    # get filename from fifo
+    set fh [open "$in_fifoname" "r"]
+    set fn_in [string trim [read "$fh"]]
+    close "$fh"
+    load_snapshot "${storedir}/${timestamp}/${fn_in}"
+    set rc [calc_rc]
+} else {
+    puts "Using initial state with equilibration."
+    init_A
+    set rc [calc_rc]
+}
+ 
+# check if RC is ok if we do a resumed escape trace
+if { $escape_flux } {
+    if {$rc < $A} {
+        set comefromok 1
+    } else {
+        set comefromok 0
+    }
+}
+ 
+set max_rc $rc
+ 
+set step_abort 0
+set calcsteps 0
+set in_progress 1
+ 
+puts "$calcsteps $rc"
+ 
+# READY TO GO
+while { $in_progress } {
+    integrate $steps
+    set rc [calc_rc]
+    set calcsteps [expr $calcsteps + $steps]
+    puts "$calcsteps $rc"
+    if {$rc > $max_rc} {
+        set max_rc $rc
+    }
+ 
+    if {$escape_flux} {
+        if {$rc >= $next_interface && $comefromok} {
+            set in_progress 0
+            puts "Reached A."
+        } elseif {$rc < $A && ! $comefromok} {
+            set comefromok 1
+        } elseif { $rc >= $B} {
+            puts "Reached B. Re-equilibrating."
+            init_A
+            set calcsteps 0
+            set comefromok 1
+            set rc [calc_rc]
+        }
+    } else {
+        if {$rc >= $next_interface || $rc <= $A} {
+            puts "Reached interface."
+            set in_progress 0
+        }
+    }
+ 
+    if {$max_steps > 0} {
+        if {$calcsteps >= $max_steps} {
+            puts "Max steps reached!"
+            set step_abort 1
+            set in_progress 0
+        }
+    }
+}
+ 
+set ctime_save [expr $calcsteps * $timestep]
+ 
+set results "\"time\": $ctime_save, \"steps\": $calcsteps, \"max_lam\": $max_rc, \"rc\": $rc, \"customdata\": \"'${tracebase}'\""
+ 
+if { ! $step_abort && $rc >= $next_interface } {
+    # save configpoint on filesystem
+    save_snapshot "$fullcfpfile"
+ 
+    # write configpoint filename to fifo
+    set outcfp [open "$back_fifoname" "w"]
+    puts "$outcfp" "$cfpfifo"
+    close $outcfp
+} else {
+    # write configpoint filename to fifo
+    set outcfp [open "$back_fifoname" "w"]
+    puts "$outcfp" ""
+    close $outcfp
+    set results "${results}, \"step_abort\": True"
+}
+ 
+ 
+# Write metadata
+set fmeta [open "$metadata_fifoname" "w"]
+puts $fmeta "{ $results }"
+close $fmeta
+
+

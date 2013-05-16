@@ -1,0 +1,174 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+# Copyright (c) 2013 Kai Kratzer, Universität Stuttgart, ICP,
+# Allmandring 3, 70569 Stuttgart, Germany; all rights
+# reserved unless otherwise stated.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+# MA 02111-1307 USA
+ 
+ 
+########################################################################
+# Harness script which uses LAMMPS as python lib, calculates
+# a trajectory and returns the metadata
+########################################################################
+ 
+import sys
+ 
+# lammps
+from lammps import lammps
+ 
+def save_snapshot(dumpfile):
+    # save here the simulation snapshot with the relevant variables and coordinates
+    # tricking: we have to know the timestep when reading in again
+    lmp.command('reset_timestep 1')
+    dumpcommand = 'dump cfp all custom 1 ' + dumpfile + ' id x y z vx vy vz'
+    lmp.command(dumpcommand)
+    # tricking: run 0 writes out dump but does not integrate
+    lmp.command('run 0')
+ 
+def load_snapshot(dumpfile):
+    # read snapshot example
+    dumpcommand = 'read_dump ' + dumpfile + ' 1 x y z vx vy vz box yes replace yes'
+    lmp.command(dumpcommand)
+    # ready for new simulation run
+    lmp.command('reset_timestep 0')
+ 
+def calc_rc():
+    # calculate and return reaction coordinate
+ 
+def init_A():
+    # initialize and equilibrate system in state A
+ 
+# create LAMMPS instance 
+lmp = lammps()
+ 
+# parse command line arguments (alternatively, argparse can be used, but this is dynamic)
+optval = {}
+for eli in range(len(sys.argv)):
+    if (eli+1) % 2 == 0:
+        optval[re.sub('-','', sys.argv[eli],1)] = sys.argv[eli+1]
+ 
+# extract variables
+metafifo = optval['metadata_fifoname']
+seed = int(optval['seed'])
+act_lambda = int(optval['act_lambda'])
+tmpdir = optval['tmpdir']
+outdump = optval['back_fifoname']
+clientname = optval['clientname']
+timestamp = optval['timestamp']
+ 
+if 'max_steps' in optval:
+    max_steps = int(optval['max_steps'])
+else:
+    max_steps = 0
+ 
+try:
+    uuid = optval['uuid']
+except:
+    uuid = ''
+ 
+harnessdir = re.sub('job_script','',sys.argv[0])
+ 
+if act_lambda == 0:
+    escape_flux = True
+    rc_max = float(optval['B'])
+else:
+    escape_flux = False
+ 
+# TODO: Set the integrator, seed, etc, e.g.
+lmp.command('fix 2 all langevin 1.0 1.0 2.0 ' + str(seed))
+ 
+# init the system
+init_A()
+ 
+if escape_flux:
+    if rc < rc_min:
+        comefromok = True
+    else:
+        comefromok = False
+ 
+# decide to load the initial config (then we are in A) or a dump.
+# This is not necessary if an initial dump exists
+if not "initial_config.dat" in str(sys.argv) and 'in_fifoname' in optval:
+    # loading snapshot from fifo
+    indump = optval['in_fifoname']
+    # this will set the last coordinates, velocities and the box size
+    load_snapshot(indump)
+    rc = calc_rc()
+else:
+    # Not loading dump file, using initial state with equilibration.
+    eqc = 0
+    init_A()
+    rc = calc_rc()
+    while rc >= rc_next:
+        print "Equilibrating again"
+        init_A()
+        rc = calc_rc()
+        eqc += 1
+ 
+max_rc = rc
+all_steps = 0
+in_progress = True
+step_abort = False
+ 
+# READY TO GO: This is an example for a script which checks the reaction coordinate itself
+while in_progress:
+    # integrate
+    lmp.command('run ' + str(steps))
+    all_steps += steps
+    if rc > max_rc:
+        max_rc = rc
+    rc = calc_rc()
+ 
+    if escape_flux:
+        if rc >= rc_next and comefromok:
+            #print "### RC info for abort escape ", rc, rc_min, rc_next
+            #time.sleep(5)
+            in_progress = False
+        elif rc < rc_min and not comefromok:
+            comefromok = True
+        elif rc >= rc_max:
+            init_A(datfile, seed, dt)
+            rc = calc_rc()
+            comefromok = True
+    else:
+        if rc >= rc_next or rc <= rc_min:
+            in_progress = False
+ 
+    if max_steps > 0:
+        if all_steps >= max_steps:
+            print "Max steps reached!"
+            step_abort = True
+            in_progress = False
+ 
+# build metadata
+metadata = "\"rc\": %.14f, \"steps\": %i, \"time\": %.14f, \"max_lam\": %.14f" % (rc, all_steps, all_steps*dt,max_rc)
+ 
+if step_abort:
+    metadata += ", \"step_abort\": True"
+ 
+# save snapshot to fifo
+save_snapshot(outdump)
+ 
+# write to output metadata
+fmeta=open(metafifo,'w')
+fmeta.write("{" + metadata + "}\n" )
+fmeta.close()
+ 
+# destroy lammps instance
+lmp.close()
+
+
