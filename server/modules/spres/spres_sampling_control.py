@@ -24,18 +24,16 @@ import time
 
 # System
 import os
-
-# Formatting
-import concolors as cc
-
 import math
 
 ##sorting & selecting config points
 import operator
 import random
 
-import server
-from spres_helper import spres_helper
+# Formatting
+import modules.concolors as cc
+import modules.server    as server
+import spres_helper
 
 # -------------------------------------------------------------------------------------------------
 
@@ -72,7 +70,7 @@ class spres_sampling_control():
         self.epoch_points_old   = [{} for x in xrange(self.nBins)]
 
         ##init an i-o helper class
-        self.helper     = spres_helper(ss, self)
+        self.helper     = spres_helper.spres_helper(ss, self)
 
         if ss.dbload == False:
             ##convention is transMat[toBin][fromBin]

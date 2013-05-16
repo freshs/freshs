@@ -23,7 +23,7 @@ import datetime as dt
 import time
 
 # Formatting
-import concolors as cc
+import modules.concolors as cc
 import ConfigParser
 
 import math

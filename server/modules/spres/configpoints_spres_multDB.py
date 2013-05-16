@@ -28,7 +28,7 @@ import random
 import logging
 
 # Formatting
-import concolors
+import modules.concolors as cc
 
 # Parsing
 import ast
@@ -48,16 +48,16 @@ class configpoints:
 
         dirName=os.path.dirname(dbfile)
 	dirList=os.listdir(dirName)
-	self.server.logger_freshs.info(concolors.c_green + 'listing dir of DB file: ' +\
-	                    dirName + ' , just before connect, gives: '+ str(dirList)+concolors.reset)
+	self.server.logger_freshs.info(cc.c_green + 'listing dir of DB file: ' +\
+	                    dirName + ' , just before connect, gives: '+ str(dirList)+cc.reset)
 
 	try:
 	    db_size = os.path.getsize(self.dbfile)
-	    self.server.logger_freshs.info(concolors.c_green + 'byte size of db file: ' +\
-		self.dbfile + ' was: '+ str(db_size)+concolors.reset)
+	    self.server.logger_freshs.info(cc.c_green + 'byte size of db file: ' +\
+		self.dbfile + ' was: '+ str(db_size)+cc.reset)
 	except:
-	    self.server.logger_freshs.debug(concolors.c_yellow + 'could not test size of db file: ' +\
-	         self.dbfile + concolors.reset)
+	    self.server.logger_freshs.debug(cc.c_yellow + 'could not test size of db file: ' +\
+	         self.dbfile + cc.reset)
 
 
 
@@ -71,8 +71,8 @@ class configpoints:
         ###is this an existing or new database?
         self.cur.execute('select count(*) from points')
         r = self.cur.fetchone()
-        self.server.logger_freshs.info(concolors.c_yellow + 'DB has point count: ' +\
-                                            str(r[0]) + concolors.reset)
+        self.server.logger_freshs.info(cc.c_yellow + 'DB has point count: ' +\
+                                            str(r[0]) + cc.reset)
 
     def increment_active_db(self, new_t):
 
@@ -97,8 +97,8 @@ class configpoints:
         
         retry = 0
         
-        self.server.logger_freshs.info(concolors.c_yellow + 'attempting connect to db: ' +\
-                                                            self.dbfile + concolors.reset)
+        self.server.logger_freshs.info(cc.c_yellow + 'attempting connect to db: ' +\
+                                                            self.dbfile + cc.reset)
         con = sqlite3.connect(self.dbfile)
         cur = con.cursor()
  
@@ -171,10 +171,10 @@ class configpoints:
                     writeok = 1
                 except:
                     attempt += 1
-                    self.server.logger_freshs.warn(concolors.c_red + 'Could not write data to DB, retrying ' + str(maxretry) + ' times: ' + str(attempt) + '/' + str(maxretry) + concolors.reset)
+                    self.server.logger_freshs.warn(cc.c_red + 'Could not write data to DB, retrying ' + str(maxretry) + ' times: ' + str(attempt) + '/' + str(maxretry) + cc.reset)
             if attempt >= maxretry:
-                self.server.logger_freshs.warn(concolors.c_red +\
-                      'ERROR! Could not write data to DB:'+ self.dbfile+ concolors.reset)
+                self.server.logger_freshs.warn(cc.c_red +\
+                      'ERROR! Could not write data to DB:'+ self.dbfile+ cc.reset)
                 exit( "Could not write" )
 
         del entries
@@ -244,8 +244,8 @@ class configpoints:
     # Return a config point based on its unique id, and time because the DB is sorted by t.
     def return_point_by_id_t(self, rp_id, t):
 
-        #self.server.logger_freshs.warn(concolors.c_red +\
-        #       'reading: ' +self.prev_table +" "+str(t)+" "+str(rp_id)+concolors.reset)
+        #self.server.logger_freshs.warn(cc.c_red +\
+        #       'reading: ' +self.prev_table +" "+str(t)+" "+str(rp_id)+cc.reset)
 
         self.cur_prev.execute('select configpoint from points where calcsteps = ? and myid = ?', [t, rp_id])
         r = self.cur_prev.fetchone() 

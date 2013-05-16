@@ -23,7 +23,8 @@ import datetime as dt
 import time
 
 # Formatting
-import concolors as cc
+import modules.concolors as cc
+import modules.server    as server
 
 import math
 
@@ -31,5 +32,4 @@ import math
 import operator
 import random
 
-import server
 from spres_helper import spres_helper

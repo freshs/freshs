@@ -28,7 +28,7 @@ import random
 import logging
 
 # Formatting
-import concolors as cc
+import modules.concolors as cc
 
 # Parsing
 import ast

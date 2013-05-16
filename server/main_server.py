@@ -23,15 +23,17 @@ import sys
 import os
 
 reldir = os.path.dirname(__file__)
-
 if not reldir:
     reldir = '.'
-
 # Append paths
 sys.path.append(reldir + '/modules')
+sys.path.append(reldir + '/modules/ffs')
+sys.path.append(reldir + '/modules/nsffs')
+sys.path.append(reldir + '/modules/spres')
 
-from server import server
+print "Python path is:"+str(sys.path)
 
+from modules  import server as ss
 from optparse import OptionParser
 
 parser = OptionParser(usage="usage: %prog [options] [args]", version="%prog 1.0")
@@ -63,7 +65,7 @@ else:   # if filename is not given
 
 ##Call the server
     print "Server: reading server config file: "+options.config
-a = server( timestamp = options.timestamp, configfile_name = options.config  )
+a = ss.server( timestamp = options.timestamp, configfile_name = options.config  )
 
 
 asyncore.loop()

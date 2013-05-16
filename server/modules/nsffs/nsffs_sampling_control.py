@@ -23,12 +23,12 @@ import datetime as dt
 import time
 
 # Formatting
-import concolors
+import modules.concolors
 import ConfigParser
 
 import math
-import server
 
+import modules.server
 # -------------------------------------------------------------------------------------------------
 
 #### NSFFS-SPECIFIC SERVER CLASS ####

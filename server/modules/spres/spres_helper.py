@@ -20,7 +20,7 @@
 
 
 # Formatting
-import concolors as cc
+import modules.concolors as cc
 
 class spres_helper():
     

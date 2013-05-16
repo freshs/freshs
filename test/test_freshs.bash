@@ -103,8 +103,10 @@ else
     xterm -e "$cmd ../server/main_server.py $conf_file; bash" & ##server xterm window will persist
 fi
 
+echo ""
 echo "SERVER command was:"
 echo "$cmd ../server/main_server.py $conf_file"
+echo ""
 
 
 ##give it a second to open its port before we start the clients.
@@ -121,15 +123,19 @@ do
     fi
 done
 
-
+echo ""
 echo "CLIENT command was:"
 echo "python ../client/main_client.py -c client_espresso.cfg"
+echo ""
 
 #xterm -e "python ../client/main_client.py -c client_espresso.cfg"
 python ../client/main_client.py -c client_espresso.cfg
 
 ##diff the results
 outfile=$(ls --sort=time DB/*configpoints.sqlite | head -1)
+echo ""
+echo "Attempting comparison of outputs with reference"
+echo ""
 if [ "$log" -eq "1" ]
 then 
     ./compare_DB.py $ref_file $outfile | tee $log_txt
