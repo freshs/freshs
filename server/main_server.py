@@ -31,7 +31,7 @@ sys.path.append(reldir + '/modules/ffs')
 sys.path.append(reldir + '/modules/nsffs')
 sys.path.append(reldir + '/modules/spres')
 
-print "Python path is:"+str(sys.path)
+#print "Python path is:"+str(sys.path)
 
 from modules  import server as ss
 from optparse import OptionParser
