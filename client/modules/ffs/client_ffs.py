@@ -90,7 +90,7 @@ class client_ffs:
                 h.send( True, parameterset['random_points'] )
 
                 optionlist = "-tmpdir " + h.tmpdir + \
-                             " -initial_config " + self.cli.harness_path + "None" + \
+                             " -initial_config None" + \
                              " -in_fifoname " + h.crds_in_fifoname + \
                              " -back_fifoname " + h.crds_back_fifoname + \
                              " -metadata_fifoname " + h.metadata_fifoname + \
