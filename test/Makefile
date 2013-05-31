@@ -23,28 +23,6 @@ riot_spres:
 	./test_freshs.bash $(WIN) $(KEEP) $(LOG) -r test_riot_spres/riot_spres_ref.sqlite -c test_riot_spres/riot_spres.conf -h ../harnesses/riot -e /bin/bash -p prof_riot_spres.txt
 	@echo
 
-.PHONY: ell_spres
-ell_spres : LOG=-l ell_spres_log.txt
-ell_spres :
-	@echo "testing ell_spres"
-	./test_freshs.bash $(WIN) $(KEEP) $(LOG) -r test_ell_spres/ell_spres_ref.sqlite -c test_ell_spres/ell_spres.conf -h ../harnesses/ell -e /bin/bash -p prof_ell_spres.txt
-	@echo
-
-.PHONY: ell_spres_absorb_at_B
-ell_spres_absorb_at_B : LOG=-l ell_spres_B_log.txt
-ell_spres_absorb_at_B :
-	@echo "testing ell_spres with absorb at B" 
-	./test_freshs.bash $(WIN) $(KEEP) $(LOG) -r test_ell_spres/ell_spres_ref_B.sqlite -c test_ell_spres/ell_spres_B.conf -h ../harnesses/ell -e /bin/bash -p prof_ell_spres_B.txt
-	@echo
-
-.PHONY: ell_ffs
-ell_ffs : LOG=-l ell_ffs_log.txt
-ell_ffs : 
-	@echo "testing ell_ffs"
-	./test_freshs.bash $(WIN) $(KEEP) $(LOG) -r test_ell_ffs/ell_ffs_ref.sqlite -c test_ell_ffs/ell_ffs.conf -h ../harnesses/ell -e /bin/bash -p prof_ell_ffs.txt 
-	@echo
-
-
 espresso_spres : LOG=-l espresso_spres_log.txt
 espresso_spres : have_espresso
 	@echo "testing espresso_spres"

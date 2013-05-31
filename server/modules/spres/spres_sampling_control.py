@@ -88,8 +88,13 @@ class spres_sampling_control():
                 'Recovered sampling frequencies: '+str(ss.M_0_runs)\
                                       + cc.reset)
 
-
-
+        #make sure we have folders for output
+        if ss.clients_use_fs == True:
+            if not os.path.exists(ss.folder_conf+str(ss.epoch)):
+                os.makedirs(ss.folder_conf+str(ss.epoch))
+            if not os.path.exists(ss.folder_conf+str(ss.epoch+ss.tau)):
+                os.makedirs(ss.folder_conf+str(ss.epoch+ss.tau))
+         
 
         ##setup an array for count of launched runs from each bin
         ss.run_count = [0] * self.nBins
@@ -256,8 +261,15 @@ class spres_sampling_control():
         
         self.reset_bin_index()
 
+        
         ss.epoch     += ss.tau    ##advance the time
         
+        ##make sure we have a folder to store state, working 1 taustep ahead.
+        if ss.clients_use_fs == True:
+            if not os.path.exists(ss.folder_conf+str(ss.epoch+ss.tau)):
+                os.makedirs(ss.folder_conf+str(ss.epoch+ss.tau))
+            
+
         nTotal   = [0] * self.nBins
         nForward = [0] * self.nBins
 

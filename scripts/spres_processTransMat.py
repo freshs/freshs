@@ -18,156 +18,197 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston,
 # MA 02111-1307 USA
 
-##parse args
+###make sure that integer division op "//" is present
+from __future__ import division
 import sys
+from collections import defaultdict
 
 ##matrix diagonalisation
 import numpy as np
 
-##default
-blockAverage=2000
-
-    
-
+##parse args
+from   optparse import OptionParser
 
 ##diagonalise the tm, write it out and the eigenvectors too.
-def printTmsEvs( evFile, tm_outFile, meanTm, L ):
+def printTmsEvs( evFiles, evFileNameStem, tm_outFile, meanTm, L ):
 
     ####experiment: what if the matrix is explicitly cyclic?
-    for i in range(L):
-        meanTm[L-1][i]=0.0
-    meanTm[L-1][0]=1.0
+    #for i in range(L):
+    #    meanTm[L-1][i]=0.0
+    #meanTm[L-1][0]=1.0
     
-
-
     evals, evecs = np.linalg.eig( np.transpose(meanTm) )
-    #evals, evecs = np.linalg.eig( (meanTm) )
+    #evals, evecs = np.linalg.eig( meanTm )
+    #print "Unsorted:"
+    #print (evals,evecs)
 
+    ###sort by eigenvalue
+    ssorted=sorted(zip(evals,np.transpose(evecs)),key=lambda x: abs(x[0]), reverse=True)
+    #ssorted=sorted(zip(evals,evecs),key=lambda x: abs(x[0]), reverse=True)
+  
+    for j in range(L):
     ##i^th eigenvector is in "column" i.
-    for i in range(L):
-        evFile.write(str(i)+" "+str(np.abs(evecs[i][0]))+\
-                         " "+str(t)+"\n")          
-    evFile.write("\n\n")
+
+        EVAL=ssorted[j][0]
+        print EVAL
+        if abs(EVAL) > 0.99:
+
+            EVEC=ssorted[j][1]
+            if EVEC[0,0] >= 0.0:
+                sign=1.0
+            else:
+                sign=-1.0
+            EVEC = EVEC * sign
+
+            print EVEC
+
+           ##open evec output file
+            while len(evFiles) < j+1:
+                evFiles.append(open(evFileNameStem+"."+str(len(evFiles))+".dat", 'w'))
+            if not evFiles[j]:
+                exit( "Error, could not open file: "+evFileNameStem+"."+str(j))
+
+
+            evFiles[j].write("#ev_number: "+str(j)+" eval: "+str(EVAL)+"\n")
+            for i in range(L):
+                evFiles[j].write(str(i)+" "+str(EVEC[0,i].real)+\
+                                        " "+str(EVEC[0,i].imag)+\
+                                        " "+str(t)+"\n")          
+            evFiles[j].write("\n\n")
 
     for i in range(L):
         for j in range(L): 
             tm_outFile.write(str(i)+" "+str(j)+\
-                                    " "+str(meanTm[i][j])+"\n")
+                                    " "+str(meanTm[i,j])+"\n")
         tm_outFile.write("\n")
     tm_outFile.write("\n")
 
 
-##start execution.
-arguments = sys.argv
-if len(arguments) < 2:
-    print "processTransmat.py: parses, takes running mean and diagonalises a transition matrix"
-    print "require 1 argument, a SPRES output file with a transition matrix time series."
-    print "Optional second argument, blocksize for time-average. default="+str(blockAverage)
-    exit( str(arguments) )
+####START EXECUTION HERE:
 
-tmName   = str(arguments[1])
-if len(arguments) >= 3:
-    blockAverage=int(arguments[2])
+##parse arguments
+parser = OptionParser()
+parser.add_option("-t", "--tblock", dest="tBlockAverage", help="number of matrices blocks to average over in time", metavar="t_block_average", type="int", default=2000)
+parser.add_option("-b", "--bblock", dest="bBlockAverage", help="number of matrix bins to block-average over", metavar="b_block_average", type="int", default=1)
 
-##Open the matrix file
-tmFile   = open(tmName, 'r')
-if not tmFile:
-    exit( "Error, could not open file: "+tmName)
+(options, args) = parser.parse_args()
+tBlockAverage=options.tBlockAverage
+bBlockAverage=options.bBlockAverage
 
+
+##Args will hold positional arguments... 
+##if there is any argument without a flag,
+## assume that it is a transition matrix file:
+if len(args) > 0:
+    tmNames=args
+else:
+    print "processTransmat.py: takes the mean and diagonalises a transition matrix"
+    print "require minimum 1 arguments,  SPRES output files with transition matrix time series."
+    print "Optional argument: --tblock tBlockAverage, blocksize for time-average. default="+str(tBlockAverage)
+    print "Optional argument: --bblock bBlockAverage, for bin-average. default="+str(bBlockAverage)
+    exit(8)
+
+##open all input files
+matCount=0
+L=1
+##create a 3D array
+allMats = np.zeros(shape=(1,1,1))  
+for tmName in tmNames:
+
+   ##Open the matrix file
+    tmFile   = open(tmName, 'r')
+    if not tmFile:
+        exit( "Error, could not open file: "+tmName)
+    else:
+        print "Reading file: "+str(tmName)
+
+    ##load the matrix files 
+    tCount  = 0
+    t_index = 0
+    for line in tmFile:
+        line   = line.rstrip()
+        asList = line.split()
+        if len(asList) == 3 :
+
+            if bBlockAverage != 0:
+                x_index = int(asList[0]) // bBlockAverage
+                y_index = int(asList[1]) // bBlockAverage
+            else:
+                x_index = int(asList[0])
+                y_index = int(asList[1])
+            
+            if x_index + 1 > L:
+                allMats = np.resize(allMats,(t_index+1,x_index+1,x_index+1))
+                for t in range(t_index+1):
+                    for i in range(L,x_index+1):
+                        for j in range(x_index+1):
+                            allMats[t][i][j] = 0.0
+                    for j in range(L,x_index+1):
+                        for i in range(x_index+1):
+                            allMats[t][i][j] = 0.0
+                L = x_index + 1
+                
+            if y_index + 1 > L:
+                allMats = np.resize(allMats,(t_index+1,y_index+1,y_index+1))
+                for t in range(t_index+1):
+                    for i in range(L,y_index+1):
+                        for j in range(y_index+1):
+                            allMats[t][i][j] = 0.0
+                    for j in range(L,y_index+1):
+                        for i in range(y_index+1):
+                            allMats[t][i][j] = 0.0
+                L = y_index + 1
+
+            ##save the value
+            allMats[t_index][x_index][y_index] += float(asList[2])
+
+        else:
+            tCount  = tCount + 1
+            if tBlockAverage != 0:
+                t_next = tCount // tBlockAverage
+            else:
+                t_next = tCount
+            
+            if t_next != t_index:
+                t_index = t_next
+                allMats = np.resize(allMats,(t_index+1,L,L))
+                for i in range(L):
+                    for j in range(L):
+                        allMats[t_index][i][j] = 0.0
+
+            if tCount % 100 == 0:
+                print "   Read "+str(tCount)+" matrices, size: "+str(L)+" by "+str(L) 
+            
+     
+
+
+##open output file
 tm_outFile = open("meanTransMat.dat","w")
 if not tm_outFile:
     exit( "Error, could not open file: meanTransMat.dat")
 
-##Open an output file
-evFile   = open('evecs.dat', 'w')
-if not evFile:
-    exit( "Error, could not open file: evecs.dat")
+##init list of evecs files.
+evFiles=[]
 
+for t in range(t_index+1):
 
-##we do not initially know the array size
-L=1
+       ##create an actual matrix, rather than an array.
+       meanTm    = np.matrix(np.zeros(shape=(L,L)))
 
-##init matrix
-##set up 2D arrays (resize later)
-meanTm    = np.matrix([[0.0]])
-rowVisits = [0.0]
+       ##init matrix
+       for i in range(L):
+           rowSum = 0.0
+           for j in range(L):
+               rowSum = rowSum + allMats[t][i][j]
+           if rowSum != 0.0:
+               invWeight = 1.0/rowSum
+           else:
+               invWeight = 1.0
+           for j in range(L):
+               meanTm[i,j] = allMats[t][i][j] * invWeight
 
-##loop over lines to build the matrix
-haveData = 0
-t        = 0
-for line in tmFile:
-     line = line.rstrip()
-
-     ##check if we have a complete matrix
-     if not line:
-         if haveData == 1:
-             t = t + 1
-             haveData = 0
-
-
-             ##diagonalise the running average and do output
-             if blockAverage == 0 or t % blockAverage == blockAverage - 1:
-                 print "diagonalising block mean transmat at t="+str(t)
-                 
-                 for i in range(L):
-
-                     invWeight = 1.0/rowVisits[i]
-                     #print str(i)+" "+str(rowVisits[i])+\
-                     #   " "+str(meanTm[i][i])+" "+str(meanTm[i][j] * invWeight)
-
-                     rowSum = 0.0
-                     for j in range(L):
-                         meanTm[i][j] = meanTm[i][j] * invWeight
-                         rowSum = rowSum + meanTm[i][j]
-                     #print "   Row sum was:"+str(rowSum)
-
-
-                 printTmsEvs( evFile, tm_outFile, meanTm, L )
+       print "Diagonalising at t = "+str(t * tBlockAverage)
+       printTmsEvs( evFiles, "evecs", tm_outFile, meanTm, L )
     
-                 for i in range(L):
-                     rowVisits[i] = 0.0
-                     for j in range(L): 
-                         meanTm[i][j] = 0.0
-         continue
-     else:
-         haveData = 1
-           
-
-     ##parse the line
-     asList = line.split()
-     x      = int(asList[0])
-     y      = int(asList[1])
-     entry  = float(asList[2])
-
-     ##extend the matrices if we have a new high-point
-     if x > L - 1 or y > L - 1:
-         lNew    =  1 + max( x, y )
-         meanTm2 =  np.zeros(shape=(lNew,lNew))
-         
-         for i in range(lNew):
-             for j in range(lNew):
-                 meanTm2[i][j] = 0.0
-         for i in range(L):
-             for j in range(L):
-                 meanTm2[i][j] = meanTm[i][j]
-         for i in range(lNew - L):
-             rowVisits.append(0.0)
-         L      = lNew
-         meanTm = meanTm2
-
-     meanTm[x][y] += entry
-     rowVisits[x] += entry
-
-
-##if we didn't just do a write, then do one
-if blockAverage != 0 and t % blockAverage != blockAverage - 1:
-    print "diagonalising block mean transmat at t="+str(t)
-    for i in range(L):
-        invWeight = 1.0/rowVisits[i]
-        for j in range(L):
-            meanTm[i][j] = meanTm[i][j] * invWeight
-    printTmsEvs( evFile, tm_outFile, meanTm, L )
-
-evFile.close()
 tm_outFile.close()
 

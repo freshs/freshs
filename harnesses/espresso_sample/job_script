@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh  ##this line is just to activate prettyprinters
 # Copyright (c) 2012 Josh Berryman, University of Luxembourg,
 # Pfaffenwaldring 27, 70569 Stuttgart, Germany; all rights
 # reserved unless otherwise stated.
@@ -39,14 +39,112 @@ proc get_rc_aggregation { r_contact n_part } {
 
 }
 
+#
+# save_snapshot
+# ---------------------
+#
+# example for writing a snapshot: keep this
+# to the minimum information needed to regenerate your system state
+# e.g., if particle charge never changes then hardcode it
+# rather than writing and re-loading.
+#############################################################
+proc save_snapshot {f_out} {
+    blockfile $f_out write variable box_l
+    blockfile $f_out write particles {pos v}
+}
+
+ 
+#
+# load_snapshot
+# ---------------------
+#
+# read in data comparable to whatever is generated 
+# by "save_snapshot"
+#############################################################
+proc load_snapshot {fn} {
+  
+    # open the FIFO or file: shouldn't matter which.
+    set f_in [open "$fn" "r"]
+ 
+    # read all parameters which were stored by save_snapshot
+    while { [blockfile $f_in read auto] != "eof" } {}
+    close $f_in
+}
+ 
+#
+# init_basic
+# ---------------------
+#
+# set up everything in the system apart from crds, vels 
+# and box 
+#############################################################
+proc init_basic { } {
+
+  set n_part   868
+
+  ##dummies 
+  set box_l     10.7437
+  setmd box_l $box_l $box_l $box_l
+
+  # Interaction parameters (Lennard Jones)
+  set lj1_eps     1.0
+  set lj1_sig     1.0
+  set lj1_cut     4.0 
+  set lj1_shift   [calc_lj_shift $lj1_sig $lj1_cut]
+  set r_contact   [expr $lj1_sig * 1.0]
+  inter 0 0 lennard-jones $lj1_eps $lj1_sig $lj1_cut $lj1_shift 0
+
+  # set up system with dummy state
+  for {set i 0} { $i < $n_part } {incr i} {
+      part $i pos 0.0 0.0 0.0 type 0
+  }
+  
+  # define the (trivial) topology
+  for {set i 0} { $i < $n_part} {incr i} {
+    set topo_chain 0
+    lappend topo_chain [expr $i]
+    lappend topo $topo_chain
+  }
+  eval analyze set $topo
+  analyze set "topo_part_sync"
+
+  # Integration parameters
+  setmd time_step 0.01
+  setmd skin      0.4
+  thermostat langevin 1.0 1.0
+
+  return $n_part
+
+}
+
+ 
+#
+# init_A
+# ---------------------
+#
+# generate a random system and equilibrate such that the
+# RC is less than value A
+#############################################################
+proc init_A {} {
+   puts "JOBSCRIPT: WARNING, CALLED STUB"
+   puts "JOBSCRIPT: YOU ARE PROBABLY HERE BECAUSE NO initial_config.dat WAS FOUND"
+   puts "JOBSCRIPT: EITHER MAKE AN initial_config.dat, CHANGE THE PATH, OR"
+   puts "JOBSCRIPT: FILL OUT THIS FUNCTION TO MAKE A RANDOM START STATE."
+}
 
 ###Debug flag: set 1 to turn on extra output. (Not threadsafe).
 set debug 0
 
+#default arguments:
+set COORDS_TO_FILE 0
+
+#parse arguments
 foreach {option value} $argv {
   switch -glob -- $option {
     -tmpdir             {set TMP_DIR $value }
-    -in_fifoname        {set INPUT_CONFIG $value }
+    -initial_config     {set INITIAL_CONFIG $value }
+    -in_fifoname        {set IN_FIFONAME $value }
+    -coords_to_file     {set COORDS_TO_FILE $value }
     -back_fifoname      {set OUTPUT_CONFIG $value }
     -metadata_fifoname  {set OUTPUT_METADATA $value }
     -halt_steps         {set HALT_STEPS $value }
@@ -54,6 +152,8 @@ foreach {option value} $argv {
     -halt_rc_lower      {set HALT_RC_LOWER $value }
     -halt_rc_upper      {set HALT_RC_UPPER $value }
     -seed               {set SEED $value }
+    -current_lambda     {set CURRENT_LAMBDA $value }
+    -rp_id              {set RP_ID $value }
     default             {puts "Additional not-used parameter $option with value $value"}
   }
 }
@@ -65,149 +165,41 @@ if { $CHECK_RC_EVERY != 0 } {
 
 set warnCount 0
 set warnMax  10
+set tcl_precision 6
+  
+# definition for rc calc
+set r_contact 1.0
+
+# basic setup
 
 
 #############################################################
 #  Parameters                                               #
 #############################################################
 
-# System parameters
-#############################################################
-
-# 10 000  Particles
-set box_l   10.7437
-set density 0.7
-
-# Interaction parameters (repulsive Lennard Jones)
-#############################################################
-
-set lj1_eps     1.0
-set lj1_sig     1.0
-##longer range to allow attractive part
-set lj1_cut     4.0 
-set lj1_shift   [calc_lj_shift $lj1_sig $lj1_cut]
-
-set r_contact   [expr $lj1_sig * 1.0]
-
-
-# Integration parameters
-#############################################################
-setmd time_step 0.01
-setmd skin      0.4
-thermostat langevin 1.0 1.0
 
 t_random seed $SEED
 
-#############################################################
-set tcl_precision 6
 
 #############################################################
 #  Setup System                                             #
 #############################################################
 
-# Interaction setup
-#############################################################
-
-setmd box_l $box_l $box_l $box_l
-inter 0 0 lennard-jones $lj1_eps $lj1_sig $lj1_cut $lj1_shift 0
-
-
-# Particle setup
-#############################################################
-set volume [expr $box_l*$box_l*$box_l]
-set n_part [expr floor($volume*$density)]
-setmd max_num_cells 2744
-for {set i 0} { $i < $n_part } {incr i} {
-    part $i pos 0.0 0.0 0.0 type 0
-}
-
-##define the (trivial) topology
-for {set i 0} { $i < $n_part} {incr i} {
-    set topo_chain 0
-    lappend topo_chain [expr $i]
-    lappend topo $topo_chain
-}
-eval analyze set $topo
-analyze set "topo_part_sync"
-
-##read coordinates 
-puts "MD: opening input pipe $INPUT_CONFIG"
-set input_channel [open $INPUT_CONFIG {RDONLY NONBLOCK}]
-fconfigure $input_channel -blocking 1
-#############################################################
-#      Read in a config                                     #
-#############################################################
-puts "MD: waiting for data"
-
-set chars_read [ gets $input_channel expect_count ]
-puts "read first line, expecting: $expect_count"
-
-set chars_read [ gets $input_channel first_line ]
-puts "read first coords line: $first_line"
-
-
-###this flag controls whether coords are saved to file
-###or sent back to FRESHS as a string
-set COORDS_FROM_FILE 0
-set COORDS_TO_FILE   0
-if { [string match f1* "$first_line"] == 1 } {
-    set COORDS_FROM_FILE 1
-    set records [split $first_line " "]
-    set in_fileName  [lindex $records 1]
-    puts "Client reading from file: $in_fileName"
-}
-if { [string match *f2* "$first_line"] == 1 } {
-    set COORDS_TO_FILE 1
-    set records [split $first_line " "]
-    set out_fileName  [lindex $records 3]
-    puts "Client writing to file: $out_fileName"
-}
-
-##reading from a file
-if { $COORDS_FROM_FILE == 1 } {
-    ##read a blockfile
-    set input_file [open $in_fileName {RDONLY}]
-    while { [blockfile $input_file read auto] != "eof" } {}
-    close $input_file
+if {$INITIAL_CONFIG == "None" && $IN_FIFONAME == "None"} {
+    puts "JOBSCRIPT: self-generating an initial state with equilibration."
+    init_A  
+} elseif {$INITIAL_CONFIG == "None"} {
+    set n_part [ init_basic ] 
+    puts "JOBSCRIPT: Loading snapshot from fifo: ${IN_FIFONAME}."
+    # get snap
+    load_snapshot "${IN_FIFONAME}"
 } else {
-	set count 0
-        set block_or_eof $first_line
-	while {  $count < $n_part } {
+    set n_part [ init_basic ] 
+    #get snap from file
+    puts "JOBSCRIPT: Loading snapshot from file: ${INITIAL_CONFIG}."
+    load_snapshot "${INITIAL_CONFIG}"
+}
 
-		    if { $chars_read > 0 } {
-			##set the coords
-			set fields [split $block_or_eof " "]
-			set l [llength $fields]
-			if  { $l == 3 } {
-			    part $count pos [lindex $fields 0]  [lindex $fields 1] [lindex $fields 2]
-			    set count [expr $count + 1 ]
-			} elseif { $l == 6 } {
-			    part $count pos [lindex $fields 0]  [lindex $fields 1] [lindex $fields 2] 
-			    part $count v   [lindex $fields 3]  [lindex $fields 4] [lindex $fields 5] 
-			    set count [expr $count + 1 ]
-			} else {
-			  if { $warnCount < $warnMax } {
-			    puts "simulation process received unexpected input: ${l} fields in line"
-			    puts "simulation process received unexpected input: _${block_or_eof}_"
-			    puts "field 0: "
-			    puts [lindex $fields 0]
-			    puts "field 6: "
-			    puts [lindex $fields 6]
-			    set warnCount [expr $warnCount + 1 ]
-			  }
-			}
-		    } else {
-			puts "Got EOF at count: $count , of expected: $n_part"
-			break
-		    }
-		    set chars_read [ gets $input_channel block_or_eof ]
-                    
-
-		    if { $count < 3 } {
-			    puts "MD line count: $count , read:  $fields  "
-		    } 
-	}
-} 
 
 if { $debug == 1 } {
         set debugF [open "espresso_debug.vtf" "w"]
@@ -221,8 +213,8 @@ if { $debug == 1 } {
 set rclast [get_rc_aggregation $r_contact $n_part]
 set rc      $rclast
 
-if { $stop_at_b == 1 } {
-        set int_step 1
+if { $CHECK_RC_EVERY != 0 } {
+        set int_step $CHECK_RC_EVERY
 } else {
         set int_step $HALT_STEPS
 }
@@ -233,11 +225,10 @@ while { 1 } {
         set i [expr ($i + $int_step)]
 
         ##REACTION COORDINATE: CALCULATE HERE      
-        if { $stop_at_b == 1 } {
+        if { $CHECK_RC_EVERY > 0 } {
                 set rclast $rc
                 set rc    [get_rc_aggregation $r_contact $n_part]
             
-                puts "rc: $rc"
                 if { $debug == 1 } {
                     puts "rc: $rc"
                     writevcf $debugF
@@ -273,41 +264,32 @@ set output_channel [open $OUTPUT_CONFIG {WRONLY}]
 
 if { $COORDS_TO_FILE == 0 } {
     ##write out the final coords
-    set count 0
-    while {  $count < $n_part } {
-        set crds_vels [part $count print pos v]
-        puts $output_channel $crds_vels
-        set count [expr $count + 1 ]
-    }
+    save_snapshot $output_channel
     flush $output_channel
     close $output_channel   
 } else {
 
-    set output_coords_file [open $out_fileName {WRONLY CREAT TRUNC}]
+    set output_coords_file [open $COORDS_TO_FILE {WRONLY CREAT TRUNC}]
     
     ##write out the final coords
-    blockfile $output_coords_file write variable  box_l
-    blockfile $output_coords_file write particles {id pos v}
-
+    save_snapshot $output_coords_file
     close $output_coords_file
     
     ##just write the filename to pipe
-    set output_channel [open $OUTPUT_CONFIG {WRONLY}]
-    puts  $output_channel "$out_fileName"
+    puts  $output_channel "$COORDS_TO_FILE"
     flush $output_channel
     close $output_channel   
 }
 
 
-    puts "MD: opening output RC data $OUTPUT_METADATA"
-    set output_metadata_channel [open $OUTPUT_METADATA {WRONLY}]
-    set t [setmd time]
-    puts $output_metadata_channel [format "{\"rc\": %.4f, \"steps\": %i, \"time\": %.4f}" $rc $i $t]
-    puts "MD: sent: "
-    puts [format "{\"rc\": %.4f, \"steps\": %i, \"time\": %.4f}" $rc $i $t]
-    flush $output_metadata_channel
-    close $output_metadata_channel   
-    close $input_channel
+puts "MD: opening output RC data $OUTPUT_METADATA"
+set output_metadata_channel [open $OUTPUT_METADATA {WRONLY}]
+set t [setmd time]
+puts $output_metadata_channel [format "{\"rc\": %.4f, \"steps\": %i, \"time\": %.4f}" $rc $i $t]
+puts "MD: sent: "
+puts [format "{\"rc\": %.4f, \"steps\": %i, \"time\": %.4f}" $rc $i $t]
+flush $output_metadata_channel
+close $output_metadata_channel  
     
 
 puts "\n Simulation Finished \n"

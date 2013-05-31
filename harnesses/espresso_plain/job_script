@@ -1,3 +1,4 @@
+#!/bin/sh  ##this line is just to activate prettyprinters
 # Copyright (c) 2013 Kai Kratzer, University of Stuttgart,
 # Allmandring 3, 70569 Stuttgart, Germany; all rights
 # reserved unless otherwise stated.
@@ -17,7 +18,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston,
 # MA 02111-1307 USA
  
-# example for writing a snapshot
+# example for writing a snapshot: keep this
+# to the minimum information needed to regenerate your system state
+# e.g., if particle charge never changes then hardcode it
+# rather than writing and re-loading.
 proc save_snapshot {fn} {
     set f_out [open "$fn" "w"]
     #blockfile $f_out write tclvariable md_int_steps
@@ -31,7 +35,10 @@ proc save_snapshot {fn} {
  
 # example for loading a snapshot
 proc load_snapshot {fn} {
+  
+    # open the FIFO or file: shouldn't matter which.
     set f_in [open "$fn" "r"]
+ 
     # read all parameters which were stored by save_snapshot
     while { [blockfile $f_in read auto] != "eof" } {}
     close $f_in
@@ -52,13 +59,20 @@ proc calc_rc {} {
 }
  
 # init system in A and equilibrate
-proc init_A() {
- 
+proc init_A {} {
+   puts "JOBSCRIPT: WARNING, CALLED STUB"
+   puts "JOBSCRIPT: YOU ARE PROBABLY HERE BECAUSE NO initial_config.dat WAS FOUND"
+   puts "JOBSCRIPT: EITHER MAKE AN initial_config.dat, CHANGE THE PATH, OR"
+   puts "JOBSCRIPT: FILL OUT THIS FUNCTION TO MAKE A RANDOM START STATE."
 }
  
 # init the system only for loading snapshot
-proc init_basic() {
- 
+proc init_basic {} {
+
+     #HARDCODE SYSTEM-SPECIFIC SETUP IN HERE 
+     setmd time_step 0.005
+     setmd 
+
 }
  
 # parse arguments
@@ -69,7 +83,7 @@ foreach {option value} $argv {
     -in_fifoname        {set in_fifoname $value }
     -back_fifoname      {set back_fifoname $value }
     -metadata_fifoname  {set metadata_fifoname $value }
-    -halt_steps         {set halt_steps $value }
+    -max_steps          {set max_steps $value }
     -check_rc_every     {set check_rc_every $value }
     -A                  {set A $value }
     -B                  {set B $value }
@@ -79,7 +93,6 @@ foreach {option value} $argv {
     -act_lambda         {set act_lambda $value }
     -jobtype            {set jobtype $value }
     -rp_id              {set rp_id $value }
-    -max_steps          {set max_steps $value }
     -clientname         {set clientname $value }
     -timestamp          {set timestamp $value }
     -uuid               {set uuid $value }
@@ -98,20 +111,23 @@ if {$jobtype == "1" } {
     set escape_flux 0
 }
  
-if {$initial_config == "None"} {
-    init_basic
-    puts "Loading snapshot."
-    # get filename from fifo
-    set fh [open "$in_fifoname" "r"]
-    set fn_in [string trim [read "$fh"]]
-    close "$fh"
-    load_snapshot "${storedir}/${timestamp}/${fn_in}"
-    set rc [calc_rc]
-} else {
-    puts "Using initial state with equilibration."
+
+if {$initial_config == "None" && $in_fifoname == "None"} {
+    puts "JOBSCRIPT: self-generating an initial state with equilibration."
     init_A
-    set rc [calc_rc]
+} elseif {$initial_config == "None"} {
+    init_basic
+    puts "JOBSCRIPT: Loading snapshot from fifo: ${in_fifoname}."
+    # get snap
+    load_snapshot "$in_fifoname"
+} else {
+    #get snap from file
+    puts "JOBSCRIPT: Loading snapshot from file: ${initial_config}."
+    load_snapshot "${initial_config}"
 }
+
+
+set rc [calc_rc]
  
 # check if RC is ok if we do a resumed escape trace
 if { $escape_flux } {
@@ -125,9 +141,15 @@ if { $escape_flux } {
 set max_rc $rc
  
 set step_abort 0
-set calcsteps 0
+set calcsteps  0
 set in_progress 1
- 
+if { $check_rc_every == "0" } {
+   set steps $max_steps
+} else {
+   set steps $check_rc_every
+}
+
+
 puts "$calcsteps $rc"
  
 # READY TO GO
@@ -139,7 +161,6 @@ while { $in_progress } {
     if {$rc > $max_rc} {
         set max_rc $rc
     }
- 
     if {$escape_flux} {
         if {$rc >= $next_interface && $comefromok} {
             set in_progress 0
@@ -159,7 +180,6 @@ while { $in_progress } {
             set in_progress 0
         }
     }
- 
     if {$max_steps > 0} {
         if {$calcsteps >= $max_steps} {
             puts "Max steps reached!"

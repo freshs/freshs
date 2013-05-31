@@ -15,6 +15,12 @@ fi
 
 
 
-./test_freshs.bash  -w -k -l espresso_spres_log.txt -r test_espresso_spres/espresso_spres_ref.sqlite -c test_espresso_spres/espresso_spres.cfg -h ../harnesses/espresso -e $ESPRESSO_PATH -p bench_$tmax.txt
+./test_freshs.bash  -w -k -l espresso_spres_log.txt\
+                          -r test_espresso_spres/espresso_spres_ref.sqlite\
+                          -c test_espresso_spres/espresso_spres.cfg \
+                          -s test_espresso_spres/example_initial_config.dat \
+                          -h ../harnesses/espresso_sample \
+                          -e $ESPRESSO_PATH \
+                          -p bench_$tmax.txt
 
 

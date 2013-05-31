@@ -19,11 +19,13 @@
 # MA 02111-1307 USA
 
 ##import wrappers for simulation programs
-from harness import harness
+from   harness import harness
+import os
 
 class client_spres:
     def __init__(self, client):
-        self.cli = client
+        self.cli       = client
+        self.prinlevel = 1
 
     # build flexible option string
     def build_options(self,paramdict,exclude):
@@ -39,109 +41,131 @@ class client_spres:
                 basis += ", \"" + el + "\": " + str(paramdict[el])
         return basis
 
+    def safeAssign( self, parameterset, myKey ):
+    
+     try:
+         return(parameterset[myKey])
+     except KeyError:
+         return None
+
+
 #### JOB 3 ####
     def job3_fixed_tau(self, parameterset):
         
-        
-        A = parameterset['A']
-        B = parameterset['B']
-        tau            = parameterset['tau']
-        parentlambda   = parameterset['parentlambda']
-        parent_id      = parameterset['rp_id']
-        currentlambda  = parameterset['currentlambda']
-        absorb_at_B    = parameterset['absorb_at_B']
-        seed           = parameterset['seed']
-        
-        print 'Doing fixed-tau run from bin-pair ' + str(currentlambda) + ' ' + str(parentlambda) + ' for time: ' + str(tau)
-        points = []
-        rcvals = []
-        ctime  = []
+        if self.prinlevel > 0:
+            print parameterset
 
-        all_meta = {}
+        ##expected parameters for this job type
+        tau              = self.safeAssign(parameterset, 'halt_steps')
+        seed             = self.safeAssign(parameterset, 'seed')
+        currentLambda    = self.safeAssign(parameterset, 'seed')
+        parent_id        = self.safeAssign(parameterset, 'rp_id')
+        seed             = self.safeAssign(parameterset, 'seed')
+        currentlambda    = self.safeAssign(parameterset, 'currentlambda') 
+        parentlambda     = self.safeAssign(parameterset, 'parentlambda')
+        uuid             = self.safeAssign(parameterset, 'uuid')
 
-        t      = 0.0
+        check_rc_every   = self.safeAssign(parameterset, 'check_rc_every') 
+        if check_rc_every is None:
+            check_rc_every = "0"
+
+        save_configs     = self.safeAssign(parameterset, 'save_configs') 
+        if save_configs is None:
+            save_configs = "0"
+
+        rcvals    = []
+        ctime     = []
+        all_meta  = {}
+        t         = 0.0
+        num_steps = 0
+        ctime_tot = 0.0
+        step      = tau
         results   = "{\"jobtype\": 3, \"success\": False, \"currentlambda\": " + str(currentlambda) + \
                                                        ", \"parentlambda\": "  + str(parentlambda)  + \
                                                        ", \"origin_points\": " + str(parent_id)  + \
                                                        " }"
-        if 'uuid' in parameterset:
-            uuid = parameterset['uuid']
-        else:
-            uuid = ''
-
        
-        #if absorb_at_B != 0:
-        #    step=absorb_at_B
-        #else:
-        step=tau
-        
-        num_steps  = 0
-        ctime_tot  = 0.0
-
         ##create a harness object to manage comms with the subtask.
         h = harness(self.cli.exec_name,  self.cli.harness_path+"/job_script", self )
         tmp_seed = int(seed)
         points=parameterset['random_points']
         while num_steps < tau :
                 
-        
-            ##print "parameterset: "+str(parameterset)
+            print "Using temp dir: "+str(h.tmpdir)
 
-            ##test if we have start coordinates or
-            ##if we are reading from a file.
-            twoWay = True   ##open two fifos, send and receive
-            start  = h.crds_in_fifoname
-            print "client: points:"+str(points)[0:128]+"..."
-            if str(parameterset['rp_id']) == "0" and num_steps == 0:
-                print "client: Treating input coords as NULL, loading from file."
-
-                inpoints = points[0][0].split()
-                print "client: inpoints:"+str(inpoints)[0:128]+"..."
-                points[0][0]   = "f1: "+self.cli.harness_path+"/initial_config.dat"
-                print "client: len(inpoints):"+str(len(inpoints))
-                if len(inpoints) > 2:
-                    for i in range(2,len(inpoints)):
-                        points[0][0] = points[0][0]+" "+str(inpoints[i])
+            optionlist = ""
+            if parent_id == "0" and num_steps == 0:
+                start_config = self.cli.initial_config_path
+                in_fifo      = "None"
+                get_coords   = True
+                send_coords  = False
+                if os.path.isfile(start_config):
+                    print "client: Found file at: "+start_config
+                    print "client: Treating input coords as NULL, loading from file."
+                else:
+                    print "client: Treating input coords as NULL:\n"+\
+                          "client:    could not find input file: "+str(start_config)+"\n"\
+                          "client:    hoping that the harness will generate one!"
+                    start_config = "None"
             else: 
-                print "client: Loading from previous output data."
+
+                ##assume that saving to file means reading from a file
+                if save_configs != "0":
+                    start_config = points[0][0]
+                    get_coords   = True   ##only open a read fifo, to get the filename of the crds
+                    send_coords  = False
+                    in_fifo      = "None"
+                else:
+                    start_config = "None"
+                    get_coords   = True   ##open two fifos, send and receive
+                    send_coords  = True
+                    in_fifo      = h.crds_in_fifoname
+
+                    
+            optionlist = " -tmpdir " + h.tmpdir + \
+                             " -in_fifoname " + in_fifo + \
+                             " -initial_config "+ start_config + \
+                             " -back_fifoname " + h.crds_back_fifoname + \
+                             " -metadata_fifoname " + h.metadata_fifoname + \
+                             " -seed " + str(tmp_seed)
+
+
+            if check_rc_every == "0":
+                optionlist +=  " -check_rc_every 0 "  
+
+                ##pass the remaining options from the parameterset straight through
+                ##....but with some exclusions.
+                optionlist += self.build_options(parameterset,\
+                                               ["jobtype","halt_rc_upper", "halt_rc_lower", "save_configs"])
+            else:
+                ##pass the remaining options from the parameterset straight through
+                ##....but with some exclusions.
+                optionlist += self.build_options(parameterset, ["jobtype"])
+
+            ##are we just saving state locally and sending a path back to the server?
+            if save_configs != "0":
+                optionlist += " -coords_to_file "+save_configs+"/"+uuid
             
 
 
             ##Wrap the code that uses threading/subprocesses
             ##in a try-catch to clean up on interrupts, ctrl-C etc.
             try:
-                print "Client: sending: "+str(points)[0:128]+"..."
+                h.send( send_coords, get_coords, True, points ) 
+                h.subthread_run_script(optionlist)
 
-                h.send( twoWay, points ) ##Assuming it is safe to send points and also write to it
-                                         ##because the simulation program will finish reading before it writes.
-                optionlist = "-tmpdir " + h.tmpdir + \
-                             " -in_fifoname " + start + \
-                             " -back_fifoname " + h.crds_back_fifoname + \
-                             " -metadata_fifoname " + h.metadata_fifoname + \
-                             " -seed " + str(tmp_seed) + \
-                             " -halt_steps " + str(step) + \
-                             " -check_rc_every " + str(absorb_at_B) + \
-                             " -halt_rc_upper " + str(B) + \
-                             " -halt_rc_lower " + str(0.0)
-
-                optionlist += self.build_options(parameterset,optionlist)
-
-                h.subthread_run_script(optionlist, twoWay)
                 pp=[]
                 calcsteps, ctime, rc, all_meta  = h.collect( pp, rcvals )
-                print "Client: collected points: "+str(pp)[0:128]+" ... "+str(pp)[-64:-1]
-                print "Client: collected metadata: "+str((calcsteps, ctime, rc))
             except e:
                 print( "Client: exception while runnning harness, %s" % e )
                 h.clean()
                 exit( e )
 
                 
-
             num_steps  = num_steps + calcsteps
             ctime_tot += ctime
 
-            if absorb_at_B != 0 :
+            if str(check_rc_every) != "0" :
                 #tmp_seed += 1
                 if rc >= B:
                     print( "Client: ending run, rc: "+str(rc) + " reached B: "+str(B))
@@ -152,9 +176,9 @@ class client_spres:
                     rcvals    = [rc]
                     break
                 else:
-                    if twoWay == False:
-                        twoWay = True
-                        start  = h.crds_in_fifoname
+                    if send_coords == False:
+                        send_coords = True
+                        start       = h.crds_in_fifoname
 
                     ##recycle the input points
                     points = pp[0]

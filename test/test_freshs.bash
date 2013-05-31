@@ -26,7 +26,8 @@ OPTIONS:
    -k               server window persists
    -w               run each process in a separate window
    -r   file.sqlite reference DB output file
-   -c   file.conf   conf file, contains options for the freshs server 
+   -c   file.conf   conf file, contains options for the freshs server
+   -s   file.dat    start system file, contains a system microstate 
    -h   /dir        harness directory, contains wrapper scripts for client MD 
    -e   file.exe    harness executable: interpreter for the harness scripts 
   <-p   prof.txt>   request profiling to output file prof.txt
@@ -46,7 +47,7 @@ then
     exit
 fi 
 
-while getopts “kwr:c:h:e:p:l:” OPTION
+while getopts “kwr:c:s:h:e:p:l:” OPTION
 do
      case $OPTION in
          r)
@@ -54,6 +55,9 @@ do
              ;;
          c)
              conf_file=$OPTARG
+             ;;
+         s)
+             start_config=$OPTARG
              ;;
          h)
              harness_dir=$OPTARG
@@ -92,8 +96,7 @@ fi
 #############################################################
 
 
-mkdir -p DB
-mkdir -p OUTPUT
+rm -Rf DB CONF LOG OUTPUT
 
 ##start a terminal window with the server in it.
 if [ "$keep_server" -eq "0" ]
@@ -117,19 +120,19 @@ for i in `seq 0 $[NUM_CLI - 2]`
 do
     if [ $separate_window -eq "1" ]
     then
-    	xterm -T "FRESHS client" -e "python ../client/main_client.py -c client_espresso.cfg" &
+    	xterm -T "FRESHS client" -e "python ../client/main_client.py -s $start_config -c client_espresso.cfg -x $harness_exe -H $harness_dir" &
     else
-	python ../client/main_client.py -c client_espresso.cfg &
+	python ../client/main_client.py  -s $start_config -c client_espresso.cfg  -x $harness_exe -H $harness_dir &
     fi
 done
 
 echo ""
 echo "CLIENT command was:"
-echo "python ../client/main_client.py -c client_espresso.cfg"
+echo "python ../client/main_client.py -s $start_config -c client_espresso.cfg -x $harness_exe -H $harness_dir"
 echo ""
 
 #xterm -e "python ../client/main_client.py -c client_espresso.cfg"
-python ../client/main_client.py -c client_espresso.cfg
+python ../client/main_client.py  -s $start_config -c client_espresso.cfg  -x $harness_exe -H $harness_dir
 
 ##diff the results
 outfile=$(ls --sort=time DB/*configpoints.sqlite | head -1)

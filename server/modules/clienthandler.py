@@ -550,18 +550,10 @@ class ClientHandler(asyncore.dispatcher):
         ###Logically we only need to search by id, but searching by t as well
         ###  gives SQLITE a chance to take advantage of indexes on the database.
         #random_point = self.server.storepoints.return_point_by_id( rp_id )
-        if ss.clients_use_fs == False:
-            random_point = self.server.storepoints.return_point_by_id_t( rp_id, ss.epoch )
-            if random_point == "[0.0, 0.0]":
-                random_point = [["f1: 0"]]
-        else:
-            from_epoch = str(ss.epoch)+"/"
-            to_epoch   = str(ss.epoch + ss.tau)+"/"
-            if rp_id != "0":
-                rp_id    = ss.folder_conf + from_epoch + rp_id
-            next_id      = ss.folder_conf + to_epoch +\
-                                      self.name + "_" + str(self.received_count + 1)
-            random_point = [["f1: "+rp_id+" f2: "+next_id]] ###pair of filenames to read and write
+        
+        random_point = self.server.storepoints.return_point_by_id_t( rp_id, ss.epoch )
+        if random_point == "[0.0, 0.0]":
+                random_point = [["0"]]    
 
         if random_point != None:
         
@@ -574,36 +566,31 @@ class ClientHandler(asyncore.dispatcher):
                 abs_at_B = ss.absorb_at_B
 
             # Send job string
-            self.server.logger_freshs.info(cc.c_blue + 'Starting job between ' +\
-                                            str(fromRow) + " and "+\
-                                            str(row)     + " at " + str(ss.epoch) + cc.reset)
-            self.server.logger_freshs.info(cc.c_green + 'Starting job3_fixedtau on ' + str(self.name) +\
-                                                         ' seed ' + str(client_seed) + ', ' + \
-                                                         ' rp id ' + str(rp_id) + ', ' + \
-                                                         " \"tau\": " + str(ss.tau) + \
-                                                         ", \"A\": "   + str(ss.A) + \
-                                                         ", \"B\": "   + str(ss.B) + \
-                                                         ", \"abs at B? " + str(abs_at_B) + ', ' +\
-                                                         str(random_point)[0:90] + '...' + \
-                                                         cc.reset)
-
-
             self.server.client_runtime[str(self)] = time.time()
+
             
             job_string = "\"jobtype\": 3, \"parentlambda\": "  + str(fromRow) + \
-                                 ", \"currentlambda\": " + str(row) + \
-                                 ", \"rp_id\": \""       + str(rp_id) + "\""+\
-                                 ", \"tau\": " + str(ss.tau) + \
-                                 ", \"A\": "   + str(ss.A) + \
-                                 ", \"B\": "   + str(ss.B) + \
-                                 ", \"absorb_at_B\": "   + str(abs_at_B) + \
-                                 ", \"seed\": "          + str(client_seed) + \
-                                 ", \"random_points\": " + str(random_point) + \
-                                 ", \"uuid\": \"" + self.get_uuid() + "\""
+                                 " , \"currentlambda\": " + str(row)+\
+                                 " , \"rp_id\": \""       + str(rp_id) + "\""+\
+                                 " , \"halt_steps\": "    + str(ss.tau) + \
+                                 " , \"seed\": "          + str(client_seed) + \
+                                 " , \"random_points\": " + str(random_point) + \
+                                 " , \"uuid\": \"" + self.get_uuid() + "\""
+            if abs_at_B:
+                job_string +=   " , \"halt_rc_upper\": " + str(ss.B) + \
+                                " , \"check_rc_every\": "+ str(1) + \
+                                " , \"absorb_at_B\": "   + str(abs_at_B)
+                
+            if ss.clients_use_fs:
+                config_folder = ss.folder_conf+str(ss.epoch+ss.tau)
+                job_string   += " , \"save_configs\": \"" + config_folder +"\"" 
+                
+
 
             job_string_complete = self.compose_message(job_string)
 
-            ss.logger_freshs.debug(cc.c_yellow + 'Sending job_string ' + job_string_complete[0:256] + " [...]" + \
+            ss.logger_freshs.debug(cc.c_yellow + 'Sending job_string ' +\
+                                   job_string_complete[0:256] + " [...]" + \
                                    cc.reset)
                                
             self.long_send( job_string_complete )

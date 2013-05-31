@@ -405,6 +405,7 @@ class server(asyncore.dispatcher):
         else:
             self.t_infocheck = 30.0
 
+
         # do we hit the filesystem or not?
         if self.configfile.has_option('general', 'clients_use_filesystem'):
             self.clients_use_fs = self.configfile.getboolean('general', 'clients_use_filesystem')
@@ -456,16 +457,10 @@ class server(asyncore.dispatcher):
         if not os.path.exists(self.folder_log):
             os.makedirs(self.folder_log)
 
-        self.folder_out += '/'
+        self.folder_out  += '/'
         self.folder_conf += '/'
-        self.folder_db += '/'
-        self.folder_log += '/'
-
-        # do we hit the filesystem or not?
-        #if self.folder_conf != None:
-        #    if not os.path.exists(self.folder_conf+str(self.tau)):
-        #        os.makedirs(self.folder_conf+str(self.tau))
-            
+        self.folder_db   += '/'
+        self.folder_log  += '/'
 
         self.logger_freshs.debug(cc.c_yellow + 'Found/Created folders: '+\
                                     self.folder_out + " " + self.folder_conf + " " + self.folder_db + " " + self.folder_log + cc.reset)

@@ -49,7 +49,6 @@ class harness:
         ##save some useful stuff
         self.sim_exec    = exec_path
         self.job_script  = job_script
-        self.twoWay      = False
         self.childproc   = 0
 
         ###create pipes to transfer MD coords into/read them back from
@@ -87,10 +86,8 @@ class harness:
         return argList
 
    
-    def fork_run_script(self, parameterset, twoWay):
+    def fork_run_script(self, parameterset):
         
-        self.twoWay = twoWay
-            
         ##start a child process
         self.childproc = os.fork()        
         if  self.childproc == 0: ##in child process
@@ -102,10 +99,8 @@ class harness:
         else:
             return
             
-    def subthread_run_script(self, parameterset, twoWay):
+    def subthread_run_script(self, parameterset):
         
-        self.twoWay = twoWay
-            
         ##start a child process    
         argList = self.build_argList(parameterset)
         print "calling the following: " + str(argList) 
@@ -115,52 +110,60 @@ class harness:
        
             
             
-    def send( self, twoWay, act_point ):
+    def send( self, send_coords, get_coords, get_meta, act_point ):
          
+            self.send_coords =  send_coords
+            self.get_coords  =  get_coords
+            self.get_meta    =  get_meta
+
             run_in_progress = True
             self.pp = []    
             self.mp = [] 
                     
-
         ##loop over multiple start points that we may have been sent?? Should only be 1.
         ##Is neccesary to pass in a list, however, or python will not pass-by-reference?
         #for act_point in act_points:
    
 
             ##send the config to the MD process
-            if twoWay == True :
+            if send_coords == True :
                 print "Client: Starting coords writer subthread"
                 self.ocFeeder = feeder(self.crds_in_fifoname, act_point, self.client)
 
-            print "Client: Starting coords listener subthread"
-            self.ocListener = listener(self.crds_back_fifoname, self.pp)
+            if get_coords == True :
+                print "Client: Starting coords listener subthread"
+                self.ocListener = listener(self.crds_back_fifoname, self.pp)
 
-            print "Client: Starting metadata listener subthread"
-            self.omListener = listener(self.metadata_fifoname, self.mp)
+            if get_meta == True :
+                print "Client: Starting metadata listener subthread"
+                self.omListener = listener(self.metadata_fifoname, self.mp)
                
             
     def collect( self, points, rcvals ):
     
             ##Blocking wait for listener threads to finish.
             ##No point waiting for the feeder.
-            self.ocListener.lT.join()
-            print "Client: coords read thread closed"
-            self.omListener.lT.join()
-            print "Client: metadata read thread closed"
-
-            ##collect the return data from the coords thread
-            points.append(self.pp)
-
+            if self.get_coords == True:
+                self.ocListener.lT.join()
+                print "Client: coords read thread closed"
+                
+                ##collect the return data from the coords thread
+                points.append(self.pp)
+            
             ##parse the return data from the metadata thread
-            line      = self.mp[0]
-            metadata  = ast.literal_eval(line[0])
+            if self.get_meta == True :
+                self.omListener.lT.join()
+                print "Client: metadata read thread closed"
+
+                line      = self.mp[0]
+                metadata  = ast.literal_eval(line[0])
             
-            this_rc   = metadata['rc']
-            rcvals.append(this_rc)
-            calcsteps = metadata['steps']
-            ctime     = metadata['time']
+                this_rc   = metadata['rc']
+                rcvals.append(this_rc)
+                calcsteps = metadata['steps']
+                ctime     = metadata['time']
             
-            print "Client: set metadata: "+str(metadata)
+                print "Client: set metadata: "+str(metadata)
 
             return( calcsteps, ctime, this_rc, metadata )
             
@@ -174,7 +177,7 @@ class harness:
         try:
             for t in threading.enumerate():
                     if t.daemon:
-                        print "Cleaning thread: _"+str(t)
+                        print "Stopping thread: _"+str(t)
                         t.stop_event.set() 
         except e:
             print "Client Warning: Could not set stop flags for harness threads: %s", e

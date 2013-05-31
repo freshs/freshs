@@ -51,7 +51,7 @@ from  client_ffs   import client_ffs
 from  client_spres import client_spres
 
 class client(asyncore.dispatcher):
-    def __init__(self, configfile, execprefix):
+    def __init__(self, configfile, execprefix, execpath, harness, startconfig):
 
         if configfile == 'auto':
             configfile = 'client-sample.conf'
@@ -62,6 +62,18 @@ class client(asyncore.dispatcher):
             self.create_ssh_tunnel()
             time.sleep(2)
 
+        ##Allow CL arguments to overwrite the config file
+        self.execprefix = execprefix
+        if execpath != 'auto':
+           self.exec_name = execpath
+        if harness != 'auto':
+           self.harness_path = harness
+        if startconfig != 'auto':
+           self.initial_config_path = startconfig
+        else:
+           self.initial_config_path = self.harness_path+"/initial_config.dat"
+
+
         self.received_data = []
         self.save_bytes=""
         self.send_bytes=""
@@ -71,7 +83,6 @@ class client(asyncore.dispatcher):
         self.msg=["ffs client v1"+'PKT_SEP']
         self.abort = False
 
-        self.execprefix = execprefix
 
         # setup timeout stuff
         start_time      = time.time()
@@ -123,6 +134,19 @@ class client(asyncore.dispatcher):
         else:
             self.nice_job = 0
 
+        ##########these option moved from server.cfg
+        # do we hit the filesystem or not?
+        #if self.configfile.has_option('general', 'clients_use_filesystem'):
+        #    self.clients_use_fs = self.configfile.getboolean('general', 'clients_use_filesystem')
+        #else:
+        #    self.clients_use_fs = False
+
+        # if we are hitting the filesystem, where do we put the files?
+        #self.config_folder = "CONF"
+        #if self.configfile.has_option('general', 'config_folder'):
+        #    self.config_folder = self.configfile.getboolean('general', 'config_folder')
+
+        
 
         # FFS specific
         if self.configfile.has_option('ffs_control', 'checking_script'):
@@ -130,9 +154,19 @@ class client(asyncore.dispatcher):
         else:
             self.checking_script = 0
 
-        # these options are required
-        self.exec_name = str(self.configfile.get('general', 'executable'))
-        self.harness_path = str(self.configfile.get('general', 'harness'))
+        # these options are required either on CL or in config
+        if self.configfile.has_option('general', 'executable'):
+            self.exec_name = str(self.configfile.get('general', 'executable'))
+            
+        if self.configfile.has_option('general', 'harness'):
+            self.harness_path = str(self.configfile.get('general', 'harness'))
+           
+        # if this option is null, harness_path+"/initial_config.dat" will be searched
+        if self.configfile.has_option('general', 'initial_config_path'):
+            self.initial_config_path = str(self.configfile.get('general', 'initial_config_path'))
+        else:
+            self.initial_config_path = "None"
+
         
 
     def create_ssh_tunnel(self):

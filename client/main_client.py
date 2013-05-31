@@ -21,6 +21,7 @@
 import sys
 import asyncore
 import os
+from   optparse import OptionParser
 
 # Append paths
 reldir = os.path.dirname(__file__)
@@ -29,13 +30,18 @@ if not reldir:
 sys.path.append(reldir + '/modules')
 
 from client   import client
-from optparse import OptionParser
 
 parser = OptionParser(usage="usage: %prog [options] [args]", version="%prog 1.0")
 
 parser.add_option("-c", "--config", dest="config", help="configfile to use", metavar="configfile.conf", type="string", default='client.cfg')
 
+parser.add_option("-s", "--startconf", dest="startconf", help="initial system config file", metavar="initial_config.dat", type="string", default='auto')
+
 parser.add_option("-e", "--execprefix", dest="execprefix", help="prefix for the executable, e.g. mpirun -np 8", metavar="execprefix", type="string", default='none')
+
+parser.add_option("-x", "--executable", dest="execpath", help="path to the simulation executable, e.g.: /home/boris/Espresso/bin/Espresso", metavar="execpath", type="string", default='auto')
+
+parser.add_option("-H", "--harness", dest="harness", help="path to the simulation program harness, e.g.: /home/boris/freshs/harnesses/espresso_plain", metavar="harnesspath", type="string", default='auto')
 
 (options, args) = parser.parse_args()
 
@@ -48,7 +54,7 @@ else:   # if filename is not given
                        '\tLook at examples in the test directory.')
     exit(8)
 
-ci = client(options.config, options.execprefix)
+ci = client(options.config, options.execprefix, options.execpath, options.harness, options.startconf)
 
 asyncore.loop()
 
