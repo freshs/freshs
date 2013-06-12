@@ -45,7 +45,7 @@ class ghosting():
                     # turn exploration mode on
                     ss.ai.exmode_on()
                 else:
-                    if ss.lambdas[ss.act_lambda] < ss.B:
+                    if ss.lambdas[-1] < ss.B:
                         ss.ai.exmode_on()
             return False
             
