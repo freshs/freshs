@@ -49,7 +49,6 @@ class feedThread( threading.Thread ):
     def run(self):
         ##blocking write some stuff
         ##This will block if noone is reading.
-        print "Client: opening start crds fifo at:"+self.fifoPath+" for write."
         try:
             self.fifoHandle  = os.open(self.fifoPath, os.O_WRONLY) 
         except:
@@ -57,12 +56,10 @@ class feedThread( threading.Thread ):
 
 
         ##main loop
-        print "Client: writing to start crds fifo"
         line_count = self.put_lines()
 
         ##cleanup
         os.close(self.fifoHandle)
-        print "Client: wrote "+str(line_count)+" lines and closed start crds fifo"
         self.fifoHandle = 0
 
 
@@ -85,10 +82,8 @@ class feedThread( threading.Thread ):
             else :
                 space_sepped = ""
 
-            print "Feedthread writing line:"+space_sepped
             os.write(self.fifoHandle, space_sepped+"\n")##send each line
             line_count = line_count + 1
-            print "Feedthread wrote:"+str(line_count)
 
             ##catch any request to exit
             if self.stop_event.isSet():
