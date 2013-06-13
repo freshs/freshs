@@ -84,7 +84,7 @@ class spres_sampling_control():
                                                          self.nBins)
             self.start_epoch    = ss.epoch
             
-            ss.logger_freshs.info(cc.c_yellow +\
+            ss.logger_freshs.debug(cc.c_yellow +\
                 'Recovered sampling frequencies: '+str(ss.M_0_runs)\
                                       + cc.reset)
 
@@ -207,22 +207,22 @@ class spres_sampling_control():
 
                     if population > 0:
                         complete = ss.storepoints.count_points_from_if_between_t(bin, ss.epoch, ss.epoch + ss.tau)
-                        ss.logger_freshs.info(cc.c_yellow +"saved shots from bin " + str(bin) +\
+                        ss.logger_freshs.debug(cc.c_yellow +"saved shots from bin " + str(bin) +\
                                      " are: " + str(complete) +\
                                      " of: " + str(ss.M_0_runs[bin]) + cc.reset)
 
                         if  complete < ss.M_0_runs[bin]:
-                            ss.logger_freshs.info(cc.c_yellow + 'bin ' + str(bin) + \
+                            ss.logger_freshs.debug(cc.c_yellow + 'bin ' + str(bin) + \
                                                                 ' has outstanding configs' + \
                                                                   cc.reset)
                             return( False )
                         else:
-                            ss.logger_freshs.info(cc.c_yellow + 'logging bin ' + str(bin) + \
+                            ss.logger_freshs.debug(cc.c_yellow + 'logging bin ' + str(bin) + \
                                                                 ' as complete for this epoch' + \
                                                                   cc.reset)
                             self.flag_bin_complete[bin] = True
 
-                ss.logger_freshs.info(cc.c_yellow +"epoch up for bin: " + str(bin) + cc.reset)         
+                ss.logger_freshs.debug(cc.c_yellow +"epoch up for bin: " + str(bin) + cc.reset)         
         else:
 
             for bin in range (0, self.nBins ):
@@ -235,19 +235,19 @@ class spres_sampling_control():
 
                         if complete < ss.M_0_runs[bin] :
                             
-                            ss.logger_freshs.info(cc.c_yellow + 'bin ' + str(bin) + \
+                            ss.logger_freshs.debug(cc.c_yellow + 'bin ' + str(bin) + \
                                                                 ' has outstanding configs: ' +\
                                                                   cc.reset)
-                            ss.logger_freshs.info(cc.c_yellow + 'counted ' + str(complete) +\
+                            ss.logger_freshs.debug(cc.c_yellow + 'counted ' + str(complete) +\
                                                                 ' shots complete, with age of ' +\
                                                                   str(ss.epoch + ss.tau) +\
                                                                   cc.reset)
-                            ss.logger_freshs.info(cc.c_yellow + 'from a total of ' + str(ss.run_count[bin]) +\
+                            ss.logger_freshs.debug(cc.c_yellow + 'from a total of ' + str(ss.run_count[bin]) +\
                                                                 ' shots made' +  cc.reset)
-                            ss.logger_freshs.info(cc.c_yellow + 'Target number to make was: '+\
+                            ss.logger_freshs.debug(cc.c_yellow + 'Target number to make was: '+\
                                                                   str(ss.M_0_runs[bin]) +\
                                                                   cc.reset)
-                            ss.logger_freshs.info(cc.c_yellow + 'Population of start configs in bin :'+str(bin)+\
+                            ss.logger_freshs.debug(cc.c_yellow + 'Population of start configs in bin :'+str(bin)+\
                                                                 ' at time: '+str(ss.epoch)+' was: '+str(population) +\
                                                                   cc.reset)
                             return( False )
@@ -323,7 +323,7 @@ class spres_sampling_control():
                                  
 
             
-            ss.logger_freshs.info(cc.c_green +\
+            ss.logger_freshs.debug(cc.c_green +\
               "bin: " +str(bin_to) + " received: "+\
                str(len(self.epoch_points_buf[bin_to].keys()))+\
                str(" points")+ cc.reset)
@@ -571,7 +571,7 @@ class spres_sampling_control():
         ##get the RNG seed that was used
         start_seed = ddata['seed']   
         
-        ss.logger_freshs.info(cc.c_yellow + str(int(prev_lambda_bin))+\
+        ss.logger_freshs.debug(cc.c_yellow + str(int(prev_lambda_bin))+\
                                     " to "+ str(new_lambda_bin)+\
                                     " of "+ str(self.nBins) + cc.reset )
 
@@ -607,7 +607,7 @@ class spres_sampling_control():
 
         ##if we don't need runs from any further bins at this epoch
         if ss.act_lambda >= self.nBins or (ss.absorb_at_B > 0 and ss.act_lambda >= self.nBins - 1):
-            ss.logger_freshs.info(cc.c_blue + 'waiting for end of epoch, not launching '+\
+            ss.logger_freshs.debug(cc.c_blue + 'waiting for end of epoch, not launching '+\
                                    str(ss.act_lambda)+" of "+ str(self.nBins)+cc.reset)
             return( False )
 
@@ -617,7 +617,7 @@ class spres_sampling_control():
             # if we don't still need runs from this bin
             if ss.run_count[ss.act_lambda] >= ss.M_0_runs[ss.act_lambda]:
 
-                ss.logger_freshs.info(cc.c_blue + 'have enough jobs in bin: '+\
+                ss.logger_freshs.debug(cc.c_blue + 'have enough jobs in bin: '+\
                                    str(ss.act_lambda)+", "+ str(ss.run_count[ss.act_lambda]) +\
                                    " of " + str(ss.M_0_runs[ss.act_lambda])+cc.reset)
 
@@ -625,14 +625,14 @@ class spres_sampling_control():
 
             ##if we don't need runs from any further bins at this epoch
             if ss.act_lambda >= self.nBins or (ss.absorb_at_B > 0 and ss.act_lambda >= self.nBins - 1):
-                ss.logger_freshs.info(cc.c_blue + 'waiting for end of epoch, not launching '+\
+                ss.logger_freshs.debug(cc.c_blue + 'waiting for end of epoch, not launching '+\
                                    str(ss.act_lambda)+" of "+ str(self.nBins)+cc.reset)
                 return( False )
 
             # if there is an algorithmic reason we can't start any from this bin
             launchOK = client.start_job3_fixedtau()
             if not launchOK:
-                ss.logger_freshs.info(cc.c_blue + 'Could not launch: act_lambda = '+\
+                ss.logger_freshs.debug(cc.c_blue + 'Could not launch: act_lambda = '+\
                                    str(ss.act_lambda)+" of "+ str(self.nBins)+cc.reset)
                 self.increment_bin_index()
             else:
@@ -640,7 +640,7 @@ class spres_sampling_control():
      
             ##if we don't need runs from any further bins at this epoch
             if ss.act_lambda >= self.nBins or (ss.absorb_at_B > 0 and ss.act_lambda >= self.nBins - 1):
-                ss.logger_freshs.info(cc.c_blue + 'waiting at bin: '+\
+                ss.logger_freshs.debug(cc.c_blue + 'waiting at bin: '+\
                                    str(ss.act_lambda)+" of "+ str(self.nBins)+cc.reset)
                 return( False )
 

@@ -598,6 +598,8 @@ class ClientHandler(asyncore.dispatcher):
 
             self.remove_from_idle()
 
+            ss.logger_freshs.debug(cc.c_yellow + 'Sent it.' + cc.reset)
+
             return True
         else:
             self.server.logger_freshs.info(cc.c_red + 'ERROR! Could not start job between ' +\
@@ -672,7 +674,7 @@ class ClientHandler(asyncore.dispatcher):
         for cli in self.server.idle_clients:
             waits.append(str(cli.name))
         waits.sort()
-        self.server.logger_freshs.info(cc.c_blue + 'Clients: ' + str(waits) + ' waiting.' + cc.reset)
+        self.server.logger_freshs.debug(cc.c_blue + 'Clients: ' + str(waits) + ' waiting.' + cc.reset)
 
 
 

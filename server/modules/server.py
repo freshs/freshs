@@ -322,16 +322,23 @@ class server(asyncore.dispatcher):
 
         # read server's config file, make timestamp backup
         self.configfile = ConfigParser.RawConfigParser()
-        if configfile_name == 'auto':
-            if self.dbload:
-                self.configfile.read(self.timestamp + '_server.conf')
-            else:
-                self.logger_freshs.info(cc.c_green + 'Loading the SAMPLE FFS CONFIGURATION file.' + cc.reset)
-                self.configfile.read(reldir + '/../server-sample-ffs.conf')
-                cfgcpflag = 'samplecfg'
-        else:
-            self.configfile.read( configfile_name )
-            cfgcpflag = 'bycfgname'
+	try:
+	    if configfile_name == 'auto':
+		configfile_name = self.timestamp + '_server.conf'
+		if self.dbload:
+		    self.configfile.read(configfile_name)
+		else:
+		    configfile_name = reldir + '/../server-sample-ffs.conf'
+		    self.logger_freshs.info(cc.c_green + 'Loading the SAMPLE FFS CONFIGURATION file.' + cc.reset)
+		    self.configfile.read(configfile_name)
+		    cfgcpflag = 'samplecfg'
+	    else:
+		self.configfile.read( configfile_name )
+		cfgcpflag = 'bycfgname'
+	except:
+	    print("Failed to read config file:"+configfile_name)
+	    pass
+
 
         # FOLDERS
         if self.configfile.has_option('general', 'folder_out'):
@@ -674,14 +681,14 @@ class server(asyncore.dispatcher):
 
             elif self.algorithm == sampling_algorithm.SPRES:
                 if False == self.spres_control.try_launch_job3(client):
-                    self.logger_freshs.info(cc.c_blue + 'asking client: '+client.name+' to wait.'+cc.reset)
+                    self.logger_freshs.debug(cc.c_blue + 'asking client: '+client.name+' to wait.'+cc.reset)
                     client.start_job_wait()
             elif self.algorithm == sampling_algorithm.NSFFS:
                 if False == self.nsffs_control.try_launch_job(client):
-                    self.logger_freshs.info(cc.c_blue + 'asking client: '+client.name+' to wait.'+cc.reset)
+                    self.logger_freshs.debug(cc.c_blue + 'asking client: '+client.name+' to wait.'+cc.reset)
                     client.start_job_wait()
             else:
-                self.logger_freshs.debug(cc.c_yellow + 'Error, sampling algorithm not recognised' + cc.reset)
+                self.logger_freshs.error(cc.c_red + 'Error, sampling algorithm not recognised' + cc.reset)
 
 
 # -------------------------------------------------------------------------------------------------
@@ -927,14 +934,14 @@ class server(asyncore.dispatcher):
                                 self.logger_freshs.info(cc.c_red + 'advancing epoch'+cc.reset)
                                 ssc.advance_epoch() 
 
-                                self.logger_freshs.info(cc.c_blue + 'Epoch up, waiters are: '+cc.reset)
+                                self.logger_freshs.debug(cc.c_blue + 'Epoch up, waiters are: '+cc.reset)
                                 for idle_client in self.idle_clients:
                                     self.logger_freshs.info(cc.c_yellow+ idle_client.name + cc.reset )
 
                                 self.start_idle_clients()
                             else:
-                                self.logger_freshs.info(cc.c_blue + 'blocking wait for epoch'+cc.reset)
-                                self.logger_freshs.info(cc.c_blue + 'asking client: '+client.name+' to wait.'+cc.reset)
+                                self.logger_freshs.debug(cc.c_blue + 'blocking wait for epoch'+cc.reset)
+                                self.logger_freshs.debug(cc.c_blue + 'asking client: '+client.name+' to wait.'+cc.reset)
                                 client.start_job_wait()
                                 return
                     else:
