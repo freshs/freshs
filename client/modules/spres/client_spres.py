@@ -22,10 +22,13 @@
 from   harness import harness
 import os
 
+import sys
+
+
 class client_spres:
     def __init__(self, client):
         self.cli       = client
-        self.prinlevel = 1
+        self.prinlevel = 0
 
     # build flexible option string
     def build_options(self,paramdict,exclude):
@@ -53,7 +56,10 @@ class client_spres:
     def job3_fixed_tau(self, parameterset):
         
         if self.prinlevel > 0:
-            print parameterset
+              print "parameters:"
+	      sys.stdout.flush()
+              print str(parameterset)[0:128]+"..."
+              sys.stdout.flush()
 
         ##expected parameters for this job type
         tau              = self.safeAssign(parameterset, 'halt_steps')
@@ -92,6 +98,7 @@ class client_spres:
         while num_steps < tau :
                 
             print "Using temp dir: "+str(h.tmpdir)
+            
 
             optionlist = ""
             if parent_id == "0" and num_steps == 0:
@@ -109,14 +116,15 @@ class client_spres:
                     start_config = "None"
             else: 
 
+
                 ##assume that saving to file means reading from a file
                 if save_configs != "0":
-                    start_config = points[0][0]
+		    start_config = points[0][0]
                     get_coords   = True   ##only open a read fifo, to get the filename of the crds
                     send_coords  = False
                     in_fifo      = "None"
                 else:
-                    start_config = "None"
+		    start_config = "None"
                     get_coords   = True   ##open two fifos, send and receive
                     send_coords  = True
                     in_fifo      = h.crds_in_fifoname
@@ -128,6 +136,7 @@ class client_spres:
                              " -back_fifoname " + h.crds_back_fifoname + \
                              " -metadata_fifoname " + h.metadata_fifoname + \
                              " -seed " + str(tmp_seed)
+
 
 
             if check_rc_every == "0":
@@ -147,6 +156,7 @@ class client_spres:
                 optionlist += " -coords_to_file "+save_configs+"/"+uuid
             
 
+	    print "client: optionlist: "+str(optionlist)[0:128]+"..."
 
             ##Wrap the code that uses threading/subprocesses
             ##in a try-catch to clean up on interrupts, ctrl-C etc.
