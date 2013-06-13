@@ -55,14 +55,14 @@ class fffs:
         configfile = ConfigParser.RawConfigParser()
         configfile.read(srv_conf)
         lambdaload = True
-        A = configfile.getfloat('Hypersurfaces', 'borderA')  # starting region
-        B = configfile.getfloat('Hypersurfaces', 'borderB')  # target region
+        A = configfile.getfloat('hypersurfaces', 'borderA')  # starting region
+        B = configfile.getfloat('hypersurfaces', 'borderB')  # target region
         self.lambdas = [A]
         # number of interfaces
         self.noi = 1
         while lambdaload:
             try:
-                self.lambdas.append(configfile.getfloat('Hypersurfaces', 'lambda'+str(self.noi)))
+                self.lambdas.append(configfile.getfloat('hypersurfaces', 'lambda'+str(self.noi)))
                 self.noi += 1
                 self.launched2.append(0)
                 self.success2.append(0)
@@ -73,10 +73,10 @@ class fffs:
         self.success2.append(0)
 
         # number of runs per interface
-        self.M_0_runs = [configfile.getint('Runs_per_interface', 'borderA')]
+        self.M_0_runs = [configfile.getint('runs_per_interface', 'borderA')]
         for act_entry in range(1,self.noi):
-            self.M_0_runs.append(configfile.getint('Runs_per_interface', 'lambda' + str(act_entry)))
-        self.M_0_runs.append(configfile.getint('Runs_per_interface', 'borderB'))
+            self.M_0_runs.append(configfile.getint('runs_per_interface', 'lambda' + str(act_entry)))
+        self.M_0_runs.append(configfile.getint('runs_per_interface', 'borderB'))
         print self.M_0_runs, self.lambdas, self.launched2
         
         
