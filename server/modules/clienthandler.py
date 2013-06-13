@@ -108,7 +108,7 @@ class ClientHandler(asyncore.dispatcher):
 
     def add_as_idle(self):
         ss = self.server
-        #ss.logger_freshs.debug(cc.c_yellow + __name__ + ': add_as_idle' + cc.reset)
+        #ss.logger_freshs.debug(cc.c_magenta + __name__ + ': add_as_idle' + cc.reset)
         if self not in ss.idle_clients:
             ss.idle_clients.append(self)
             ss.idlenames.append(self.name)
@@ -163,15 +163,15 @@ class ClientHandler(asyncore.dispatcher):
             ss.storepoints.update_M_0(1)
         ss.run_count[lam] += 1
 
-        ss.logger_freshs.debug(cc.c_yellow + self.name + ': Increasing runcount, lambda ' + str(lam) + cc.reset)
-        ss.logger_freshs.debug(cc.c_yellow + 'Runcount: ' + str(ss.run_count) + cc.reset)
+        ss.logger_freshs.debug(cc.c_magenta + self.name + ': Increasing runcount, lambda ' + str(lam) + cc.reset)
+        ss.logger_freshs.debug(cc.c_magenta + 'Runcount: ' + str(ss.run_count) + cc.reset)
 
     def decr_runcount(self,lam):
         ss = self.server
         if ss.run_count[lam] >= 1:
             ss.run_count[lam] -= 1
-            ss.logger_freshs.debug(cc.c_yellow + self.name + ': Decreasing runcount, lambda ' + str(lam) + cc.reset)
-        ss.logger_freshs.debug(cc.c_yellow + 'Runcount: ' + str(ss.run_count) + cc.reset)
+            ss.logger_freshs.debug(cc.c_magenta + self.name + ': Decreasing runcount, lambda ' + str(lam) + cc.reset)
+        ss.logger_freshs.debug(cc.c_magenta + 'Runcount: ' + str(ss.run_count) + cc.reset)
 
 
     # Return the composed message string consisting of system and user messages
@@ -305,7 +305,7 @@ class ClientHandler(asyncore.dispatcher):
 
         job_string_complete = self.compose_message(job_string)
 
-        ss.logger_freshs.debug(cc.c_yellow + 'Sending job_string ' + job_string_complete + \
+        ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' + job_string_complete + \
                                   cc.reset)
 
         # Send job string
@@ -358,7 +358,7 @@ class ClientHandler(asyncore.dispatcher):
             else:
                 random_point, rp_id = ss.storepoints.return_random_point(ss.act_lambda)
 
-        ss.logger_freshs.debug(cc.c_yellow + 'Indatabase: ' + str(indatabase) + ', ghostcount = ' + str(self.ghostcount) + cc.reset)
+        ss.logger_freshs.debug(cc.c_magenta + 'Indatabase: ' + str(indatabase) + ', ghostcount = ' + str(self.ghostcount) + cc.reset)
 
         if indatabase and self.ghostcount < ss.ffs_control.max_ghosts_between:
             # Ghost run is available! Get it.
@@ -447,7 +447,7 @@ class ClientHandler(asyncore.dispatcher):
                 else:
                     ss.logger_freshs.info(cc.c_cyan + 'Starting explorer job2 on ' + str(self.name) + \
                                           cc.reset)
-                    ss.logger_freshs.debug(cc.c_yellow + 'Explorer index is ' + str(current_lambda) + ', max_steps = ' + str(max_steps) + \
+                    ss.logger_freshs.debug(cc.c_magenta + 'Explorer index is ' + str(current_lambda) + ', max_steps = ' + str(max_steps) + \
                                           cc.reset)
 
                 job_string = "\"jobtype\": 2 , \"A\": "     + str(self.server.A)    + \
@@ -464,7 +464,7 @@ class ClientHandler(asyncore.dispatcher):
 
                 job_string_complete = self.compose_message(job_string)
 
-                #ss.logger_freshs.debug(cc.c_yellow + 'Sending job_string ' + job_string_complete + \
+                #ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' + job_string_complete + \
                 #                  cc.reset)
 
                 ss.client_runtime[str(self)] = time.time()
@@ -525,7 +525,7 @@ class ClientHandler(asyncore.dispatcher):
 
         job_string_complete = self.compose_message(job_string)
 
-        #ss.logger_freshs.debug(cc.c_yellow + 'Sending job_string ' + job_string_complete + \
+        #ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' + job_string_complete + \
         #                       cc.reset)
         
         self.long_send( job_string_complete )
@@ -589,7 +589,7 @@ class ClientHandler(asyncore.dispatcher):
 
             job_string_complete = self.compose_message(job_string)
 
-            ss.logger_freshs.debug(cc.c_yellow + 'Sending job_string ' +\
+            ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' +\
                                    job_string_complete[0:256] + " [...]" + \
                                    cc.reset)
                                
@@ -598,7 +598,7 @@ class ClientHandler(asyncore.dispatcher):
 
             self.remove_from_idle()
 
-            ss.logger_freshs.debug(cc.c_yellow + 'Sent it.' + cc.reset)
+            ss.logger_freshs.debug(cc.c_magenta + 'Sent it.' + cc.reset)
 
             return True
         else:
@@ -649,7 +649,7 @@ class ClientHandler(asyncore.dispatcher):
         
         job_string_complete = self.compose_message(job_string)
 
-        ss.logger_freshs.debug(cc.c_yellow + 'Sending job_string ' + job_string_complete + \
+        ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' + job_string_complete + \
                                cc.reset)
                                
         self.long_send( job_string_complete )

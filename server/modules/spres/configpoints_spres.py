@@ -53,7 +53,7 @@ class configpoints:
     # Connect to database
     def connect(self):
         try:
-            self.server.logger_freshs.info(concolors.c_yellow + 'attempting connect to db: ' + self.dbfile + concolors.reset)
+            self.server.logger_freshs.info(concolors.c_magenta + 'attempting connect to db: ' + self.dbfile + concolors.reset)
         except:
             pass
         con = sqlite3.connect(self.dbfile)

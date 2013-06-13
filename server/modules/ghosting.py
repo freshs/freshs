@@ -30,7 +30,7 @@ class ghosting():
     def ghost_possible(self):
         ss = self.server
         
-        ss.logger_freshs.debug(cc.c_yellow + __name__ + ': ghost_possible' + cc.reset)
+        ss.logger_freshs.debug(cc.c_magenta + __name__ + ': ghost_possible' + cc.reset)
         
         # Check if next lambda exists.
         if len(ss.lambdas) >= ss.act_lambda + 2:
@@ -57,7 +57,7 @@ class ghosting():
     def parse_message(self, data, ddata, client, runid):
         ss = self.server
 
-        ss.logger_freshs.debug(cc.c_yellow + __name__ + ': parse_message' + cc.reset)
+        ss.logger_freshs.debug(cc.c_magenta + __name__ + ': parse_message' + cc.reset)
 
         if "\"omit\": True" in data:
             ss.logger_freshs.info(cc.c_magenta + client.name + ' requested to omit data.' + cc.reset)
@@ -80,7 +80,7 @@ class ghosting():
     def analyze_job_success(self, client, ddata, runid):
         ss = self.server
 
-        ss.logger_freshs.debug(cc.c_yellow + __name__ + ': analyze_job_success' + cc.reset)
+        ss.logger_freshs.debug(cc.c_magenta + __name__ + ': analyze_job_success' + cc.reset)
         
         if len(ddata['points']) < 1:
             ss.logger_freshs.warn(cc.c_red + 'Warning: Did not receive a configuration set from client.' + cc.reset)
@@ -152,7 +152,7 @@ class ghosting():
     def analyze_job_nosuccess(self, client, ddata, runid):
         ss = self.server
 
-        ss.logger_freshs.debug(cc.c_yellow + __name__ + ': analyze_job_nosuccess' + cc.reset)
+        ss.logger_freshs.debug(cc.c_magenta + __name__ + ': analyze_job_nosuccess' + cc.reset)
 
         if 'runtime' in ddata:
             runtime = ddata['runtime']

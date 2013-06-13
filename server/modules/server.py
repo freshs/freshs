@@ -186,7 +186,7 @@ class server(asyncore.dispatcher):
         # Start sampling module
         if self.algorithm == sampling_algorithm.FFS :
             self.logger_freshs.info(cc.c_green + cc.bold + 'Loading module FFS ' + cc.reset)
-            self.ai = auto_interfaces.auto_interfaces(self)
+            self.ai     = auto_interfaces.auto_interfaces(self)
             self.ghosts = ghosting.ghosting(self)
             self.ffs_control.launch_jobs()
             self.periodic_check()
@@ -198,7 +198,7 @@ class server(asyncore.dispatcher):
             self.nsffs_control.launch_jobs()
 
         # Ready to go!
-        self.logger_freshs.info(cc.c_yellow + 'Listening on port ' + str(self.port) + cc.reset)
+        self.logger_freshs.info(cc.c_magenta + 'Listening on port ' + str(self.port) + cc.reset)
         self.logger_freshs.info(cc.c_blue + cc.bold + 'Ready. Waiting for clients.' + cc.reset)
 
 # -------------------------------------------------------------------------------------------------
@@ -222,7 +222,7 @@ class server(asyncore.dispatcher):
     # check if timestamp was given, else return one
     def get_timestamp(self,timestamp):
 
-        self.logger_freshs.debug(cc.c_yellow + 'timestamp: ' + timestamp + cc.reset)
+        self.logger_freshs.debug(cc.c_magenta + 'timestamp: ' + timestamp + cc.reset)
 
         if timestamp == 'auto':
             timestamp = re.sub('\..*$','',re.sub(' ','_',re.sub(':','-',str(dt.datetime.now()))))
@@ -231,7 +231,7 @@ class server(asyncore.dispatcher):
             # Init from database
             self.dbload = True
 
-        self.logger_freshs.info(cc.c_yellow + 'timestamp now: ' + timestamp + cc.reset)
+        self.logger_freshs.info(cc.c_magenta + 'timestamp now: ' + timestamp + cc.reset)
 
         return timestamp
 
@@ -262,7 +262,7 @@ class server(asyncore.dispatcher):
     # create databases for data storage
     def create_dbs(self):
     
-        self.logger_freshs.debug(cc.c_yellow + __name__ + ': create_dbs' + cc.reset)
+        self.logger_freshs.debug(cc.c_magenta + __name__ + ': create_dbs' + cc.reset)
     
         if self.algo_name == 'ffs':
 
@@ -316,7 +316,7 @@ class server(asyncore.dispatcher):
     # read the server's config file
     def read_config(self,configfile_name):
 
-        self.logger_freshs.debug(cc.c_yellow + __name__ + ': read_config' + cc.reset)
+        self.logger_freshs.debug(cc.c_magenta + __name__ + ': read_config' + cc.reset)
 
         cfgcpflag = 'nop'
 
@@ -367,10 +367,10 @@ class server(asyncore.dispatcher):
             try:
                 shutil.copy(configfile_name, self.folder_conf + self.timestamp + '_server.conf')
             except:
-                self.logger_freshs.debug(cc.c_yellow + 'Not copying config, exists probably.' + cc.reset)
+                self.logger_freshs.debug(cc.c_magenta + 'Not copying config, exists probably.' + cc.reset)
 
         # Choose the sampling algorithm
-        self.logger_freshs.debug(cc.c_yellow + 'Server: repeat, Config file name is:' +\
+        self.logger_freshs.debug(cc.c_magenta + 'Server: repeat, Config file name is:' +\
                                                                       configfile_name + cc.reset)
         self.algo_name = self.configfile.get('general', 'algo_name').lower()
 
@@ -395,11 +395,11 @@ class server(asyncore.dispatcher):
             self.test_rc_every = self.configfile.getint('general', 'test_rc_every')
         else:
             self.test_rc_every = 1
-        
-        if self.configfile.has_option('auto_interfaces', 'auto_interfaces'):
-            self.auto_interfaces = self.configfile.getint('auto_interfaces', 'auto_interfaces')
-        else:
-            self.auto_interfaces = 0
+      
+        self.auto_interfaces = 0 
+	if self.configfile.has_section('auto_interfaces'): 
+            if self.configfile.has_option('auto_interfaces', 'auto_interfaces'):
+                self.auto_interfaces = self.configfile.getint('auto_interfaces', 'auto_interfaces')
     
         # use ghosts
         if self.configfile.has_option('general', 'use_ghosts'):
@@ -452,7 +452,7 @@ class server(asyncore.dispatcher):
     # create folders if they do not exist.
     def create_filestruct(self):
     
-        self.logger_freshs.debug(cc.c_yellow + __name__ + ': create_filestruct' + cc.reset)
+        self.logger_freshs.debug(cc.c_magenta + __name__ + ': create_filestruct' + cc.reset)
     
         # Create directories if they do not exist
         if not os.path.exists(self.folder_out):
@@ -469,7 +469,7 @@ class server(asyncore.dispatcher):
         self.folder_db   += '/'
         self.folder_log  += '/'
 
-        self.logger_freshs.debug(cc.c_yellow + 'Found/Created folders: '+\
+        self.logger_freshs.debug(cc.c_magenta + 'Found/Created folders: '+\
                                     self.folder_out + " " + self.folder_conf + " " + self.folder_db + " " + self.folder_log + cc.reset)
 
 # -------------------------------------------------------------------------------------------------
@@ -477,7 +477,7 @@ class server(asyncore.dispatcher):
     # Fill lambdas list. # TODO: algorithmspecific
     def fill_lambdas(self):
     
-        self.logger_freshs.debug(cc.c_yellow + __name__ + ': fill_lambdas' + cc.reset)
+        self.logger_freshs.debug(cc.c_magenta + __name__ + ': fill_lambdas' + cc.reset)
     
         lambdaload = True
         self.noi = 1
@@ -521,8 +521,8 @@ class server(asyncore.dispatcher):
     def periodic_check(self):
         # WARN: DO NOT USE THE DATABASE IN THIS THREADED FUNCTION
         self.print_status()
-        self.logger_freshs.debug(cc.c_yellow + 'Runcount: ' + str(self.run_count) + cc.reset)
-        self.logger_freshs.debug(cc.c_yellow + 'Clients: ' + str(self.clientnames) + cc.reset)
+        self.logger_freshs.debug(cc.c_magenta + 'Runcount: ' + str(self.run_count) + cc.reset)
+        self.logger_freshs.debug(cc.c_magenta + 'Clients: ' + str(self.clientnames) + cc.reset)
         if self.check_alive > 0:
             # Check if clients are alive (one after another)
             # if not, send new job, if not ok, disconnect
@@ -547,7 +547,7 @@ class server(asyncore.dispatcher):
     # set seed for master RNG
     def set_seed(self):
     
-        self.logger_freshs.debug(cc.c_yellow + __name__ + ': set_seed' + cc.reset)
+        self.logger_freshs.debug(cc.c_magenta + __name__ + ': set_seed' + cc.reset)
     
         try: 
             master_seed = self.configfile.getint('general', 'rng_seed')
@@ -585,7 +585,7 @@ class server(asyncore.dispatcher):
                 last_received_count = max([self.storepoints.return_last_received_count(name), self.ghostpoints.return_last_received_count(name)])
             else:
                 last_received_count = self.storepoints.return_last_received_count(name)
-            self.logger_freshs.debug(cc.c_yellow + 'Last received count of ' + name + ' is ' + str(last_received_count) + cc.reset)
+            self.logger_freshs.debug(cc.c_magenta + 'Last received count of ' + name + ' is ' + str(last_received_count) + cc.reset)
             clienthandler.ClientHandler(self,sock,addr,name,last_received_count)
             self.logger_freshs.info(cc.c_blue + name + ' connected.' + cc.reset)
 
@@ -604,13 +604,13 @@ class server(asyncore.dispatcher):
         try:
             if self.algorithm == sampling_algorithm.FFS:
                 if self.act_lambda == 0:
-                    self.logger_freshs.info(cc.c_yellow + cc.bold \
+                    self.logger_freshs.info(cc.c_magenta + cc.bold \
                     + 'Clients: ' + str(len(self.clients)) + ', Idle: ' + str(len(self.idle_clients)) \
                     + ', Ghosts: ' + str(len(self.ghost_clients)) + ', Explorers: ' + str(len(self.explorer_clients)) \
                     + ', ctime: ' + str(self.ctime) \
                     + cc.reset)
                 else:
-                    self.logger_freshs.info(cc.c_yellow + cc.bold \
+                    self.logger_freshs.info(cc.c_magenta + cc.bold \
                     + 'Clients: ' + str(len(self.clients)) + ', Idle: ' + str(len(self.idle_clients)) \
                     + ', Ghosts: ' + str(len(self.ghost_clients)) + ', Explorers: ' + str(len(self.explorer_clients)) \
                     + ', ctime: ' + str(self.ctime) \
@@ -620,12 +620,12 @@ class server(asyncore.dispatcher):
                     + cc.reset)
 
             elif self.algorithm == sampling_algorithm.SPRES:
-                self.logger_freshs.info(cc.c_yellow + 'Clients (' + str(len(self.clientnames))+ '): ' + str(self.clientnames) \
+                self.logger_freshs.info(cc.c_magenta + 'Clients (' + str(len(self.clientnames))+ '): ' + str(self.clientnames) \
                 + ', idle (' + str(len(self.idlenames))+ '): ' + str(self.idlenames) \
                 + cc.reset)
 
             elif self.algorithm == sampling_algorithm.NSFFS:
-                self.logger_freshs.info(cc.c_yellow + 'Clients (' + str(len(self.clientnames))+ '): ' + str(self.clientnames) \
+                self.logger_freshs.info(cc.c_magenta + 'Clients (' + str(len(self.clientnames))+ '): ' + str(self.clientnames) \
                 + ', ghosts (' + str(len(self.ghostnames)) + '): ' + str(self.ghostnames) \
                 + ', idle (' + str(len(self.idlenames))+ '): ' + str(self.idlenames) \
                 + ', ghostruns_in_db: ' + str(self.ghostpoints.return_nop(self.act_lambda)) \
@@ -638,7 +638,7 @@ class server(asyncore.dispatcher):
     # check if calculation job is available
     def check_for_job(self, client):
     
-        self.logger_freshs.debug(cc.c_yellow + __name__ + ': check_for_job' + cc.reset)
+        self.logger_freshs.debug(cc.c_magenta + __name__ + ': check_for_job' + cc.reset)
     
         if not self.disable_runs:
             if self.algorithm == sampling_algorithm.FFS:
@@ -696,7 +696,7 @@ class server(asyncore.dispatcher):
     # register client and add to client array, send timestamp, check for job
     def registerClient(self, client):
     
-        self.logger_freshs.debug(cc.c_yellow + __name__ + ': register_client' + cc.reset)
+        self.logger_freshs.debug(cc.c_magenta + __name__ + ': register_client' + cc.reset)
     
         self.clients.append(client)
 
@@ -712,7 +712,7 @@ class server(asyncore.dispatcher):
     # clean client from all arrays (e.g. on disconnect) 
     def cleanup_client(self, client):
     
-        self.logger_freshs.debug(cc.c_yellow + __name__ + ': cleanup_client' + cc.reset)
+        self.logger_freshs.debug(cc.c_magenta + __name__ + ': cleanup_client' + cc.reset)
     
         if client.name in self.clientnames:
             self.clientnames.remove(client.name)
@@ -745,7 +745,7 @@ class server(asyncore.dispatcher):
     # deregister client, check run_count etc
     def deregisterClient(self, client):
     
-        self.logger_freshs.debug(cc.c_yellow + __name__ + ': deregisterClient' + cc.reset)
+        self.logger_freshs.debug(cc.c_magenta + __name__ + ': deregisterClient' + cc.reset)
     
         was_active2 = 0
 
@@ -861,7 +861,7 @@ class server(asyncore.dispatcher):
     # Analyze the data received from a client
     def analyze_recv(self, data, client, runid):
 
-        self.logger_freshs.debug(cc.c_yellow + __name__ + ': analyze_recv' + cc.reset)
+        self.logger_freshs.debug(cc.c_magenta + __name__ + ': analyze_recv' + cc.reset)
 
         # remove carriage returns and line feeds
         data = data.strip()
@@ -936,7 +936,7 @@ class server(asyncore.dispatcher):
 
                                 self.logger_freshs.debug(cc.c_blue + 'Epoch up, waiters are: '+cc.reset)
                                 for idle_client in self.idle_clients:
-                                    self.logger_freshs.info(cc.c_yellow+ idle_client.name + cc.reset )
+                                    self.logger_freshs.info(cc.c_magenta+ idle_client.name + cc.reset )
 
                                 self.start_idle_clients()
                             else:
@@ -956,7 +956,7 @@ class server(asyncore.dispatcher):
     # Start idle clients
     def start_idle_clients(self):
 
-        self.logger_freshs.debug(cc.c_yellow + __name__ + ': start_idle_clients' + cc.reset)
+        self.logger_freshs.debug(cc.c_magenta + __name__ + ': start_idle_clients' + cc.reset)
 
         ##loop backwards over a list if you are deleting values
         ##...otherwise the position of list items changes durig the iteration 
@@ -984,7 +984,7 @@ class server(asyncore.dispatcher):
     # End of simulation. Here the results are vacuumed and shampooed. Then the server exits.
     def end_simulation(self):
     
-        self.logger_freshs.debug(cc.c_yellow + __name__ + ': end_simulation' + cc.reset)
+        self.logger_freshs.debug(cc.c_magenta + __name__ + ': end_simulation' + cc.reset)
     
         self.disable_runs = True
         # commit data in database

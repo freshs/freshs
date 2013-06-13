@@ -26,16 +26,17 @@ class auto_interfaces():
     def __init__(self, server):
         self.server = server
 
-        self.read_config()
-        
         # switch between real runs and exploring clients
-        self.exmode = False             # exploring mode for interface placement
+        self.exmode       = False      # exploring mode for interface placement
+        self.arrived_in_B = False
+
+        if not self.read_config():
+            return
+
         # This is where the act_lam id starts. Should be larger than number of possible interfaces.        
         self.loffset = 1337
         # unique act_lam id for explorers
         self.ex_act_lambda = self.loffset
-        
-        self.arrived_in_B = False
         
         # move unit        
         self.munit = (self.server.B-self.server.A) * self.auto_moveunit / 100.0
@@ -47,6 +48,9 @@ class auto_interfaces():
         
     def read_config(self):
         ss = self.server
+
+        if not ss.configfile.has_section('auto_interfaces'):
+            return False 
 
         # Auto Interface switch
         self.auto_interfaces = ss.configfile.getint('auto_interfaces', 'auto_interfaces')
@@ -68,6 +72,8 @@ class auto_interfaces():
         self.auto_histo = ss.configfile.getint('auto_interfaces', 'auto_histo')
         #self.auto_histo_thresh = ss.configfile.getfloat('auto_interfaces', 'auto_histo_thresh')
         self.auto_min_points = ss.configfile.getfloat('auto_interfaces', 'auto_min_points')
+
+        return True
 
 # -------------------------------------------------------------------------------------------------    
         
@@ -116,7 +122,7 @@ class auto_interfaces():
 
                 self.ex_lambdas = [ self.guess_lambda(last_lam, 0) ]
 
-                ss.logger_freshs.info(cc.c_yellow + 'Lambda candidates: ' + str(self.ex_lambdas) + \
+                ss.logger_freshs.info(cc.c_magenta + 'Lambda candidates: ' + str(self.ex_lambdas) + \
                                       cc.reset)
 
 # -------------------------------------------------------------------------------------------------
@@ -128,7 +134,7 @@ class auto_interfaces():
             self.exmode = False
             # append new lambda
             ss.lambdas.append(self.ex_lambda)
-            ss.logger_freshs.info(cc.c_yellow + cc.bold + 'Found lambda: '  + str(self.ex_lambda) + cc.reset)
+            ss.logger_freshs.info(cc.c_magenta + cc.bold + 'Found lambda: '  + str(self.ex_lambda) + cc.reset)
             if ss.use_ghosts and ss.act_lambda > 0 and not self.auto_histo:
                 # use explorer runs as ghosts on this interface if possible
                 self.explored2ghost()
@@ -169,7 +175,7 @@ class auto_interfaces():
     def start_explorer(self, client):
         ss = self.server
 
-        ss.logger_freshs.debug(cc.c_yellow + __name__ + ': start_explorer' + cc.reset)
+        ss.logger_freshs.debug(cc.c_magenta + __name__ + ': start_explorer' + cc.reset)
         
         if self.arrived_in_B:
             return False
@@ -198,7 +204,7 @@ class auto_interfaces():
                             ss.start_idle_clients()
                             return True
                 else:
-                    ss.logger_freshs.debug(cc.c_yellow + 'Not enough points on last interface to start explorer (' + \
+                    ss.logger_freshs.debug(cc.c_magenta + 'Not enough points on last interface to start explorer (' + \
                                           str(npoints) + '/' + str(ndesired) + ')' + cc.reset)
                     return False
 
@@ -429,18 +435,18 @@ class auto_interfaces():
                             flux = float(self.ex_success[lam]) / self.ex_ctime[lam]
                         except:
                             flux = 0.0
-                        ss.logger_freshs.info(cc.c_yellow + 'Estimated flux: ' + str(flux) + cc.reset)
+                        ss.logger_freshs.info(cc.c_magenta + 'Estimated flux: ' + str(flux) + cc.reset)
                         self.check_flux(flux, lam, lam_id)
                     else:
                         if self.ex_success[lam] <= self.ex_launched[lam]:
                             flux = float(self.ex_success[lam]) / float(self.ex_launched[lam])
-                            ss.logger_freshs.info(cc.c_yellow + 'Estimated flux: ' + str(flux) + cc.reset)
+                            ss.logger_freshs.info(cc.c_magenta + 'Estimated flux: ' + str(flux) + cc.reset)
                             self.check_flux(flux, lam, lam_id)
                         else:
                             ss.logger_freshs.warn(cc.c_red + 'Flux is too big. Dang! '  + \
                                                   'Look at the source code in ffs_sampling_control.py to fix this ' + cc.reset)
         else:
-            ss.logger_freshs.info(cc.c_yellow + 'Omitting exploring run of ' + client.name + \
+            ss.logger_freshs.info(cc.c_magenta + 'Omitting exploring run of ' + client.name + \
                                   ', because exploring mode is '  + \
                                   'already finished on ex_interface ' + \
                                   str(lam_id) + \
@@ -451,7 +457,7 @@ class auto_interfaces():
     def add_parallel_lambda(self):
         ss = self.server
         
-        ss.logger_freshs.debug(cc.c_yellow + __name__ + ': add_parallel_lambda' + cc.reset)
+        ss.logger_freshs.debug(cc.c_magenta + __name__ + ': add_parallel_lambda' + cc.reset)
         
         if len(ss.lambdas) == ss.act_lambda:
             lamget = ss.act_lambda - 1
@@ -489,7 +495,7 @@ class auto_interfaces():
             else:
                 ex_next_lambda = self.guess_lambda(last_lam, 0)
             
-            ss.logger_freshs.info(cc.c_yellow + \
+            ss.logger_freshs.info(cc.c_magenta + \
                                   'Added parallel lambda: ' + str(ex_next_lambda)+ \
                                   cc.reset)
             self.ex_lambdas.append(ex_next_lambda)
@@ -628,14 +634,14 @@ class auto_interfaces():
 
             retval = self.int_float( last_lam + (float(th) * self.munit) )
             if self.check_lam(retval):
-                ss.logger_freshs.info(cc.c_yellow + 'Trying interface: ' + str(retval) + \
+                ss.logger_freshs.info(cc.c_magenta + 'Trying interface: ' + str(retval) + \
                                       cc.reset)
                 # deactivate interfaces, if lambda was far off
                 #if th > self.auto_max_move_fac * 2.0 / 3.0:
                 #    self.deactivate_ex_lambdas()
                 return retval
             else:
-                ss.logger_freshs.info(cc.c_yellow + 'Arrived in B'  + \
+                ss.logger_freshs.info(cc.c_magenta + 'Arrived in B'  + \
                                       cc.reset)
                 return ss.B
 
@@ -655,7 +661,7 @@ class auto_interfaces():
             for finefac in range(1000):
                 retval = self.int_float( last_lam + (float(th) * self.munit / (float(finefac) + 1.0) ) )
                 if self.check_lam(retval):
-                    ss.logger_freshs.info(cc.c_yellow + 'Trying interface: ' + str(retval) + \
+                    ss.logger_freshs.info(cc.c_magenta + 'Trying interface: ' + str(retval) + \
                                           cc.reset)
                     # deactivate, if flux was far off
                     #if th < (-self.auto_max_move_fac * 2.0 / 3.0):
@@ -670,7 +676,7 @@ class auto_interfaces():
                 # Start with a first guess
                 return self.int_float( ss.A + self.munit )
             elif len(self.ex_lambdas) == 0:
-                ss.logger_freshs.info(cc.c_yellow + 'Starting new placement of interface.'  + \
+                ss.logger_freshs.info(cc.c_magenta + 'Starting new placement of interface.'  + \
                                       cc.reset)
                 return self.int_float( max(ss.lambdas) + self.munit )
          
@@ -739,7 +745,7 @@ class auto_interfaces():
                             return self.guess_whatever()
                 
 
-        ss.logger_freshs.info(cc.c_yellow + 'Starting new placement of interface.'  + \
+        ss.logger_freshs.info(cc.c_magenta + 'Starting new placement of interface.'  + \
                               cc.reset)
         #self.ex_inter_new += 1
         try:
@@ -761,7 +767,7 @@ class auto_interfaces():
         ss = self.server
 
         if "\"omit\": True" in data:
-            ss.logger_freshs.info(cc.c_yellow + client.name + ' requested to omit data.' + cc.reset)
+            ss.logger_freshs.info(cc.c_magenta + client.name + ' requested to omit data.' + cc.reset)
             return
 
         ss.explorer_clients.pop(client)
@@ -823,7 +829,7 @@ class auto_interfaces():
                 self.append_histo_lambda(ddata['max_lam'],self.cemlti(the_jobs_lambda))
             except:
                 ss.logger_freshs.warn(cc.c_red + client.name + ' maximum lambda information could not be added.' + cc.reset)
-                ss.logger_freshs.debug(cc.c_yellow + 'Data was: ' + str(ddata) + ', job_lambda ' + str(the_jobs_lambda) + cc.reset)
+                ss.logger_freshs.debug(cc.c_magenta + 'Data was: ' + str(ddata) + ', job_lambda ' + str(the_jobs_lambda) + cc.reset)
                 client.send_quit()
 
         if the_jobs_lambda >= self.loffset:
@@ -874,7 +880,7 @@ class auto_interfaces():
                 self.append_histo_lambda(ddata['max_lam'],self.cemlti(the_jobs_lambda))
             except:
                 ss.logger_freshs.warn(cc.c_red + client.name + ' maximum lambda information could not be added.' + cc.reset)
-                ss.logger_freshs.debug(cc.c_yellow + 'Data was: ' + str(ddata) + ', job_lambda ' + str(the_jobs_lambda) + cc.reset)
+                ss.logger_freshs.debug(cc.c_magenta + 'Data was: ' + str(ddata) + ', job_lambda ' + str(the_jobs_lambda) + cc.reset)
                 client.send_quit()
                 
         if the_jobs_lambda >= self.loffset:

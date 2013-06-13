@@ -56,7 +56,7 @@ class configpoints:
 	    self.server.logger_freshs.info(cc.c_green + 'byte size of db file: ' +\
 		self.dbfile + ' was: '+ str(db_size)+cc.reset)
 	except:
-	    self.server.logger_freshs.debug(cc.c_yellow + 'could not test size of db file: ' +\
+	    self.server.logger_freshs.debug(cc.c_magenta + 'could not test size of db file: ' +\
 	         self.dbfile + cc.reset)
 
 
@@ -71,7 +71,7 @@ class configpoints:
         ###is this an existing or new database?
         self.cur.execute('select count(*) from points')
         r = self.cur.fetchone()
-        self.server.logger_freshs.info(cc.c_yellow + 'DB has point count: ' +\
+        self.server.logger_freshs.info(cc.c_magenta + 'DB has point count: ' +\
                                             str(r[0]) + cc.reset)
 
     def increment_active_db(self, new_t):
@@ -97,7 +97,7 @@ class configpoints:
         
         retry = 0
         
-        self.server.logger_freshs.info(cc.c_yellow + 'attempting connect to db: ' +\
+        self.server.logger_freshs.info(cc.c_magenta + 'attempting connect to db: ' +\
                                                             self.dbfile + cc.reset)
         con = sqlite3.connect(self.dbfile)
         cur = con.cursor()

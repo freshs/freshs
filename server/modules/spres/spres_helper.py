@@ -52,7 +52,7 @@ class spres_helper():
         sc = self.control ##spaghetti-trail of backpointers
 
         mf = open( self.server.matfile, "r")
-        ss.logger_freshs.info(cc.c_yellow +\
+        ss.logger_freshs.info(cc.c_magenta +\
          'reading transmat... this function not yet optimised for speed'\
                                   +cc.reset)
 
@@ -95,7 +95,7 @@ class spres_helper():
 
         mf.close()
         epoch    = epoch + self.server.tau
-        ss.logger_freshs.info(cc.c_yellow +\
+        ss.logger_freshs.info(cc.c_magenta +\
                                   'read transmat, epoch: '+str(epoch)\
                                   +cc.reset)
 
@@ -184,7 +184,7 @@ class spres_helper():
         vf.close()
  
         epoch    = epoch + self.server.tau
-	ss.logger_freshs.info(cc.c_yellow +\
+	ss.logger_freshs.info(cc.c_magenta +\
 	           'read statevec, epoch: '+str(epoch)\
 	                          +cc.reset)
 
