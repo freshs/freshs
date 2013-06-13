@@ -43,6 +43,9 @@ parser.add_option("-x", "--executable", dest="execpath", help="path to the simul
 
 parser.add_option("-H", "--harness", dest="harness", help="path to the simulation program harness, e.g.: /home/boris/freshs/harnesses/espresso_plain", metavar="harnesspath", type="string", default='auto')
 
+parser.add_option("-S", "--server-host", dest="server", help="network address(:port) of the server, e.g.: localhost:1000 or www.google.com", metavar="server_address(:port)", type="string", default='auto')
+
+
 (options, args) = parser.parse_args()
 
 if os.path.isfile(options.config):
@@ -54,7 +57,7 @@ else:   # if filename is not given
                        '\tLook at examples in the test directory.')
     exit(8)
 
-ci = client(options.config, options.execprefix, options.execpath, options.harness, options.startconf)
+ci = client(options.config, options.execprefix, options.execpath, options.harness, options.startconf, options.server)
 
 asyncore.loop()
 

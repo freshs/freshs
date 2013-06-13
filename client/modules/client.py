@@ -51,10 +51,13 @@ from  client_ffs   import client_ffs
 from  client_spres import client_spres
 
 class client(asyncore.dispatcher):
-    def __init__(self, configfile, execprefix, execpath, harness, startconfig):
+    def __init__(self, configfile, execprefix, execpath, harness, startconfig, server_address):
 
         if configfile == 'auto':
             configfile = 'client-sample.conf'
+
+        print 'Client initialising'
+        sys.stdout.flush()
 
         self.read_configfile(configfile)
 
@@ -72,6 +75,11 @@ class client(asyncore.dispatcher):
            self.initial_config_path = startconfig
         else:
            self.initial_config_path = self.harness_path+"/initial_config.dat"
+        if server_address != 'auto':
+           self.host = server_address.split(':')[0]
+           if len(server_address.split(':')) > 1:
+                self.port = int(server_address.split(':')[1])
+
 
 
         self.received_data = []
@@ -98,7 +106,8 @@ class client(asyncore.dispatcher):
         
         print 'client initted to run scripts in: ' +  self.harness_path +\
               ' using executable: ' + self.exec_name    
-            
+        sys.stdout.flush()
+
     # read the config file
     def read_configfile(self, tcfg):
         self.configfile = ConfigParser.RawConfigParser()
@@ -133,6 +142,8 @@ class client(asyncore.dispatcher):
             self.nice_job = self.configfile.getint('general', 'nice_job')
         else:
             self.nice_job = 0
+
+
 
         ##########these option moved from server.cfg
         # do we hit the filesystem or not?
