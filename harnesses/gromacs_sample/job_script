@@ -1,0 +1,318 @@
+#!/bin/ksh
+# Copyright (c) 2013 Aaron Taudt, Universität Stuttgart, ITB,
+# Allmandring 31, 70569 Stuttgart, Germany; all rights
+# reserved unless otherwise stated.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+# MA 02111-1307 USA
+ 
+# This is a FRESHS job_script written in BASH for an FFS run with GROMACS.
+# Two proteins in contact in a box of water are driven apart. Order parameter is the center-of-mass distance.
+ 
+# ---------------------------------------------------------- 
+# A few words to the naming convention
+# ---------------------------------------------------------- 
+ 
+# The naming convention for the GROMACS commands is the following:
+# EM=Energy Minimization, EQU=Equilibration with position restraints on all heavy atoms, PD=Production
+# The suffix _OUT, e.g. EQU_OUT, PD_OUT, etc., designate the output-files of the equilibration, production, etc. process.
+# The variable $NAME is the name of my system, which is contained in every filename for easier subsequent analysis and file management.
+ 
+# ---------------------------------------------------------- 
+# Additional files
+# ----------------------------------------------------------  
+ 
+# For this script to work, several additional files have to be present in the harness folder:
+# chains.ndx: Index-file for the calculation of the reaction coordinate
+# dissociation_contact1.top: Topology file
+# dissociation_contact1_Protein_chain_A.itp, dissociation_contact1_Protein_chain_A2.itp: Topology-include file
+# EQU_OUT_dissociation_contact1.gro: Equilibrated starting configuration
+# PD_dissociation_contact1.tpr: Structure file
+# initial_config.dat
+ 
+# ---------------------------------------------------------- 
+# Get parameters from client
+# ---------------------------------------------------------- 
+ 
+OLDIFS=$IFS
+IFS=$'\n'
+varmod=0
+for el in $*;do
+    if [ $varmod == 0 ];then
+        varset=`echo $el | sed s/^-//g`
+        varmod=1
+    else
+        eval "$varset=\"$el\""
+        varmod=0
+    fi
+done
+IFS=$OLDIFS
+ 
+# ---------------------------------------------------------- 
+# User defined variables
+# ----------------------------------------------------------
+ 
+# The following variables have to be given in the server-config-file via "user_msg"
+# store_directory
+# source_directory
+# eval_time_intervall
+# stepsize
+# temperature
+# NAME
+# CPU
+ 
+PMECORES=0     # Number of nodes used for PME, automatic is -1
+ 
+# Machine specific parameters
+HOST=biobrain2.itbc.uni-stuttgart.de
+case $HOST in
+    "biobrain2.itbc.uni-stuttgart.de" )	# Biobrain
+        WALLTIMEH=48
+        MACHINE='default'
+        MDRUN='mdrun_mpi'
+        MPIRUN="mpirun -np $CPU"
+        SRC_DIR="$HOME/$source_directory"
+        STR_DIR="$HOME/${store_directory}_$timestamp"
+	;;
+  * )	# Everything else
+    echo "ERROR: Could not define machine paramters for hostname $HOSTNAME"
+    echo "Stopping here."
+    exit 1
+    ;;
+esac
+WALLTIMEM='00'
+MAXH=`echo "scale=3; $WALLTIMEH * 0.992" | bc` # Maximum hours to run one mdrun in job_script
+ 
+ 
+# ---------------------------------------------------------- 
+# Get input (key that lets us find the correct directories)
+# ---------------------------------------------------------- 
+ 
+if [ -z ${in_fifoname+x} ]; then
+    #in_fifoname is unset
+    INPUT=`cat $initial_config`
+else
+    #in_fifoname is set
+    INPUT=`cat $in_fifoname`
+fi
+ 
+# $uuid is the key for the current trajectory fragment
+# $uuid_input is the key of the trajectory fragment which we receive from the client
+uuid_input=`echo $INPUT`
+# between interfaces: $uuid == $uuid_input
+# starting new trajectory fragment from interface: $uuid != $uuid_input
+ 
+# ---------------------------------------------------------- 
+# Create new directories
+# ---------------------------------------------------------- 
+ 
+# Make overall storage directory if it doesn't exist
+if [ ! -e $STR_DIR ]
+then
+    mkdir $STR_DIR
+fi
+ 
+INP_DIR="$STR_DIR/$uuid_input"
+RUN_DIR="$STR_DIR/$uuid"
+ 
+if [ $uuid != $uuid_input ]
+then
+    # We are starting a trajectory fragment from an interface.
+ 
+    if [ ! -e $RUN_DIR ]
+    then
+        mkdir $RUN_DIR
+    else
+        echo "job_script: $RUN_DIR exists, but should not!! Something is terribly wrong!"
+        return
+    fi
+elif [ $uuid == $uuid_input ]
+then
+    # We are calculating on a trajectory fragment between two interfaces.
+    if [ $RUN_DIR != $INP_DIR ]
+    then
+        echo "job_script: RUN_DIR != INP_DIR: Should not be this way!! Something is terribly wrong!"
+        return
+    fi
+fi
+ 
+ 
+# ---------------------------------------------------------- 
+# Production (PD) input file
+# ---------------------------------------------------------- 
+ 
+# Define time-variables, use integers
+ 
+# $eval_time_intervall: Simulation time in [ps]
+# $stepsize: Stepsize in [fs]
+PRECout=$eval_time_intervall                  # Timestep to store full PRECision coordinates in [ps]
+COMPout=$eval_time_intervall                  # Timestep to store COMPressed coordinates in [ps]
+LOGout=$eval_time_intervall                    # Timestep to store LOGfile info in [ps]
+ 
+# Calculate variables
+DTps=0`echo "scale=3; $stepsize/1000" | bc`  # Stepsize in [ps]
+NSTEPS=$((1000*$eval_time_intervall/$stepsize))         # Number of steps for simulation
+NSTXOUT=$((1000*$PRECout/$stepsize))         # Number of steps after which full precision coordinates are stored
+NSTXTCOUT=$((1000*$COMPout/$stepsize))       # Number of steps after which compressed coordinates are stored
+NSTLOGOUT=$((1000*$LOGout/$stepsize))        # Number of steps after which logfile info is stored
+ 
+ 
+# Generate Parameterfile
+if [ $uuid != $uuid_input ]
+then
+    # We are starting a trajectory fragment from an interface and have to generate the GROMACS parameter files for this simulation. The only values that are different from the previous trajectory fragment are the starttime $TINIT and the thermostat-RNG $seed. This is crucial because we want different trajectories launched from the same configuration point to diverge.
+    # (In between two interfaces the simulation can be continued seamlessly)
+ 
+    if [ -e $INP_DIR/PD_OUT_$NAME.cpt ]
+    then
+        # A checkpoint file exists in the input directory, so we take the start time of our new simulation from there
+        TINIT=`gmxcheck -f $INP_DIR/PD_OUT_$NAME.cpt 2>&1 | grep "Last frame" | awk '{print $5}'`
+        GENVEL='no' # Do not generate velocities, but use them from the .cpt file
+    else
+        # No checkpoint file exists in the input directory (because the input directory does not exist), meaning we start a new run from inside region A
+        TINIT='0.0'
+        GENVEL='yes'
+    fi
+ 
+cat > $RUN_DIR/PD_$NAME.mdp <<eof
+    ; Generated at $timestamp
+    integrator          =  md
+    tinit               =  $TINIT
+    dt                  =  $DTps
+    nsteps              =  $NSTEPS
+    nstcomm             =  1
+    nstxout             =  $NSTXOUT
+    nstvout             =  $NSTXOUT
+    nstfout             =  $NSTXOUT
+    nstenergy           =  $NSTXTCOUT
+    nstlog              =  $NSTLOGOUT
+    nstxtcout           =  $NSTXTCOUT
+    nstlist             =  5
+    energygrps          =  System
+    ns_type             =  grid
+    ; Constraints
+    constraints         =  all-bonds
+    constraint_algorithm = lincs
+    ;Treatment of Vdw and Elctrostatics
+    vdwtype             =  cut-off
+    rlist               =  0.9
+    rvdw                =  1.4
+    coulombtype         =  PME
+    rcoulomb            =  0.9
+    fourierspacing      =  0.12
+    fourier_nx          = 108
+    fourier_ny          = 84
+    fourier_nz          = 72
+    pme_order           =  4
+    ewald_rtol          =  1e-05
+    optimize_fft        =  yes
+    ; Temperature coupling is on
+    tcoupl          = V-rescale             ; modified Berendsen thermostat
+    tc-grps         = Protein Non-Protein   ; two coupling groups - more accurate
+    tau_t           = 0.1   0.1             ; time constant, in ps
+    ref_t           = $temperature  $temperature    ; reference temperature, one for each group, in K
+    ld_seed         = $seed
+    ; Pressure coupling is  on
+    pcoupl          = Parrinello-Rahman             ; Pressure coupling on in NPT
+    pcoupltype      = isotropic                     ; uniform scaling of box vectors
+    tau_p           = 2.0                           ; time constant, in ps
+    ref_p           = 1.0                           ; reference pressure, in bar
+    compressibility = 4.5e-5                        ; isothermal compressibility of water, bar^-1
+    refcoord_scaling = com
+    ; Generate velocites is on at ${temperature}K
+    gen_vel             =  $GENVEL
+    gen_temp            =  $temperature
+    gen_seed            =  $seed
+eof
+ 
+ 
+fi
+ 
+ 
+# ---------------------------------------------------------- 
+# Preprocessing and simulation
+# ---------------------------------------------------------- 
+ 
+if [ $uuid != $uuid_input ]
+then
+    # We are starting a trajectory fragment from an interface
+ 
+    if [ -e $INP_DIR/PD_OUT_$NAME.cpt ]
+    then
+        # If not starting from inside region A, a checkpoint file should exist
+ 
+        # Generate new .tpr with new .mdp (seed!) for continuation from interface
+        # grompp -f new.mdp -c old.tpr -o new.tpr -t old.cpt
+        grompp -f $RUN_DIR/PD_$NAME.mdp -po $RUN_DIR/PD_OUT_$NAME.mdp -c $INP_DIR/PD_$NAME.tpr -p $SRC_DIR/$NAME.top -o $RUN_DIR/PD_$NAME.tpr -t $INP_DIR/PD_OUT_$NAME.cpt
+        # $MDRUN -s new.tpr
+        $MPIRUN $MDRUN -v -npme $PMECORES -maxh $MAXH -s $RUN_DIR/PD_$NAME.tpr -o $RUN_DIR/PD_OUT_$NAME.trr -x $RUN_DIR/PD_OUT_$NAME.xtc -cpt 15 -cpo $RUN_DIR/PD_OUT_$NAME.cpt -e $RUN_DIR/PD_OUT_$NAME.edr -c $RUN_DIR/PD_OUT_$NAME.gro -g $RUN_DIR/PD_OUT_$NAME.log
+    else
+        # Starting from inside region A, start from the precalculated configuration
+ 
+        grompp -f $RUN_DIR/PD_$NAME.mdp -po $RUN_DIR/PD_OUT_$NAME.mdp -c $SRC_DIR/$STARTCONF -p $SRC_DIR/$NAME.top -o $RUN_DIR/PD_$NAME.tpr
+        $MPIRUN $MDRUN -v -npme $PMECORES -maxh $MAXH -s $RUN_DIR/PD_$NAME.tpr -o $RUN_DIR/PD_OUT_$NAME.trr -x $RUN_DIR/PD_OUT_$NAME.xtc -cpt 15 -cpo $RUN_DIR/PD_OUT_$NAME.cpt -e $RUN_DIR/PD_OUT_$NAME.edr -c $RUN_DIR/PD_OUT_$NAME.gro -g $RUN_DIR/PD_OUT_$NAME.log
+ 
+    fi
+elif [ $uuid == $uuid_input ]
+then
+    # We continue a trajectory fragment between two interfaces
+ 
+    # Extending simulation by STEPS
+    # tpbconv -s previous.tpr -extend timetoextendby -o next.tpr
+    tpbconv -s $INP_DIR/PD_$NAME.tpr -extend $eval_time_intervall -o $INP_DIR/next.tpr
+    mv $INP_DIR/PD_${NAME}.tpr $INP_DIR/\#PD_${NAME}.tpr\#
+    mv $INP_DIR/next.tpr $INP_DIR/PD_$NAME.tpr
+    $MPIRUN $MDRUN -v -npme $PMECORES -maxh $MAXH -s $INP_DIR/PD_$NAME.tpr -o $INP_DIR/PD_OUT_$NAME.trr -x $INP_DIR/PD_OUT_$NAME.xtc -cpt 15 -cpo $INP_DIR/PD_OUT_$NAME.cpt -e $INP_DIR/PD_OUT_$NAME.edr -c $INP_DIR/PD_OUT_$NAME.gro -g $INP_DIR/PD_OUT_$NAME.log -append -cpi $INP_DIR/PD_OUT_$NAME.cpt
+fi
+ 
+ 
+# ---------------------------------------------------------- 
+# Extraction of the reaction coordinate
+# ---------------------------------------------------------- 
+ 
+echo "15
+16" | g_dist -f $RUN_DIR/PD_OUT_$NAME.xtc -s $RUN_DIR/PD_$NAME.tpr -n $SRC_DIR/chains.ndx -o $RUN_DIR/distance.xvg
+ 
+# Extract last timestep
+rc_line=`tail -n 1 $RUN_DIR/distance.xvg`
+rc_time=`echo $rc_line | awk '{print $1}'`
+rc_val=`echo $rc_line | awk '{print $2}'`
+ 
+echo "job_script: simulation-time spent in this part of trajectory: $eval_time_intervall"
+ 
+# ---------------------------------------------------------- 
+# Give the data back
+# ---------------------------------------------------------- 
+ 
+# Print key ($uuid) to fifo
+echo $uuid > $back_fifoname
+ 
+# Print the data that will be written to the metadata_fifoname fifo
+echo $rc_val $NSTEPS $eval_time_intervall |\
+ awk '{printf "{\"rc\": %.4f, \"steps\": %i, \"time\": %.4f}\n",$1,$2,$3}'
+ 
+# Print some data to metadata_fifoname
+echo $rc_val $NSTEPS $eval_time_intervall |\
+ awk '{printf "{\"rc\": %.4f, \"steps\": %i, \"time\": %.4f}",$1,$2,$3}'> $metadata_fifoname
+# Insert newline, because unlike "echo", "awk" with "printf" does not do this
+echo > $metadata_fifoname
+ 
+ 
+# ---------------------------------------------------------- 
+# Clean up
+# ----------------------------------------------------------
+ 
+# Get rid of GROMACS backup files to save space
+rm $RUN_DIR/\#*\#
