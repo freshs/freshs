@@ -50,6 +50,7 @@ class spres_sampling_control():
         ##setup some useful variables
         self.nBins             = ss.nohs+2
         self.parentShots       = []
+        self.min_weight        = 1e-300 ##round weights below this value to zero
 
         ##build some data structures.
         self.stateVector        = self.nBins * [0.0]
@@ -202,7 +203,16 @@ class spres_sampling_control():
 
             for bin in range (0, self.nBins - 1):
 
-                if self.flag_bin_complete[bin] == False:
+
+	        ##skip bins with weight below min_weight
+		if self.stateVector[bin] < self.min_weight:
+		       self.flag_bin_complete[bin] = True
+		       if self.stateVector[bin] > 0.0:
+		          ss.logger_freshs.info(cc.c_magenta + 'Skipping bin '+str(bin)+' with weight below ' +\
+		                     str(self.min_weight) + cc.reset)
+
+
+		elif self.flag_bin_complete[bin] == False:
                     population = ss.storepoints.count_points_in_if_at_t(bin, ss.epoch)
 
                     if population > 0:
@@ -227,17 +237,30 @@ class spres_sampling_control():
 
             for bin in range (0, self.nBins ):
 
-                if self.flag_bin_complete[bin] == False:
+	        ##skip bins with weight below min_weight
+                if self.stateVector[bin] < self.min_weight:
+		    self.flag_bin_complete[bin] = True
+		    if self.stateVector[bin] > 0.0:
+		           ss.logger_freshs.info(cc.c_magenta + 'Skipping bin '+str(bin)+' with weight below ' +\
+		                        str(self.min_weight) + cc.reset)
+
+
+		elif self.flag_bin_complete[bin] == False:
+
                     population = ss.storepoints.count_points_in_if_at_t(bin, ss.epoch)
 
                     if population > 0:
-                        complete =  ss.storepoints.count_points_from_if_at_t(bin, ss.epoch + ss.tau)
+		        complete =  ss.storepoints.count_points_from_if_at_t(bin, ss.epoch + ss.tau)
 
                         if complete < ss.M_0_runs[bin] :
-                            
+                           
+			    ss.logger_freshs.debug(cc.c_magenta + 'sv: ' + str(self.stateVector[bin]) + \
+							         cc.reset)
+
+
                             ss.logger_freshs.debug(cc.c_magenta + 'bin ' + str(bin) + \
                                                                 ' has outstanding configs: ' +\
-                                                                  cc.reset)
+                                                                cc.reset)
                             ss.logger_freshs.debug(cc.c_magenta + 'counted ' + str(complete) +\
                                                                 ' shots complete, with age of ' +\
                                                                   str(ss.epoch + ss.tau) +\
@@ -459,22 +482,25 @@ class spres_sampling_control():
         for fromRow in self.transMat1[row].keys():
             chance =  self.stateVector_old[fromRow] * self.transMat1[row][fromRow]
             if chance > 0.0:
-                scale     += chance
+                if self.stateVector_old[fromRow] < self.min_weight:
+		    ss.logger_freshs.info(cc.c_red+ "Warning! Rounded away weight of "+str(chance)+\
+			                            " between "+str(fromRow)+" and "+str(row)+cc.reset)
+                else:
 
-                ##print str(row)+" "+str(fromRow)
-                ##print self.epoch_points_old
+		    scale     += chance
+                    count      = len(self.epoch_points_old[row][fromRow])
+                    chance_per = chance / float(count)
 
-                count      = len(self.epoch_points_old[row][fromRow])
-                chance_per = chance / float(count)
+                    ##sort the eligible points by seed
+                    ##in order to ensure determinism
+                    self.epoch_points_old[row][fromRow].sort(key=lambda x : x[1])
+                    for point in self.epoch_points_old[row][fromRow]:
+                        shotId = point[0]
+                        self.parentShots.append( [shotId, fromRow, chance_per] ) ##list of lists
 
-                ##sort the eligible points by seed
-                ##in order to ensure determinism
-                self.epoch_points_old[row][fromRow].sort(key=lambda x : x[1])
-                for point in self.epoch_points_old[row][fromRow]:
-                    shotId = point[0]
-                    self.parentShots.append( [shotId, fromRow, chance_per] ) ##list of lists
-
+        ##divide by less than about 1e-300 seems to give NaNs
         if scale <= 0.0:
+
             ss.logger_freshs.debug(cc.c_blue+ "Found 0 shots into row " + str(row)+cc.reset)
             ss.logger_freshs.debug(cc.c_blue+"transmat in is: "+str(self.transMat1[row])+cc.reset)
             ss.logger_freshs.debug(cc.c_blue+"shots in were: ")
@@ -509,7 +535,8 @@ class spres_sampling_control():
                 return( None, None ) ##there are no parent shots entering this bin, as yet.
 
             self.weightToSpend = 1.0
-            self.invNumShots   = 1.0 / ss.M_0_runs[ss.act_lambda]
+	    self.invNumShots   = 1.0 / ss.M_0_runs[ss.act_lambda]
+
             self.needFlip      = False
 
         fromRow = -1
@@ -541,10 +568,16 @@ class spres_sampling_control():
                      fromRow  = self.parentShots[i][1]
                      break
                  
-        if fromRow == -1:
-             ss.logger_freshs.info(cc.c_red+ "ERROR selecting shots to " + str(row) +\
+            if fromRow == -1:
+		 ss.logger_freshs.info(cc.c_red+ "WARNING selecting shots to " + str(row) +\
                                 cc.reset)
-             quit()
+	         ss.logger_freshs.info(cc.c_red+ "  Total weight in row: " + str(row) + " was " +\
+		                str(totalTrans)+cc.reset)
+	         ss.logger_freshs.info(cc.c_red+ "  And flipped a: " + str(flip) +cc.reset)
+                 ss.logger_freshs.info(cc.c_red+ "  Some kind of rounding error. Quitting." +cc.reset)
+		 quit();
+
+
            
         return (fromRow, parentId)
   

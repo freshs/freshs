@@ -96,6 +96,9 @@ class ClientHandler(asyncore.dispatcher):
 
 
     def handle_close(self):
+        self.server.logger_freshs.info(cc.c_magenta + 'CLIENT CLOSED: ' +\
+ 	                                  self.name + cc.reset)
+
         self.server.deregisterClient(self)
         self.close()
         
