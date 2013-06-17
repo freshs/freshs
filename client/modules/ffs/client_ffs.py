@@ -110,7 +110,7 @@ class client_ffs:
                              " -initial_config " + self.cli.harness_path + "/initial_config.dat" + \
                              " -back_fifoname " + h.crds_back_fifoname + \
                              " -metadata_fifoname " + h.metadata_fifoname + \
-                             " -halt_steps 0 " + \
+                             " -halt_steps 0" + \
                              " -check_rc_every 1" + \
                              self.build_options(parameterset)
 
@@ -145,6 +145,7 @@ class client_ffs:
 
                     if flRc >= float(B):
                         print "Client: reached B, resetting"
+                        success = False
                         break
                     elif flRc >= float(A) and comefromok:
                         print "Client: reached interface coming from A, saving point."
@@ -154,6 +155,11 @@ class client_ffs:
                     elif flRc < float(A) and not comefromok:
                         print "Client: has fallen back to A"
                         comefromok = True
+                        
+                    if parameterset['max_steps'] > 0:
+                        if calcsteps >= parameterset['max_steps']:
+                            success = False
+                            break
 
                     ##
                     print "Client: continuing, with rc: "+str(flRc)+" of "+str(A)+", "+str(B)
@@ -170,7 +176,7 @@ class client_ffs:
                                  " -in_fifoname " + h.crds_in_fifoname + \
                                  " -back_fifoname " + h.crds_back_fifoname + \
                                  " -metadata_fifoname " + h.metadata_fifoname + \
-                                 " -halt_steps 0 " + \
+                                 " -halt_steps 0" + \
                                  " -check_rc_every 1" + \
                                  self.build_options(parameterset)
 
@@ -243,15 +249,17 @@ class client_ffs:
             calcsteps = 0
             ctime     = 0
 
+            
             while True:
 
                 optionlist = "-tmpdir " + h.tmpdir + \
                              " -in_fifoname " + h.crds_in_fifoname + \
                              " -back_fifoname " + h.crds_back_fifoname + \
                              " -metadata_fifoname " + h.metadata_fifoname + \
-                             " -halt_steps 0 " + \
+                             " -halt_steps 0" + \
                              " -check_rc_every 1" + \
                              self.build_options(parameterset)
+                             
 
                 # fork a subthread to run the MD
                 h.subthread_run_script(optionlist, True)
