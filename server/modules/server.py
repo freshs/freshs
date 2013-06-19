@@ -80,6 +80,7 @@ class server(asyncore.dispatcher):
         # Set global timestamp / set dbload if timestamp is given
         self.timestamp = self.get_timestamp(timestamp)
         
+       
         # Read the configfile
         self.read_config(configfile_name)
 

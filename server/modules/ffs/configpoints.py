@@ -45,7 +45,7 @@ class configpoints:
         self.con, self.cur = self.connect()
         self.init_table()
         self.have_pair_ij = 0
-        # if you have problems with the database which cannot be written to disk
+        # if you have problems with the database which cannot be written to disk, error: "database or disk is full"
         #self.cur.execute('PRAGMA temp_store = 2')
         
     # Connect to database
@@ -340,7 +340,7 @@ class configpoints:
             retval.append(ast.literal_eval(str(row[0])))
         return retval
 
-    # Return all collected configpoints from interface
+    # Return all collected configpoints ids from interface
     def return_configpoints_ids(self, interface):
         self.cur.execute('select myid from configpoints where lambda = ? and deactivated = 0 and success = 1', [interface])
         retval = []
@@ -506,14 +506,14 @@ class configpoints:
     # Select ghost point for calculation 
     def select_ghost_point(self, interface):
         # get configpoints on current interface
-        candidates = self.return_configpoints(interface)
+        candidates = self.return_configpoints_ids(interface)
         countdict = {}
         for candidate in candidates:
             countdict[str(candidate)] = self.server.ghostpoints.runs_on_point(candidate) + self.runs_on_point(candidate)
         # get (one) point with lowest number
         # min([(countdict[x],x) for x in countdict])[1]
-        point = min(countdict,key = lambda a: countdict.get(a))
-        return point, self.return_id(point)
+        point_id = min(countdict,key = lambda a: countdict.get(a))
+        return self.return_point_by_id(point_id), point_id
 
     # Return all entries corresponding to one interface
     def return_interface(self, interface):
