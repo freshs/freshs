@@ -196,7 +196,7 @@ class configpoints:
         ##Create a view of the DB to save searching repeatedly for the set of candidate points
         viewname = 'v_'+str(the_lambda)
         self.cur.execute(\
-   'create temp view if not exists '+viewname+' as select * from configpoints where deactivated = 0 and lambda = '+\
+   'create temp view if not exists '+viewname+' as select * from configpoints where deactivated = 0 and success = 1 and lambda = '+\
                          str(the_lambda))
         ##Note that passing arguments doesn't work for view creation in sqlite,
         ##you have to mung the string directly.

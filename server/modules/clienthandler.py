@@ -412,7 +412,9 @@ class ClientHandler(asyncore.dispatcher):
         else:
             # random point not in ghost database
 
-            self.ghostcount = 0
+            if self.ghostcount >= ss.ffs_control.max_ghosts_between:
+                self.ghostcount = 0
+                ss.logger_freshs.info(cc.c_magenta + 'Not using more ghostpoints in a row per client than requested.' + cc.reset)
 
             # check if ghost client is calculating this point at the moment
             if rp_id in ss.ghost_clients.values():

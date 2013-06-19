@@ -311,11 +311,11 @@ class client_ffs:
         
              
              
-        print "Resultstring before appending:", results_base
+        #print "Resultstring before appending:", results_base
 
         results = self.build_custominfo(results_base, all_meta)
 
-        print "Resultstring after appending:", results
+        #print "Resultstring after appending:", results
 
         return "{" + results + "}"
 

@@ -425,7 +425,7 @@ class ffs_sampling_control():
                     # check again
                     return self.check_run_required(ilam)
                 
-                ss.logger_freshs.info(cc.c_magenta + cc.bold + 'Last interface was ' + \
+                ss.logger_freshs.info(cc.c_green + cc.bold + 'Last interface was ' + \
                                       str(ss.act_lambda-1) + ', now calculating on interface ' + \
                                       str(ss.act_lambda) + cc.reset)
                 
@@ -726,6 +726,38 @@ class ffs_sampling_control():
         else:
             calcsteps = 0
 
+        if 'rcval' in ddata:
+            rcval = ddata['rcval']
+        else:
+            ss.logger_freshs.warn(cc.c_red + 'Warning: Did not receive reaction coordinate value from client, setting to zero.' + \
+                                  cc.reset)
+            rcval = 0.0
+
+        if 'uuid' in ddata:
+            uuid = ddata['uuid']
+        else:
+            uuid = ''
+
+        if 'customdata' in ddata:
+            customdata = ddata['customdata']
+        else:
+            customdata = ''
+
+        try:
+            origin_point = ddata['origin_points']
+        except:
+            ss.logger_freshs.warn(cc.c_red + 'Warning: Did not receive an origin point from client, setting to empty string!' + \
+                                  cc.reset)
+            origin_point = ''
+
+        # get the RNG seed that was used
+        try:
+            start_seed = ddata['seed']
+        except:
+            start_seed = 0
+            ss.logger_freshs.warn(cc.c_red + 'Warning: Did not receive seed from client, setting to zero.' + \
+                                  cc.reset)
+
         try:
             origin_point = ddata['origin_points']
         except:
@@ -739,6 +771,7 @@ class ffs_sampling_control():
                                   cc.reset)
                 newjob = False
         
+        # Should not be necessary, but safety first...
         client.remove_from_escape()
         
         if the_jobs_lambda == ss.act_lambda or the_jobs_lambda == 0:
@@ -761,11 +794,38 @@ class ffs_sampling_control():
                         ss.logger_freshs.debug(cc.c_magenta + 'Added ctime ' + str(ctime) + ' to last escape point. Server ctime is now ' + \
                                            str(ss.ctime) + cc.reset)
             
+            else:
+                try:
+                    ss.storepoints.add_point(the_jobs_lambda, \
+                                             '', \
+                                             origin_point, \
+                                             ddata['calcsteps'], \
+                                             ddata['ctime'], \
+                                             runtime, \
+                                             0, \
+                                             runid, \
+                                             start_seed, \
+                                             rcval, \
+                                             ss.lambdas[the_jobs_lambda], \
+                                             0, \
+                                             0, \
+                                             uuid, \
+                                             customdata \
+                                             )
+
+                except Exception as exc:
+                    ss.logger_freshs.warn(cc.c_red + \
+                                      'Not storing unsuccesful run in database because of incomplete data, ' + str(exc) + \
+                                      cc.reset)
+                    ss.logger_freshs.debug(cc.c_red + 'Data was: ' + str(ddata) + cc.reset)                
+            
             ss.logger_freshs.debug(cc.c_green + \
                                    'Run was not successful, not incrementing counter.' + \
                                    cc.reset)
             if 'origin_points' in ddata:
                 ss.storepoints.update_usecount_by_myid(ddata['origin_points'])
+                
+                
             else:
                 ss.logger_freshs.warn(cc.c_red + 'No origin point in data of ' + client.name + \
                                         ', not incrementing use-count' + cc.reset)
