@@ -541,6 +541,7 @@ class server(asyncore.dispatcher):
         if len(self.clients) > 0 and (len(self.ghost_clients) + len(self.idle_clients)) == len(self.clients):
            self.logger_freshs.warn(cc.c_red + 'DANG! ALL CLIENTS ARE ABSENT...' + cc.reset)
         self.periodic = threading.Timer(self.t_infocheck, self.periodic_check)
+        self.periodic.daemon=True
         self.periodic.start()
 
 # -------------------------------------------------------------------------------------------------
