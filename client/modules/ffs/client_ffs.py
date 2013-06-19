@@ -237,7 +237,7 @@ class client_ffs:
         all_meta = {}
 
         h = harness(self.cli.exec_name,  self.cli.harness_path+"/job_script", self)
-                                           
+        print "check"                                           
         # Wrap the code that uses threading/subprocesses
         # in a try-catch to clean up on interrupts, ctrl-C etc.
         try:     
@@ -245,7 +245,7 @@ class client_ffs:
             print "sending: "+str(parameterset['random_points'])[0:64]
 
             # start loading the input pipes for the MD process
-            h.send( True, parameterset['random_points'] )
+            h.send( True, True, True, parameterset['random_points'] )
             calcsteps = 0
             ctime     = 0
 
@@ -286,7 +286,7 @@ class client_ffs:
                     # Assuming that it is safe to both read and write from points, because all
                     # simulation programs will complete reading their input
                     # before they write their output.
-                    h.send( True, points[-1] )
+                    h.send( True, True, True, points[-1] )
 
         except e:
             print( "Cient: exception while running harness, %s" % e ) 
