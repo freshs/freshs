@@ -195,7 +195,7 @@ class auto_interfaces():
 
                 # check if there are enough points to start
                 npoints = ss.storepoints.return_nop(lamget)
-                ndesired = int(round(self.auto_min_points * ss.M_0_runs[ss.act_lambda]))
+                ndesired = int(round(self.auto_min_points * ss.M_0_runs[lamget]))
                 if npoints >= ndesired:
                     for i in range(len(self.ex_launched)):
                         if self.ex_launched[i] < self.auto_trials:
