@@ -268,7 +268,7 @@ class client(asyncore.dispatcher):
                 
 
         else:
-            print "received not required data: " + data + ", ignoring."
+            print "received additional data: " + data
             
 
     def handle_read(self):

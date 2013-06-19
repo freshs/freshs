@@ -87,7 +87,7 @@ class client_ffs:
             if use_previous_point:
                 # we are at least on A...
                 comefromok = False
-                h.send( True, parameterset['random_points'] )
+                h.send( True, True, True, parameterset['random_points'] )
 
                 optionlist = "-tmpdir " + h.tmpdir + \
                              " -initial_config None" + \
@@ -98,13 +98,13 @@ class client_ffs:
                              " -check_rc_every 1" + \
                              self.build_options(parameterset)
 
-                h.subthread_run_script(optionlist, True)
+                h.subthread_run_script(optionlist)
 
             else:
                 # we assume that the simulation is set up in A if no
                 # last successful point is received
                 comefromok = True
-                h.send( False, [[0]] )
+                h.send( False, True, True, ['None'] )
 
                 optionlist = "-tmpdir " + h.tmpdir + \
                              " -initial_config " + self.cli.harness_path + "/initial_config.dat" + \
@@ -114,7 +114,7 @@ class client_ffs:
                              " -check_rc_every 1" + \
                              self.build_options(parameterset)
 
-                h.subthread_run_script(optionlist, False)
+                h.subthread_run_script(optionlist)
 
             calcsteps = 0
             ctime     = 0
@@ -169,7 +169,7 @@ class client_ffs:
                     # Assuming that it is safe to both read and write from points, because all
                     # simulation programs will complete reading their input
                     # before they write their output.
-                    h.send( True, points[-1] ) 
+                    h.send( True, True, True, points[-1] ) 
 
 
                     optionlist = "-tmpdir " + h.tmpdir + \
@@ -181,7 +181,7 @@ class client_ffs:
                                  self.build_options(parameterset)
 
                     # fork a subthread to run the MD, starting from the crds_in fifo.            
-                    h.subthread_run_script(optionlist, False)
+                    h.subthread_run_script(optionlist)
 
         except e:
             print( "Client: exception while running harness, %s" % e ) 
@@ -262,7 +262,7 @@ class client_ffs:
                              
 
                 # fork a subthread to run the MD
-                h.subthread_run_script(optionlist, True)
+                h.subthread_run_script(optionlist)
 
                 # read output from the MD subthread
                 steps, time, rc, all_meta  = h.collect( points, rcvals ) 
