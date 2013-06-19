@@ -134,7 +134,7 @@ class auto_interfaces():
             self.exmode = False
             # append new lambda
             ss.lambdas.append(self.ex_lambda)
-            ss.logger_freshs.info(cc.c_magenta + cc.bold + 'Found lambda: '  + str(self.ex_lambda) + cc.reset)
+            ss.logger_freshs.info(cc.c_green + cc.bold + 'Found lambda: '  + str(self.ex_lambda) + cc.reset)
             if ss.use_ghosts and ss.act_lambda > 0 and not self.auto_histo:
                 # use explorer runs as ghosts on this interface if possible
                 self.explored2ghost()
@@ -142,9 +142,11 @@ class auto_interfaces():
                 fsc.append_to_lamconf('hypersurfaces','borderA', str(ss.lambdas[ss.act_lambda]))
             elif self.ex_lambda < ss.B:
                 fsc.append_to_lamconf('hypersurfaces','lambda' + str(ss.act_lambda), str(ss.lambdas[ss.act_lambda]))
+                ss.start_idle_clients()
             else:
                 fsc.append_to_lamconf('hypersurfaces','borderB', str(ss.B))
                 self.arrived_in_B = True
+                ss.start_idle_clients()
                 
             self.loffset = self.ex_act_lambda + 1
 
