@@ -150,7 +150,8 @@ class configpoints:
         return dt*float(the_calcsteps)
 
     def return_runcount(self, interface):
-        self.cur.execute('select max(runcount) from configpoints where lambda = ? and deactivated = 0', [interface])
+        #self.cur.execute('select max(runcount) from configpoints where lambda = ? and deactivated = 0', [interface])
+        self.cur.execute('select count(*) from configpoints where lambda = ? and deactivated = 0', [interface])
         runcount = 0
         for row in self.cur:
             runcount = row[0]
@@ -289,15 +290,15 @@ class configpoints:
         #self.con.commit()
 
     # change number of runs on last point by 'nor'
-    def update_M_0(self,nor=0,point='last'):
-        # get last calculated point from database
-        if nor != 0:
-            if point == 'last':
-                self.cur.execute("select configpoint from configpoints where deactivated = 0 and lambda=? order by runcount desc limit 1",[str(self.biggest_lambda())])
-            for row in self.cur:
-                point = row[0]
-            self.cur.execute("update configpoints set runcount=runcount+? where configpoint = ?", [str(nor), str(point)])
-            #self.con.commit()
+    #def update_M_0(self,nor=0,point='last'):
+    #    # get last calculated point from database
+    #    if nor != 0:
+    #        if point == 'last':
+    #            self.cur.execute("select configpoint from configpoints where deactivated = 0 and lambda=? order by runcount desc limit 1",[str(self.biggest_lambda())])
+    #        for row in self.cur:
+    #            point = row[0]
+    #        self.cur.execute("update configpoints set runcount=runcount+? where configpoint = ?", [str(nor), str(point)])
+    #        #self.con.commit()
         
     # Return number of runs performed on origin_point
     def runs_on_point(self, point):

@@ -162,8 +162,8 @@ class ClientHandler(asyncore.dispatcher):
         ss = self.server
         ss.M_0[lam] += 1
 
-        if ss.storepoints.return_nop(lam) > 0:
-            ss.storepoints.update_M_0(1)
+        #if ss.storepoints.return_nop(lam) > 0:
+        #    ss.storepoints.update_M_0(1)
         ss.run_count[lam] += 1
 
         ss.logger_freshs.debug(cc.c_magenta + self.name + ': Increasing runcount, lambda ' + str(lam) + cc.reset)

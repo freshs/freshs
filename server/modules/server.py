@@ -778,11 +778,11 @@ class server(asyncore.dispatcher):
                             if self.run_count[self.act_lambda] > 0:
                                 client.decr_runcount(self.act_lambda)
                                 self.M_0[self.act_lambda] -= 1
-                            if self.storepoints.return_nop(self.act_lambda) > 0:
-                                self.storepoints.update_M_0(-1)
+                            #if self.storepoints.return_nop(self.act_lambda) > 0:
+                            #    self.storepoints.update_M_0(-1)
 
-                        except:
-                            self.logger_freshs.warn(cc.c_red + 'Could not decrease run_count...' + cc.reset )
+                        except Exception as exc:
+                            self.logger_freshs.warn(cc.c_red + 'Could not decrease run_count, ' + str(exc) + cc.reset )
                     else:
                         # get index on which explorer was running
                         
