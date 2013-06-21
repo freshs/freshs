@@ -141,7 +141,6 @@ class ffs_sampling_control():
         ss.act_lambda = ss.storepoints.biggest_lambda()
 
         if ss.auto_interfaces:
-            ss.M_0_runs.append(ss.ai.auto_runs)
             try:
                 # TODO: make this a config option?
                 loadfromdb = True
@@ -153,7 +152,8 @@ class ffs_sampling_control():
                     tmp_lamlist = ss.storepoints.return_lamlist()
                     ilam = len(tmp_lamlist)
                     ss.lambdas = tmp_lamlist[:]
-                    for i in range(ilam):
+                    ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'borderA'))
+                    for i in range(ilam-1):
                         ss.M_0_runs.append(ss.ai.auto_runs)
                     ss.logger_freshs.info(cc.c_magenta + 'Read ' + str(ilam-1) + ' lambdas from DB' + cc.reset)
                 else:
@@ -226,6 +226,11 @@ class ffs_sampling_control():
             if ss.auto_interfaces:
                 if ss.M_0_runs[-1] < ss.ai.auto_runs:
                     ss.M_0_runs[-1] = ss.ai.auto_runs
+
+                if ss.lambdas[-1] >= ss.B:
+                    runs_on_B = ss.configfile.getint('runs_per_interface', 'borderB')
+                    if ss.M_0_runs[-1] < runs_on_B:
+                        ss.M_0_runs[-1] = runs_on_B
 
             ss.logger_freshs.debug(cc.c_magenta + 'Runcount: ' + str(ss.run_count) + cc.reset)
             ss.logger_freshs.debug(cc.c_magenta + 'M_0: ' + str(ss.M_0) + cc.reset)

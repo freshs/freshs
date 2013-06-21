@@ -119,7 +119,15 @@ class configpoints:
         r = self.cur.fetchone()
         return r[0]
 
-    # return number of all points on interface (including deactivated)
+    # Return number of active points (nop) on interface
+    def return_nop_nonsuccess(self,interface):
+        self.cur.execute('select count(*) from configpoints where lambda = ? and success = 0 and deactivated = 0', [interface])
+        retval = 0
+
+        r = self.cur.fetchone()
+        return r[0]
+
+    # return number of all successful points on interface (including deactivated)
     def return_nop_all(self,interface):
         self.cur.execute('select count(*) from configpoints where lambda = ? and success = 1', [interface])
         retval = 0
@@ -632,6 +640,32 @@ class configpoints:
         for row in self.cur:
             rtl.append(row[0])
         return rtl
+
+    def return_probabilities(self):
+        probabs = []
+        asuccess = []
+        anonsuccess = []
+        nnall = []
+        biglam = self.biggest_lambda()
+        for i in range(1,biglam+1):
+            nonsuccess = self.return_nop_nonsuccess(i)
+            anonsuccess.append(nonsuccess)
+            success = self.return_nop(i)
+            asuccess.append(success)
+            nall = nonsuccess + success
+            nnall.append(nall)
+            if nall > 0:
+                probabs.append(float(success) / float(nall))
+            else:
+                print "Warning: number of points is 0 despite of having a point on the interface. Something is wrong."
+        return probabs, asuccess, anonsuccess, nnall
+
+    def return_customdata(self,interface):
+        cud = []
+        self.cur.execute('select customdata from configpoints where lambda = ? and deactivated = 0', [str(interface)])
+        for row in self.cur:
+            cud.append(row[0])
+        return cud
 
     def return_calcsteps_list(self, the_lambda):
         csl = []
