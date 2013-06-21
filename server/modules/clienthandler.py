@@ -205,7 +205,6 @@ class ClientHandler(asyncore.dispatcher):
                 return True
         return False
 
-
 # --------------------------------------------------------------------------
 # FFS Escape flux
 # --------------------------------------------------------------------------
@@ -299,9 +298,17 @@ class ClientHandler(asyncore.dispatcher):
                     ", \"clientname\": \"" + self.name + "\"" + \
                     ", \"timestamp\": \"" + ss.timestamp + "\"" + \
                     ", \"uuid\": \"" + self.get_uuid() + "\""
+        
+        if ss.ffs_control.reverse_direction > 0 and last_escape_point == 'None':
+            # get configpoint from forward database
+            equi_B_point = ss.ffs_control.fwd_db.random_point_B()[0]
+            job_string += ", \"random_points\": " + str(equi_B_point) + ", \"reverse_equilibrate\": 1"
+        
+        elif last_escape_point != 'None':
+            job_string += ", \"random_points\": " + str(last_escape_point)
 
-        if last_escape_point != 'None':
-            job_string += ", \"random_points\": " + str(last_escape_point) + ", \"random_points\": " + str(last_escape_point)
+        if ss.ffs_control.reverse_direction > 0:
+            job_string += ", \"reverse_direction\": 1" + ", \"forward_timestamp\": \"" + ss.ffs_control.fwd_timestamp + "\""
 
         if not newtrace:
             job_string += ", \"last_rc\": " + str(rcval)
@@ -467,6 +474,9 @@ class ClientHandler(asyncore.dispatcher):
                                    ", \"timestamp\": \""    + ss.timestamp +"\"" + \
                                    ", \"uuid\": \""         + self.get_uuid() + "\""
 
+                if ss.ffs_control.reverse_direction > 0:
+                    job_string += ", \"reverse_direction\": 1"
+                
                 job_string_complete = self.compose_message(job_string)
 
                 #ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' + job_string_complete + \
@@ -528,6 +538,9 @@ class ClientHandler(asyncore.dispatcher):
                     ", \"act_lambda\":"      + str(next_lambda) + \
                     ", \"uuid\": \"" + self.get_uuid() + "\""
 
+        if ss.ffs_control.reverse_direction > 0:
+            job_string += ", \"reverse_direction\": 1"
+                    
         job_string_complete = self.compose_message(job_string)
 
         #ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' + job_string_complete + \

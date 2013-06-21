@@ -27,8 +27,11 @@ import random
 # Logging
 import logging
 
-# Formatting
-import modules.concolors as cc
+try:
+    # Formatting
+    import modules.concolors as cc
+except:
+    print "Not using console colors."
 
 # Parsing
 import ast
@@ -39,7 +42,7 @@ class configpoints:
     def __init__(self, server, dbfile):
     
         self.server = server
-        
+
         # create sqlite table
         self.dbfile = dbfile
         self.con, self.cur = self.connect()
@@ -75,9 +78,9 @@ class configpoints:
             self.cur.execute('''create index timeindex on configpoints ( calcsteps )''')
             self.con.commit()
 
-        except:
-            #print "Not creating table, already exists."
-            pass
+        except Exception as exc:
+            print self.dbfile + ":", exc
+            
 
 
     # Add config point to database
@@ -91,7 +94,6 @@ class configpoints:
         entries.append((interface, str(newpoint), str(originpoint), calcsteps, ctime, runtime, success, runcount, pointid, seed, 0, 0.0, rcval, lpos, usecount, deactivated, uuid, customdata))
             
         for t in entries:
-            # TODO: error handling, if database is locked or so
             maxretry = 3
             attempt = 0
             writeok = 0
@@ -102,7 +104,10 @@ class configpoints:
                     writeok = 1
                 except:
                     attempt += 1
-                    self.server.logger_freshs.warn(cc.c_red + 'Could not write data to DB, retrying ' + str(maxretry) + ' times: ' + str(attempt) + '/' + str(maxretry) + cc.reset)
+                    try:
+                        self.server.logger_freshs.warn(cc.c_red + 'Could not write data to DB, retrying ' + str(maxretry) + ' times: ' + str(attempt) + '/' + str(maxretry) + cc.reset)
+                    except:
+                        pass
                     #quit client and throw error (?)
 
 
@@ -186,7 +191,10 @@ class configpoints:
         rcval = float(r[2])
             
         return retpoints, retpoint_ids, rcval               
-        
+    
+    def random_point_B(self):
+        biglam = self.biggest_lambda()
+        return self.return_random_point(biglam)
         
     # Return random point from interface
     def return_random_point(self,the_lambda):
@@ -310,7 +318,8 @@ class configpoints:
     
     # Return the biggest lambda in database
     def biggest_lambda(self):
-        self.cur.execute('select lambda from configpoints order by lambda desc limit 1')
+        #self.cur.execute('select lambda from configpoints order by lambda desc limit 1')
+        self.cur.execute('select max(lambda) from configpoints')
         biglam = 0
         for row in self.cur:
             biglam = row[0]

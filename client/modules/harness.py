@@ -106,6 +106,7 @@ class harness:
         print "calling the following: " + str(argList) 
         
         self.sT = scriptThread(argList)
+        self.sT.daemon = True
         self.sT.run()
        
             

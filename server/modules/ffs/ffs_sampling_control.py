@@ -25,11 +25,12 @@ import time
 # Formatting
 import modules.concolors as cc
 import ConfigParser
+import re
 
 import math
 import random
 
-#import server
+import configpoints
 
 # -------------------------------------------------------------------------------------------------
 
@@ -70,9 +71,23 @@ class ffs_sampling_control():
         
         ss.logger_freshs.debug(cc.c_magenta + __name__ + ': read_config' + cc.reset)
         
-        # not implemented yet
-        #self.reverse_direction = self.server.configfile.getint('ffs_control', 'reverse_direction')
-
+        if ss.configfile.has_option('ffs_control', 'reverse_direction'):
+            self.reverse_direction = ss.configfile.getint('ffs_control', 'reverse_direction')
+        else:
+            self.reverse_direction = 0
+        
+        if ss.configfile.has_option('ffs_control', 'reverse_forward_DB') and self.reverse_direction > 0:
+            self.reverse_forward_DB = str(ss.configfile.get('ffs_control', 'reverse_forward_DB'))
+            self.fwd_timestamp = re.sub('.*/','',re.sub('_configpoints.sqlite', '', self.reverse_forward_DB) )
+            # create database handler
+            self.fwd_db = configpoints.configpoints(ss, self.reverse_forward_DB)
+            ss.logger_freshs.info(cc.c_green + cc.bold + 'Simulating backwards.' + cc.reset)
+        else:
+            self.reverse_forward_DB = ''
+            if self.reverse_direction > 0:
+                ss.logger_freshs.warn(cc.c_red + 'Requested reverse simulation but no database given of the forward run! ' + \
+                                        'Ignore this if you are able to set up the simulation in B without a forward simulation.' + cc.reset)
+        
         if ss.configfile.has_option('ffs_control', 'require_runs'):
             self.require_runs = ss.configfile.getint('ffs_control', 'require_runs')
         else:
@@ -112,6 +127,8 @@ class ffs_sampling_control():
             self.min_origin_increase_count = ss.configfile.getint('ffs_control', 'min_origin_increase_count')
         else:
             self.min_origin_increase_count = 3
+
+
 
 
 # -------------------------------------------------------------------------------------------------
@@ -176,7 +193,7 @@ class ffs_sampling_control():
                 ss.logger_freshs.error(cc.c_red + cc.bold + 'Could not read lambdas from file '+ ss.lamfile + cc.reset)
                 raise SystemExit
         else:
-            ss.fill_lambdas()
+            self.fill_lambdas()
  
         if ss.act_lambda == 0:
             # read in ctime and successful runs
@@ -233,6 +250,11 @@ class ffs_sampling_control():
         
         ## Set initial parameters
         ss.M_0_runs = []
+        if self.reverse_direction > 0:
+            tmpA = ss.A
+            ss.A = -ss.B
+            ss.B = -tmpA
+
         ss.lambdas = [ss.A]
         ss.run_count = []
         ss.M_0 = []
@@ -263,7 +285,7 @@ class ffs_sampling_control():
             ss.run_count.append(0)
             ss.M_0.append(0)
             # fill lambda array
-            ss.fill_lambdas()
+            self.fill_lambdas()
             # fill M_0_runs array with desired number of runs
             ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'borderA'))
             for act_entry in range(1,ss.noi):
@@ -274,6 +296,27 @@ class ffs_sampling_control():
                                   str(ss.lambdas) + \
                                   cc.reset)
 
+# -------------------------------------------------------------------------------------------------
+
+    # Fill lambdas list.
+    def fill_lambdas(self):
+        ss = self.server
+    
+        ss.logger_freshs.debug(cc.c_magenta + __name__ + ': fill_lambdas' + cc.reset)
+    
+        lambdaload = True
+        ss.noi = 1
+        while lambdaload:
+            try:
+                tmplam = ss.configfile.getfloat('hypersurfaces', 'lambda'+str(self.noi))
+                if self.reverse_direction > 0:
+                    tmplam = -tmplam
+                ss.lambdas.append(tmplam)
+                ss.noi += 1
+            except:
+                lambdaload = False
+                
+        ss.lambdas.append(self.B)
 
 # -------------------------------------------------------------------------------------------------
 
@@ -548,7 +591,7 @@ class ffs_sampling_control():
                 percent += ' '
 
         if mode == 'AB':
-            ss.logger_freshs.info(cc.c_magenta + cc.bold + '[A|' + percent + '|B]' + cc.reset)
+            ss.logger_freshs.info(cc.c_green + cc.bold + '[A|' + percent + '|B]' + cc.reset)
         else:
             ss.logger_freshs.info(cc.c_green + cc.bold + '[' + il + '|' + percent + \
                                   '|' + ir + '] (' + str(ndone) + '/' + str(ndesired) + ')' + \
