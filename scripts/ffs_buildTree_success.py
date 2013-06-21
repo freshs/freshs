@@ -25,6 +25,7 @@
 # os-related
 import sys
 sys.path.append('../server/modules')
+sys.path.append('../server/modules/ffs')
 sys.setrecursionlimit(999999)
 import os
 import glob
