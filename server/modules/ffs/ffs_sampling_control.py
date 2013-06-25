@@ -327,7 +327,7 @@ class ffs_sampling_control():
             except:
                 lambdaload = False
                 
-        ss.lambdas.append(self.B)
+        ss.lambdas.append(ss.B)
 
 # -------------------------------------------------------------------------------------------------
 
