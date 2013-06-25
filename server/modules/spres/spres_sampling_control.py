@@ -50,7 +50,7 @@ class spres_sampling_control():
         ##setup some useful variables
         self.nBins             = ss.nohs+2
         self.parentShots       = []
-        self.min_weight        = 1e-300 ##round weights below this value to zero
+        self.min_weight        = 1e-250 ##round weights below this value to zero
 
         ##build some data structures.
         self.stateVector        = self.nBins * [0.0]
@@ -146,7 +146,7 @@ class spres_sampling_control():
             shots_required = ss.M_0_prev[bin]
             shots_made     = ss.storepoints.return_nop_lold( bin )
         
-            if shots_made < shots_required and self.stateVector_old[bin] > 0.0:
+            if shots_made < shots_required and self.stateVector_old[bin] > self.min_weight:
                allShots  = False
                bin_short = bin
                self.flag_bin_complete[bin] = False
@@ -254,8 +254,12 @@ class spres_sampling_control():
 
                         if complete < ss.M_0_runs[bin] :
                            
-			    ss.logger_freshs.debug(cc.c_magenta + 'sv: ' + str(self.stateVector[bin]) + \
+			    ss.logger_freshs.debug(cc.c_magenta + 'sv:    ' + str(self.stateVector[bin]) + \
 							         cc.reset)
+                            ss.logger_freshs.debug(cc.c_magenta + 'sv_old:' + str(self.stateVector_old[bin]) + \
+				                                                                 cc.reset)
+
+
 
 
                             ss.logger_freshs.debug(cc.c_magenta + 'bin ' + str(bin) + \
@@ -482,12 +486,12 @@ class spres_sampling_control():
         for fromRow in self.transMat1[row].keys():
             chance =  self.stateVector_old[fromRow] * self.transMat1[row][fromRow]
             if chance > 0.0:
-                if self.stateVector_old[fromRow] < self.min_weight:
-		    ss.logger_freshs.info(cc.c_red+ "Warning! Rounded away weight of "+str(chance)+\
-			                            " between "+str(fromRow)+" and "+str(row)+cc.reset)
-                else:
 
 		    scale     += chance
+
+		    ##print str(row)+" "+str(fromRow)
+		    ##print self.epoch_points_old
+
                     count      = len(self.epoch_points_old[row][fromRow])
                     chance_per = chance / float(count)
 
@@ -498,6 +502,13 @@ class spres_sampling_control():
                         shotId = point[0]
                         self.parentShots.append( [shotId, fromRow, chance_per] ) ##list of lists
 
+        if scale > 0.0 and scale < self.min_weight:
+            ss.logger_freshs.info(cc.c_red+ "Warning! Rounded away weight of "+str(scale)+\
+	    	                                                    " for bin "+str(row)+cc.reset)
+            scale = 0.0
+	    self.parentShots = []
+
+
         ##divide by less than about 1e-300 seems to give NaNs
         if scale <= 0.0:
 
@@ -506,9 +517,9 @@ class spres_sampling_control():
             ss.logger_freshs.debug(cc.c_blue+"shots in were: ")
             for fromRow in self.transMat1[row].keys():
                 ss.logger_freshs.debug("bin: "+str(fromRow)+" had weight: "+str(self.stateVector_old[fromRow]))
-                if self.stateVector_old[fromRow] == 0.0:
-                    ss.logger_freshs.debug("stateVec: "+str(self.stateVector_old)+cc.reset)
-                    exit("Error: shot recorded from bin which had zero weight. Do the transmats, state vectors and DBs match up?")
+                #if self.stateVector_old[fromRow] == 0.0:
+                #    ss.logger_freshs.debug("stateVec: "+str(self.stateVector_old)+cc.reset)
+                #    exit("Error: shot recorded from bin which had zero weight. Do the transmats, state vectors and DBs match up?")
             ss.logger_freshs.debug(cc.reset)
 
             return( False ) ##there are no parent shots entering this bin, as yet.
@@ -535,7 +546,10 @@ class spres_sampling_control():
                 return( None, None ) ##there are no parent shots entering this bin, as yet.
 
             self.weightToSpend = 1.0
-	    self.invNumShots   = 1.0 / ss.M_0_runs[ss.act_lambda]
+	    if ss.M_0_runs[ss.act_lambda] >= 1:
+		self.invNumShots = 1.0 / ss.M_0_runs[ss.act_lambda]
+	    else:
+	        self.invNumShots = 1.0
 
             self.needFlip      = False
 
