@@ -194,7 +194,12 @@ class ffs_sampling_control():
                 raise SystemExit
         else:
             self.fill_lambdas()
- 
+            # fill M_0_runs array with desired number of runs
+            ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'borderA'))
+            for act_entry in range(1,ss.noi):
+                ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'lambda' + str(act_entry)))
+            ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'borderB')) 
+            
         if ss.act_lambda == 0:
             # read in ctime and successful runs
             ss.ctime = ss.storepoints.return_ctime()
@@ -222,8 +227,9 @@ class ffs_sampling_control():
                 ss.M_0.append(ss.storepoints.return_runcount(lmbd_tmp))
                 ss.run_count.append(ss.storepoints.return_nop(lmbd_tmp))
            
-            ss.M_0_runs = ss.run_count[:]
+            
             if ss.auto_interfaces:
+                ss.M_0_runs = ss.run_count[:]
                 if ss.M_0_runs[-1] < ss.ai.auto_runs:
                     ss.M_0_runs[-1] = ss.ai.auto_runs
 

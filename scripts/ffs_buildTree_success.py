@@ -60,8 +60,9 @@ def visit(cfp):
     
     try:
         uuid_tracefile = get_tracefile(cfp[0], cfp[16])
-    except:
+    except Exception as exc:
         uuid_tracefile = ''
+        print exc
         
 #lambda_id,configpoint,origin_point,calcsteps,ctime,runtime,success,runcount,myid,seed,lambda_old,weight,rcval,lpos,usecount
     tr_line.append([ cfp[0],cfp[13],cfp[12],cfp[3],cfp[4],cfp[5],cfp[9], uuid_tracefile ])
