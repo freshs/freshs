@@ -331,6 +331,8 @@ class configpoints:
         biglam = 0
         for row in self.cur:
             biglam = row[0]
+            if biglam == None:
+                biglam = 0
         return biglam  
 
     # Return complete database line where origin_point matches (for copying the ghost-line to real world)
