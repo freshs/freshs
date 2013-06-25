@@ -80,6 +80,7 @@ class server(asyncore.dispatcher):
         # Set global timestamp / set dbload if timestamp is given
         self.timestamp = self.get_timestamp(timestamp)
         
+       
         # Read the configfile
         self.read_config(configfile_name)
 
@@ -540,6 +541,7 @@ class server(asyncore.dispatcher):
         if len(self.clients) > 0 and (len(self.ghost_clients) + len(self.idle_clients)) == len(self.clients):
            self.logger_freshs.warn(cc.c_red + 'DANG! ALL CLIENTS ARE ABSENT...' + cc.reset)
         self.periodic = threading.Timer(self.t_infocheck, self.periodic_check)
+        self.periodic.daemon=True
         self.periodic.start()
 
 # -------------------------------------------------------------------------------------------------
@@ -776,11 +778,11 @@ class server(asyncore.dispatcher):
                             if self.run_count[self.act_lambda] > 0:
                                 client.decr_runcount(self.act_lambda)
                                 self.M_0[self.act_lambda] -= 1
-                            if self.storepoints.return_nop(self.act_lambda) > 0:
-                                self.storepoints.update_M_0(-1)
+                            #if self.storepoints.return_nop(self.act_lambda) > 0:
+                            #    self.storepoints.update_M_0(-1)
 
-                        except:
-                            self.logger_freshs.warn(cc.c_red + 'Could not decrease run_count...' + cc.reset )
+                        except Exception as exc:
+                            self.logger_freshs.warn(cc.c_red + 'Could not decrease run_count, ' + str(exc) + cc.reset )
                     else:
                         # get index on which explorer was running
                         

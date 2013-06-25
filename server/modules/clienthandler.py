@@ -162,8 +162,8 @@ class ClientHandler(asyncore.dispatcher):
         ss = self.server
         ss.M_0[lam] += 1
 
-        if ss.storepoints.return_nop(lam) > 0:
-            ss.storepoints.update_M_0(1)
+        #if ss.storepoints.return_nop(lam) > 0:
+        #    ss.storepoints.update_M_0(1)
         ss.run_count[lam] += 1
 
         ss.logger_freshs.debug(cc.c_magenta + self.name + ': Increasing runcount, lambda ' + str(lam) + cc.reset)
@@ -204,7 +204,6 @@ class ClientHandler(asyncore.dispatcher):
             if ss.ffs_control.escape_clients[el] == point:
                 return True
         return False
-
 
 # --------------------------------------------------------------------------
 # FFS Escape flux
@@ -299,9 +298,17 @@ class ClientHandler(asyncore.dispatcher):
                     ", \"clientname\": \"" + self.name + "\"" + \
                     ", \"timestamp\": \"" + ss.timestamp + "\"" + \
                     ", \"uuid\": \"" + self.get_uuid() + "\""
+        
+        if ss.ffs_control.reverse_direction > 0 and last_escape_point == 'None':
+            # get configpoint from forward database
+            equi_B_point = ss.ffs_control.fwd_db.random_point_B()[0]
+            job_string += ", \"random_points\": " + str(equi_B_point) + ", \"reverse_equilibrate\": 1"
+        
+        elif last_escape_point != 'None':
+            job_string += ", \"random_points\": " + str(last_escape_point)
 
-        if last_escape_point != 'None':
-            job_string += ", \"random_points\": " + str(last_escape_point) + ", \"random_points\": " + str(last_escape_point)
+        if ss.ffs_control.reverse_direction > 0:
+            job_string += ", \"reverse_direction\": 1" + ", \"forward_timestamp\": \"" + ss.ffs_control.fwd_timestamp + "\""
 
         if not newtrace:
             job_string += ", \"last_rc\": " + str(rcval)
@@ -412,6 +419,9 @@ class ClientHandler(asyncore.dispatcher):
         else:
             # random point not in ghost database
 
+            if self.ghostcount >= ss.ffs_control.max_ghosts_between:
+                ss.logger_freshs.info(cc.c_magenta + 'Not using more ghostpoints in a row per client than requested.' + cc.reset)
+
             self.ghostcount = 0
 
             # check if ghost client is calculating this point at the moment
@@ -465,6 +475,9 @@ class ClientHandler(asyncore.dispatcher):
                                    ", \"timestamp\": \""    + ss.timestamp +"\"" + \
                                    ", \"uuid\": \""         + self.get_uuid() + "\""
 
+                if ss.ffs_control.reverse_direction > 0:
+                    job_string += ", \"reverse_direction\": 1"
+                
                 job_string_complete = self.compose_message(job_string)
 
                 #ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' + job_string_complete + \
@@ -526,6 +539,9 @@ class ClientHandler(asyncore.dispatcher):
                     ", \"act_lambda\":"      + str(next_lambda) + \
                     ", \"uuid\": \"" + self.get_uuid() + "\""
 
+        if ss.ffs_control.reverse_direction > 0:
+            job_string += ", \"reverse_direction\": 1"
+                    
         job_string_complete = self.compose_message(job_string)
 
         #ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' + job_string_complete + \

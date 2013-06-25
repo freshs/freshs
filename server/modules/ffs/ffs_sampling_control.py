@@ -25,11 +25,12 @@ import time
 # Formatting
 import modules.concolors as cc
 import ConfigParser
+import re
 
 import math
 import random
 
-#import server
+import configpoints
 
 # -------------------------------------------------------------------------------------------------
 
@@ -70,9 +71,23 @@ class ffs_sampling_control():
         
         ss.logger_freshs.debug(cc.c_magenta + __name__ + ': read_config' + cc.reset)
         
-        # not implemented yet
-        #self.reverse_direction = self.server.configfile.getint('ffs_control', 'reverse_direction')
-
+        if ss.configfile.has_option('ffs_control', 'reverse_direction'):
+            self.reverse_direction = ss.configfile.getint('ffs_control', 'reverse_direction')
+        else:
+            self.reverse_direction = 0
+        
+        if ss.configfile.has_option('ffs_control', 'reverse_forward_DB') and self.reverse_direction > 0:
+            self.reverse_forward_DB = str(ss.configfile.get('ffs_control', 'reverse_forward_DB'))
+            self.fwd_timestamp = re.sub('.*/','',re.sub('_configpoints.sqlite', '', self.reverse_forward_DB) )
+            # create database handler
+            self.fwd_db = configpoints.configpoints(ss, self.reverse_forward_DB)
+            ss.logger_freshs.info(cc.c_green + cc.bold + 'Simulating backwards.' + cc.reset)
+        else:
+            self.reverse_forward_DB = ''
+            if self.reverse_direction > 0:
+                ss.logger_freshs.warn(cc.c_red + 'Requested reverse simulation but no database given of the forward run! ' + \
+                                        'Ignore this if you are able to set up the simulation in B without a forward simulation.' + cc.reset)
+        
         if ss.configfile.has_option('ffs_control', 'require_runs'):
             self.require_runs = ss.configfile.getint('ffs_control', 'require_runs')
         else:
@@ -114,6 +129,8 @@ class ffs_sampling_control():
             self.min_origin_increase_count = 3
 
 
+
+
 # -------------------------------------------------------------------------------------------------
 
     def load_from_db(self):
@@ -124,7 +141,6 @@ class ffs_sampling_control():
         ss.act_lambda = ss.storepoints.biggest_lambda()
 
         if ss.auto_interfaces:
-            ss.M_0_runs.append(ss.ai.auto_runs)
             try:
                 # TODO: make this a config option?
                 loadfromdb = True
@@ -136,7 +152,8 @@ class ffs_sampling_control():
                     tmp_lamlist = ss.storepoints.return_lamlist()
                     ilam = len(tmp_lamlist)
                     ss.lambdas = tmp_lamlist[:]
-                    for i in range(ilam):
+                    ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'borderA'))
+                    for i in range(ilam-1):
                         ss.M_0_runs.append(ss.ai.auto_runs)
                     ss.logger_freshs.info(cc.c_magenta + 'Read ' + str(ilam-1) + ' lambdas from DB' + cc.reset)
                 else:
@@ -176,8 +193,13 @@ class ffs_sampling_control():
                 ss.logger_freshs.error(cc.c_red + cc.bold + 'Could not read lambdas from file '+ ss.lamfile + cc.reset)
                 raise SystemExit
         else:
-            ss.fill_lambdas()
- 
+            self.fill_lambdas()
+            # fill M_0_runs array with desired number of runs
+            ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'borderA'))
+            for act_entry in range(1,ss.noi):
+                ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'lambda' + str(act_entry)))
+            ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'borderB')) 
+            
         if ss.act_lambda == 0:
             # read in ctime and successful runs
             ss.ctime = ss.storepoints.return_ctime()
@@ -205,10 +227,16 @@ class ffs_sampling_control():
                 ss.M_0.append(ss.storepoints.return_runcount(lmbd_tmp))
                 ss.run_count.append(ss.storepoints.return_nop(lmbd_tmp))
            
-            ss.M_0_runs = ss.run_count[:]
+            
             if ss.auto_interfaces:
+                ss.M_0_runs = ss.run_count[:]
                 if ss.M_0_runs[-1] < ss.ai.auto_runs:
                     ss.M_0_runs[-1] = ss.ai.auto_runs
+
+                if ss.lambdas[-1] >= ss.B:
+                    runs_on_B = ss.configfile.getint('runs_per_interface', 'borderB')
+                    if ss.M_0_runs[-1] < runs_on_B:
+                        ss.M_0_runs[-1] = runs_on_B
 
             ss.logger_freshs.debug(cc.c_magenta + 'Runcount: ' + str(ss.run_count) + cc.reset)
             ss.logger_freshs.debug(cc.c_magenta + 'M_0: ' + str(ss.M_0) + cc.reset)
@@ -233,6 +261,11 @@ class ffs_sampling_control():
         
         ## Set initial parameters
         ss.M_0_runs = []
+        if self.reverse_direction > 0:
+            tmpA = ss.A
+            ss.A = -ss.B
+            ss.B = -tmpA
+
         ss.lambdas = [ss.A]
         ss.run_count = []
         ss.M_0 = []
@@ -263,7 +296,7 @@ class ffs_sampling_control():
             ss.run_count.append(0)
             ss.M_0.append(0)
             # fill lambda array
-            ss.fill_lambdas()
+            self.fill_lambdas()
             # fill M_0_runs array with desired number of runs
             ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'borderA'))
             for act_entry in range(1,ss.noi):
@@ -274,6 +307,27 @@ class ffs_sampling_control():
                                   str(ss.lambdas) + \
                                   cc.reset)
 
+# -------------------------------------------------------------------------------------------------
+
+    # Fill lambdas list.
+    def fill_lambdas(self):
+        ss = self.server
+    
+        ss.logger_freshs.debug(cc.c_magenta + __name__ + ': fill_lambdas' + cc.reset)
+    
+        lambdaload = True
+        ss.noi = 1
+        while lambdaload:
+            try:
+                tmplam = ss.configfile.getfloat('hypersurfaces', 'lambda'+str(self.noi))
+                if self.reverse_direction > 0:
+                    tmplam = -tmplam
+                ss.lambdas.append(tmplam)
+                ss.noi += 1
+            except:
+                lambdaload = False
+                
+        ss.lambdas.append(ss.B)
 
 # -------------------------------------------------------------------------------------------------
 
@@ -425,7 +479,7 @@ class ffs_sampling_control():
                     # check again
                     return self.check_run_required(ilam)
                 
-                ss.logger_freshs.info(cc.c_magenta + cc.bold + 'Last interface was ' + \
+                ss.logger_freshs.info(cc.c_green + cc.bold + 'Last interface was ' + \
                                       str(ss.act_lambda-1) + ', now calculating on interface ' + \
                                       str(ss.act_lambda) + cc.reset)
                 
@@ -548,7 +602,7 @@ class ffs_sampling_control():
                 percent += ' '
 
         if mode == 'AB':
-            ss.logger_freshs.info(cc.c_magenta + cc.bold + '[A|' + percent + '|B]' + cc.reset)
+            ss.logger_freshs.info(cc.c_green + cc.bold + '[A|' + percent + '|B]' + cc.reset)
         else:
             ss.logger_freshs.info(cc.c_green + cc.bold + '[' + il + '|' + percent + \
                                   '|' + ir + '] (' + str(ndone) + '/' + str(ndesired) + ')' + \
@@ -726,6 +780,38 @@ class ffs_sampling_control():
         else:
             calcsteps = 0
 
+        if 'rcval' in ddata:
+            rcval = ddata['rcval']
+        else:
+            ss.logger_freshs.warn(cc.c_red + 'Warning: Did not receive reaction coordinate value from client, setting to zero.' + \
+                                  cc.reset)
+            rcval = 0.0
+
+        if 'uuid' in ddata:
+            uuid = ddata['uuid']
+        else:
+            uuid = ''
+
+        if 'customdata' in ddata:
+            customdata = ddata['customdata']
+        else:
+            customdata = ''
+
+        try:
+            origin_point = ddata['origin_points']
+        except:
+            ss.logger_freshs.warn(cc.c_red + 'Warning: Did not receive an origin point from client, setting to empty string!' + \
+                                  cc.reset)
+            origin_point = ''
+
+        # get the RNG seed that was used
+        try:
+            start_seed = ddata['seed']
+        except:
+            start_seed = 0
+            ss.logger_freshs.warn(cc.c_red + 'Warning: Did not receive seed from client, setting to zero.' + \
+                                  cc.reset)
+
         try:
             origin_point = ddata['origin_points']
         except:
@@ -739,6 +825,7 @@ class ffs_sampling_control():
                                   cc.reset)
                 newjob = False
         
+        # Should not be necessary, but safety first...
         client.remove_from_escape()
         
         if the_jobs_lambda == ss.act_lambda or the_jobs_lambda == 0:
@@ -761,11 +848,38 @@ class ffs_sampling_control():
                         ss.logger_freshs.debug(cc.c_magenta + 'Added ctime ' + str(ctime) + ' to last escape point. Server ctime is now ' + \
                                            str(ss.ctime) + cc.reset)
             
+            else:
+                try:
+                    ss.storepoints.add_point(the_jobs_lambda, \
+                                             '', \
+                                             origin_point, \
+                                             ddata['calcsteps'], \
+                                             ddata['ctime'], \
+                                             runtime, \
+                                             0, \
+                                             runid, \
+                                             start_seed, \
+                                             rcval, \
+                                             ss.lambdas[the_jobs_lambda], \
+                                             0, \
+                                             0, \
+                                             uuid, \
+                                             customdata \
+                                             )
+
+                except Exception as exc:
+                    ss.logger_freshs.warn(cc.c_red + \
+                                      'Not storing unsuccesful run in database because of incomplete data, ' + str(exc) + \
+                                      cc.reset)
+                    ss.logger_freshs.debug(cc.c_red + 'Data was: ' + str(ddata) + cc.reset)                
+            
             ss.logger_freshs.debug(cc.c_green + \
                                    'Run was not successful, not incrementing counter.' + \
                                    cc.reset)
             if 'origin_points' in ddata:
                 ss.storepoints.update_usecount_by_myid(ddata['origin_points'])
+                
+                
             else:
                 ss.logger_freshs.warn(cc.c_red + 'No origin point in data of ' + client.name + \
                                         ', not incrementing use-count' + cc.reset)

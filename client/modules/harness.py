@@ -106,20 +106,21 @@ class harness:
         print "calling the following: " + str(argList) 
         
         self.sT = scriptThread(argList)
+        self.sT.daemon = True
         self.sT.run()
        
             
             
     def send( self, send_coords, get_coords, get_meta, act_point ):
-         
+
             self.send_coords =  send_coords
             self.get_coords  =  get_coords
             self.get_meta    =  get_meta
-
+            
             run_in_progress = True
             self.pp = []    
             self.mp = [] 
-                    
+            
         ##loop over multiple start points that we may have been sent?? Should only be 1.
         ##Is neccesary to pass in a list, however, or python will not pass-by-reference?
         #for act_point in act_points:

@@ -27,8 +27,11 @@ import random
 # Logging
 import logging
 
-# Formatting
-import modules.concolors as cc
+try:
+    # Formatting
+    import modules.concolors as cc
+except:
+    print "Not using console colors."
 
 # Parsing
 import ast
@@ -39,13 +42,13 @@ class configpoints:
     def __init__(self, server, dbfile):
     
         self.server = server
-        
+
         # create sqlite table
         self.dbfile = dbfile
         self.con, self.cur = self.connect()
         self.init_table()
         self.have_pair_ij = 0
-        # if you have problems with the database which cannot be written to disk
+        # if you have problems with the database which cannot be written to disk, error: "database or disk is full"
         #self.cur.execute('PRAGMA temp_store = 2')
         
     # Connect to database
@@ -75,9 +78,9 @@ class configpoints:
             self.cur.execute('''create index timeindex on configpoints ( calcsteps )''')
             self.con.commit()
 
-        except:
-            #print "Not creating table, already exists."
-            pass
+        except Exception as exc:
+            print self.dbfile + ":", exc
+            
 
 
     # Add config point to database
@@ -91,7 +94,6 @@ class configpoints:
         entries.append((interface, str(newpoint), str(originpoint), calcsteps, ctime, runtime, success, runcount, pointid, seed, 0, 0.0, rcval, lpos, usecount, deactivated, uuid, customdata))
             
         for t in entries:
-            # TODO: error handling, if database is locked or so
             maxretry = 3
             attempt = 0
             writeok = 0
@@ -102,7 +104,10 @@ class configpoints:
                     writeok = 1
                 except:
                     attempt += 1
-                    self.server.logger_freshs.warn(cc.c_red + 'Could not write data to DB, retrying ' + str(maxretry) + ' times: ' + str(attempt) + '/' + str(maxretry) + cc.reset)
+                    try:
+                        self.server.logger_freshs.warn(cc.c_red + 'Could not write data to DB, retrying ' + str(maxretry) + ' times: ' + str(attempt) + '/' + str(maxretry) + cc.reset)
+                    except:
+                        pass
                     #quit client and throw error (?)
 
 
@@ -114,7 +119,15 @@ class configpoints:
         r = self.cur.fetchone()
         return r[0]
 
-    # return number of all points on interface (including deactivated)
+    # Return number of active points (nop) on interface
+    def return_nop_nonsuccess(self,interface):
+        self.cur.execute('select count(*) from configpoints where lambda = ? and success = 0 and deactivated = 0', [interface])
+        retval = 0
+
+        r = self.cur.fetchone()
+        return r[0]
+
+    # return number of all successful points on interface (including deactivated)
     def return_nop_all(self,interface):
         self.cur.execute('select count(*) from configpoints where lambda = ? and success = 1', [interface])
         retval = 0
@@ -150,7 +163,8 @@ class configpoints:
         return dt*float(the_calcsteps)
 
     def return_runcount(self, interface):
-        self.cur.execute('select max(runcount) from configpoints where lambda = ? and deactivated = 0', [interface])
+        #self.cur.execute('select max(runcount) from configpoints where lambda = ? and deactivated = 0', [interface])
+        self.cur.execute('select count(*) from configpoints where lambda = ? and deactivated = 0', [interface])
         runcount = 0
         for row in self.cur:
             runcount = row[0]
@@ -185,7 +199,10 @@ class configpoints:
         rcval = float(r[2])
             
         return retpoints, retpoint_ids, rcval               
-        
+    
+    def random_point_B(self):
+        biglam = self.biggest_lambda()
+        return self.return_random_point(biglam)
         
     # Return random point from interface
     def return_random_point(self,the_lambda):
@@ -196,7 +213,7 @@ class configpoints:
         ##Create a view of the DB to save searching repeatedly for the set of candidate points
         viewname = 'v_'+str(the_lambda)
         self.cur.execute(\
-   'create temp view if not exists '+viewname+' as select * from configpoints where deactivated = 0 and lambda = '+\
+   'create temp view if not exists '+viewname+' as select * from configpoints where deactivated = 0 and success = 1 and lambda = '+\
                          str(the_lambda))
         ##Note that passing arguments doesn't work for view creation in sqlite,
         ##you have to mung the string directly.
@@ -289,15 +306,15 @@ class configpoints:
         #self.con.commit()
 
     # change number of runs on last point by 'nor'
-    def update_M_0(self,nor=0,point='last'):
-        # get last calculated point from database
-        if nor != 0:
-            if point == 'last':
-                self.cur.execute("select configpoint from configpoints where deactivated = 0 and lambda=? order by runcount desc limit 1",[str(self.biggest_lambda())])
-            for row in self.cur:
-                point = row[0]
-            self.cur.execute("update configpoints set runcount=runcount+? where configpoint = ?", [str(nor), str(point)])
-            #self.con.commit()
+    #def update_M_0(self,nor=0,point='last'):
+    #    # get last calculated point from database
+    #    if nor != 0:
+    #        if point == 'last':
+    #            self.cur.execute("select configpoint from configpoints where deactivated = 0 and lambda=? order by runcount desc limit 1",[str(self.biggest_lambda())])
+    #        for row in self.cur:
+    #            point = row[0]
+    #        self.cur.execute("update configpoints set runcount=runcount+? where configpoint = ?", [str(nor), str(point)])
+    #        #self.con.commit()
         
     # Return number of runs performed on origin_point
     def runs_on_point(self, point):
@@ -309,10 +326,13 @@ class configpoints:
     
     # Return the biggest lambda in database
     def biggest_lambda(self):
-        self.cur.execute('select lambda from configpoints order by lambda desc limit 1')
+        #self.cur.execute('select lambda from configpoints order by lambda desc limit 1')
+        self.cur.execute('select max(lambda) from configpoints')
         biglam = 0
         for row in self.cur:
             biglam = row[0]
+            if biglam == None:
+                biglam = 0
         return biglam  
 
     # Return complete database line where origin_point matches (for copying the ghost-line to real world)
@@ -340,7 +360,7 @@ class configpoints:
             retval.append(ast.literal_eval(str(row[0])))
         return retval
 
-    # Return all collected configpoints from interface
+    # Return all collected configpoints ids from interface
     def return_configpoints_ids(self, interface):
         self.cur.execute('select myid from configpoints where lambda = ? and deactivated = 0 and success = 1', [interface])
         retval = []
@@ -506,14 +526,14 @@ class configpoints:
     # Select ghost point for calculation 
     def select_ghost_point(self, interface):
         # get configpoints on current interface
-        candidates = self.return_configpoints(interface)
+        candidates = self.return_configpoints_ids(interface)
         countdict = {}
         for candidate in candidates:
             countdict[str(candidate)] = self.server.ghostpoints.runs_on_point(candidate) + self.runs_on_point(candidate)
         # get (one) point with lowest number
         # min([(countdict[x],x) for x in countdict])[1]
-        point = min(countdict,key = lambda a: countdict.get(a))
-        return point, self.return_id(point)
+        point_id = min(countdict,key = lambda a: countdict.get(a))
+        return self.return_point_by_id(point_id), point_id
 
     # Return all entries corresponding to one interface
     def return_interface(self, interface):
@@ -622,6 +642,32 @@ class configpoints:
         for row in self.cur:
             rtl.append(row[0])
         return rtl
+
+    def return_probabilities(self):
+        probabs = []
+        asuccess = []
+        anonsuccess = []
+        nnall = []
+        biglam = self.biggest_lambda()
+        for i in range(1,biglam+1):
+            nonsuccess = self.return_nop_nonsuccess(i)
+            anonsuccess.append(nonsuccess)
+            success = self.return_nop(i)
+            asuccess.append(success)
+            nall = nonsuccess + success
+            nnall.append(nall)
+            if nall > 0:
+                probabs.append(float(success) / float(nall))
+            else:
+                print "Warning: number of points is 0 despite of having a point on the interface. Something is wrong."
+        return probabs, asuccess, anonsuccess, nnall
+
+    def return_customdata(self,interface):
+        cud = []
+        self.cur.execute('select customdata from configpoints where lambda = ? and deactivated = 0', [str(interface)])
+        for row in self.cur:
+            cud.append(row[0])
+        return cud
 
     def return_calcsteps_list(self, the_lambda):
         csl = []
