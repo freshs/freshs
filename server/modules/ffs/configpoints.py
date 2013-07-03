@@ -624,14 +624,14 @@ class configpoints:
 
     def return_points_on_last_interface(self):
         the_points = []
-        self.cur.execute('select * from configpoints where lambda = ? and deactivated = 0', [str(self.biggest_lambda())])
+        self.cur.execute('select * from configpoints where lambda = ? and deactivated = 0 and success = 1', [str(self.biggest_lambda())])
         for row in self.cur:
             the_points.append(row)
         return the_points
 
     def return_points_on_last_interface_all(self):
         the_points = []
-        self.cur.execute('select * from configpoints where lambda = ?', [str(self.biggest_lambda())])
+        self.cur.execute('select * from configpoints where lambda = ? and deactivated = 0', [str(self.biggest_lambda())])
         for row in self.cur:
             the_points.append(row)
         return the_points

@@ -22,6 +22,7 @@
 # os-related
 import sys
 sys.path.append('../server/modules')
+sys.path.append('../server/modules/ffs')
 import os
 import re
 
