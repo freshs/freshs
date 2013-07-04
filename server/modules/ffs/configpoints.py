@@ -298,6 +298,24 @@ class configpoints:
         #print "Point was used", usecount, "times."
         return usecount
 
+
+    def return_nop_used_from_interface(self,interface,success=-1):
+        if success < 0:
+            self.cur.execute('select sum(usecount) from configpoints where lambda = ? and deactivated = 0', [interface])
+        else:
+            self.cur.execute('select sum(usecount) from configpoints where lambda = ? and deactivated = 0 and success = ?', [interface,success])
+        r = self.cur.fetchone()
+        try:
+            retval = int(r[0])
+            return retval
+        except Exception as e:
+            #print e
+            return 0
+        if retval == None:
+            return 0
+        return 0
+
+
     # Delete line where origin_point matches (necessary for ghosts)
     def delete_origin_point(self, ghostline):
         # lambda int, configpoint text, origin_point text, calcsteps int, ctime real, runtime real, success int, runcount int, \
@@ -558,15 +576,31 @@ class configpoints:
             retval = int(row[0])
         return retval
 
-    def return_sum_calcsteps(self):
-        self.cur.execute('select sum(calcsteps) from configpoints where deactivated = 0')
+    def return_sum_calcsteps(self,interface=-1):
         calcsteps = 0
+        if interface < 0:
+            self.cur.execute('select sum(calcsteps) from configpoints where deactivated = 0')
+        else:
+            self.cur.execute('select sum(calcsteps) from configpoints where deactivated = 0 and lambda = ?', [interface])
         for row in self.cur:
             try:
                 calcsteps = int(row[0])
             except:
                 calcsteps = 0
         return calcsteps
+
+    def return_sum_runtime(self,interface=-1):
+        runtime = 0.0
+        if interface < 0:
+            self.cur.execute('select sum(runtime) from configpoints where deactivated = 0')
+        else:
+            self.cur.execute('select sum(runtime) from configpoints where deactivated = 0 and lambda = ?', [interface])
+        for row in self.cur:
+            try:
+                runtime = float(row[0])
+            except:
+                runtime = 0.0
+        return runtime
 
     def return_nohs(self):
         self.cur.execute('select max(lambda) from configpoints')
@@ -642,6 +676,21 @@ class configpoints:
         for row in self.cur:
             rtl.append(row[0])
         return rtl
+
+    def return_pointcount_all(self):
+        asuccess = []
+        anonsuccess = []
+        nnall = []
+        biglam = self.biggest_lambda()
+        for i in range(0,biglam+1):
+            nonsuccess = self.return_nop_nonsuccess(i)
+            anonsuccess.append(nonsuccess)
+            success = self.return_nop(i)
+            asuccess.append(success)
+            nall = nonsuccess + success
+            nnall.append(nall)
+        return asuccess, anonsuccess, nnall
+
 
     def return_probabilities(self):
         probabs = []
