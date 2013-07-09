@@ -55,7 +55,10 @@ class ffs_sampling_control():
         self.lamconf = ConfigParser.RawConfigParser()
         
         self.escape_clients = {}
-
+        
+        # If there's no point in the escape trace, save the ctime and store it with the next point
+        self.ctime_pending = 0
+        
         # counter for different origin points
         self.dorigins = 0
         self.dorigins_last = 0
@@ -840,10 +843,16 @@ class ffs_sampling_control():
                     ss.ctime += ctime
                     # write leftover steps to DB
                     if origin_point == 'escape':
-                        ss.logger_freshs.warn(cc.c_red + 'Tried to add ctime ' + str(ctime) + ' to escape point with ID = escape. This is ambiguous and cannot be done. ' + \
-                                              'Please use more escape_steps to have at least 2 points in an escape trajectory!' + cc.reset)
+                        self.ctime_pending += ctime
+                        ss.logger_freshs.info(cc.c_green + 'ctime ' + str(ctime) + ' will be stored with the next valid point, ' + str(self.ctime_pending) + ' ctime pending.' + cc.reset) 
                     else:
-                        ss.storepoints.add_ctime_steps(origin_point, ctime, calcsteps)
+                        if self.ctime_pending > 0.0:
+                            ctime_save = ctime + self.ctime_pending
+                            self.ctime_pending = 0.0
+                        else:
+                            ctime_save = ctime
+
+                        ss.storepoints.add_ctime_steps(origin_point, ctime_save, calcsteps)
                     # add it to the server variable
                         ss.logger_freshs.debug(cc.c_magenta + 'Added ctime ' + str(ctime) + ' to last escape point. Server ctime is now ' + \
                                            str(ss.ctime) + cc.reset)

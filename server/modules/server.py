@@ -746,7 +746,7 @@ class server(asyncore.dispatcher):
 
     # deregister client, check run_count etc
     def deregisterClient(self, client):
-    
+
         self.logger_freshs.debug(cc.c_magenta + __name__ + ': deregisterClient' + cc.reset)
     
         was_active2 = 0
@@ -754,10 +754,16 @@ class server(asyncore.dispatcher):
         if not self.disable_runs:
 
             # commit data in database
-            self.storepoints.commit()
+            try:
+                self.storepoints.commit()
+            except:
+                self.logger_freshs.info(cc.c_green + 'Notice: Could not commit last state of configpoint DB during client disconnect.' + cc.reset )
 
             if self.algorithm == sampling_algorithm.FFS:
-                self.ghostpoints.commit()
+                try:
+                    self.ghostpoints.commit()
+                except:
+                    self.logger_freshs.info(cc.c_green + 'Notice: Could not commit last state of ghostpoint DB during client disconnect.' + cc.reset )
 
             if self.is_active(client) or self.is_explorer(client):
 
@@ -770,7 +776,10 @@ class server(asyncore.dispatcher):
                     except:
                         self.logger_freshs.warn(cc.c_red + 'Could not decrease run_count...' + cc.reset )
                 else:
-                    self.ghostpoints.commit()
+                    try:
+                        self.ghostpoints.commit()
+                    except:
+                        self.logger_freshs.info(cc.c_green + 'Notice: Could not commit last state of ghostpoint DB during client disconnect.' + cc.reset )
                     if client not in self.explorer_clients:
                         # client was active. Need another client to resume this job
                         was_active2 = 1

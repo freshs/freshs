@@ -456,6 +456,8 @@ class ClientHandler(asyncore.dispatcher):
                 if ex_ind == -1:
                     ss.logger_freshs.info(cc.c_green + 'Starting job2 on ' + str(self.name) + \
                             ', run ' + str(ss.M_0[current_lambda]) + \
+                            ', lambda' + str(current_lambda) + \
+                            ' (' + str(next_interface) + ')' + \
                             cc.reset)
                 else:
                     ss.logger_freshs.info(cc.c_cyan + 'Starting explorer job2 on ' + str(self.name) + \
