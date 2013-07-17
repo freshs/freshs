@@ -535,6 +535,7 @@ class ClientHandler(asyncore.dispatcher):
                     ", \"random_points\": "  + str(selected_point)   + \
                     ", \"rp_id\": \""        + str(rp_id) + "\""     + \
                     ", \"seed\": "           + str(client_seed)      + \
+                    ", \"max_steps\": 0" + \
                     ", \"next_interface\": " + str(next_interface) + \
                     ", \"clientname\": \"" + self.name + "\"" + \
                     ", \"timestamp\": \"" + ss.timestamp + "\"" + \

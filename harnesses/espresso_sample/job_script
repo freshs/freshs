@@ -154,6 +154,16 @@ foreach {option value} $argv {
     -seed               {set SEED $value }
     -current_lambda     {set CURRENT_LAMBDA $value }
     -rp_id              {set RP_ID $value }
+    -A                  {set HALT_RC_LOWER $value }
+    -B                  {set borderB $value }
+    -last_rc            {set last_rc $value }
+    -next_interface     {set HALT_RC_UPPER $value }
+    -clientname         {set clientname $value }
+    -timestamp          {set timestamp $value }
+    -act_lambda         {set act_lambda $value }
+    -uuid               {set uuid $value }
+    -max_steps          {set max_steps $value }
+    -jobtype            {set jobtype $value }
     default             {puts "Additional not-used parameter $option with value $value"}
   }
 }
@@ -219,10 +229,18 @@ if { $CHECK_RC_EVERY != 0 } {
         set int_step $HALT_STEPS
 }
 set i 0
-while { 1 } {
+set in_progress 1
+set step_abort 0
+
+while { $in_progress } {
 
         integrate $int_step
         set i [expr ($i + $int_step)]
+
+        if {$i >= $max_steps} {
+            set in_progress 0
+            set step_abort 1
+        }
 
         ##REACTION COORDINATE: CALCULATE HERE      
         if { $CHECK_RC_EVERY > 0 } {

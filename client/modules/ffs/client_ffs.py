@@ -173,6 +173,7 @@ class client_ffs:
 
 
                     optionlist = "-tmpdir " + h.tmpdir + \
+                                 " -initial_config None" + \
                                  " -in_fifoname " + h.crds_in_fifoname + \
                                  " -back_fifoname " + h.crds_back_fifoname + \
                                  " -metadata_fifoname " + h.metadata_fifoname + \
@@ -204,11 +205,11 @@ class client_ffs:
                         ", \"rcval\": "      + str(flRc) + \
                         ", \"uuid\": \""      + uuid + "\""
 
-        print "Resultstring before appending:", results_base
+        #print "Resultstring before appending:", results_base
 
         results = self.build_custominfo(results_base, all_meta)
 
-        print "Resultstring after appending:", results
+        #print "Resultstring after appending:", results
 
         return "{" + results + "}"
 
@@ -237,7 +238,6 @@ class client_ffs:
         all_meta = {}
 
         h = harness(self.cli.exec_name,  self.cli.harness_path+"/job_script", self)
-        print "check"                                           
         # Wrap the code that uses threading/subprocesses
         # in a try-catch to clean up on interrupts, ctrl-C etc.
         try:     
@@ -253,6 +253,7 @@ class client_ffs:
             while True:
 
                 optionlist = "-tmpdir " + h.tmpdir + \
+                             " -initial_config None" + \
                              " -in_fifoname " + h.crds_in_fifoname + \
                              " -back_fifoname " + h.crds_back_fifoname + \
                              " -metadata_fifoname " + h.metadata_fifoname + \
