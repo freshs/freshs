@@ -570,46 +570,50 @@ class ffs_sampling_control():
 
     def print_lambar(self,mode='none',ndone=1,ndesired=1):
         ss = self.server
-        
-        ss.logger_freshs.debug(cc.c_magenta + __name__ + ': print_lambar' + cc.reset)
-        
-        subdiv = 50
-        percent = ''
-        
-        if mode == 'AB':
-            scale = ss.B / float(subdiv)
-            margin = int(ss.lambdas[ss.act_lambda] / scale)
-            
-        else:
-            scale = float(ndesired) / float(subdiv)
-            margin = int(float(ndone) / scale)
 
-            if ss.act_lambda == 0:
-                il = 'A'
+        try:
+        
+            ss.logger_freshs.debug(cc.c_magenta + __name__ + ': print_lambar' + cc.reset)
+            
+            subdiv = 50
+            percent = ''
+            
+            if mode == 'AB':
+                scale = ss.B / float(subdiv)
+                margin = int(ss.lambdas[ss.act_lambda] / scale)
+                
             else:
-                il = str(ss.act_lambda - 1)
-            if len(ss.lambdas) > 0:
-                if ss.lambdas[ss.act_lambda] == ss.B:
-                    ir = 'B'
+                scale = float(ndesired) / float(subdiv)
+                margin = int(float(ndone) / scale)
+
+                if ss.act_lambda == 0:
+                    il = 'A'
+                else:
+                    il = str(ss.act_lambda - 1)
+                if len(ss.lambdas) > 0:
+                    if ss.lambdas[ss.act_lambda] == ss.B:
+                        ir = 'B'
+                    else:
+                        ir = str(ss.act_lambda)
                 else:
                     ir = str(ss.act_lambda)
-            else:
-                ir = str(ss.act_lambda)
-            
-        for i in range(subdiv):
-            if(i < margin):
-                percent += '='
-            elif i == margin:
-                percent += '>'
-            else:
-                percent += ' '
+                
+            for i in range(subdiv):
+                if(i < margin):
+                    percent += '='
+                elif i == margin:
+                    percent += '>'
+                else:
+                    percent += ' '
 
-        if mode == 'AB':
-            ss.logger_freshs.info(cc.c_green + cc.bold + '[A|' + percent + '|B]' + cc.reset)
-        else:
-            ss.logger_freshs.info(cc.c_green + cc.bold + '[' + il + '|' + percent + \
-                                  '|' + ir + '] (' + str(ndone) + '/' + str(ndesired) + ')' + \
-                                  cc.reset)
+            if mode == 'AB':
+                ss.logger_freshs.info(cc.c_green + cc.bold + '[A|' + percent + '|B]' + cc.reset)
+            else:
+                ss.logger_freshs.info(cc.c_green + cc.bold + '[' + il + '|' + percent + \
+                                      '|' + ir + '] (' + str(ndone) + '/' + str(ndesired) + ')' + \
+                                      cc.reset)
+        except Exception as e:
+            ss.logger_freshs.debug(cc.c_magenta + 'Not printing lambar: ' + str(e) + cc.reset)
 
 
 # -------------------------------------------------------------------------------------------------
