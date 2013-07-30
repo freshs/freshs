@@ -1,15 +1,25 @@
 #!/bin/bash
 
 echo "Searching for Espresso executable to run test...."
-ESPRESSO_PATH=$(which Espresso)
+
+if [ "$ESPRESSO_PATH" == "" ];then
+    ESPRESSO_PATH=$(which Espresso)
+fi
+
 if [ -a "$ESPRESSO_PATH" ]
 then
        echo "found espresso at: $ESPRESSO_PATH" 
 else
        echo "Searching home directory....."
-       ESPRESSO_PATH=$(find ~/[E,e]spresso* /usr/local/[E,e]ffss* -name "Espresso"  | head -1)
+       ESPRESSO_PATH=$(find ~/[E,e]spresso* /usr/local/[E,e]spress* -name "Espresso"  | head -1)
+fi
+
+if [ "$ESPRESSO_PATH" == "" ];then
+    echo "Espresso not found. Please set ESPRESSO_PATH to the executable."
+    exit 1
+else
        echo ""
-       echo "Using the first Espresso executable located: $ESPRESSO_PATH"
+       echo "Using the Espresso executable located in $ESPRESSO_PATH"
        echo ""
 fi
 

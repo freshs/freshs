@@ -561,6 +561,14 @@ class configpoints:
             retval.append(list(row))
         return retval
 
+    # Return all successful entries corresponding to one interface
+    def return_interface_success(self, interface):
+        self.cur.execute('select * from configpoints where lambda = ? and deactivated = 0 and success = 1', [interface])
+        retval = []
+        for row in self.cur:
+            retval.append(list(row))
+        return retval
+        
     # Return all entries corresponding to one interface including deactivated points
     def return_interface_all(self, interface):
         self.cur.execute('select * from configpoints where lambda = ?', [interface])

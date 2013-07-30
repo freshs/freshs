@@ -322,12 +322,12 @@ class ffs_sampling_control():
         ss.noi = 1
         while lambdaload:
             try:
-                tmplam = ss.configfile.getfloat('hypersurfaces', 'lambda'+str(self.noi))
+                tmplam = ss.configfile.getfloat('hypersurfaces', 'lambda'+str(ss.noi))
                 if self.reverse_direction > 0:
                     tmplam = -tmplam
                 ss.lambdas.append(tmplam)
                 ss.noi += 1
-            except:
+            except Exception as e:
                 lambdaload = False
                 
         ss.lambdas.append(ss.B)
@@ -427,7 +427,7 @@ class ffs_sampling_control():
         ss.logger_freshs.debug(cc.c_magenta + 'run_count: ' + str(ss.run_count) + cc.reset)
         ss.logger_freshs.debug(cc.c_magenta + 'M_0_runs: ' + str(ss.M_0_runs) + cc.reset)
         ss.logger_freshs.debug(cc.c_magenta + 'lambda: ' + str(ilam) + cc.reset)
-
+        ss.logger_freshs.debug(cc.c_magenta + 'ESC_cl: ' + str(self.escape_clients)  + cc.reset)
         # number of escape clients running
         
         nescape = len(self.escape_clients)
@@ -442,14 +442,12 @@ class ffs_sampling_control():
 
         if ilam == 0 and self.parallel_escape == 1:
             if len(self.escape_point_candidates()[0]) - nescape > 0:
-                ss.logger_freshs.debug(cc.c_magenta + 'At least one escape trace still needs calculation steps.' + cc.reset)
+                ss.logger_freshs.info(cc.c_green + 'At least one escape trace still needs calculation steps.' + cc.reset)
+                self.print_lambar('inter',ncheck,ss.M_0_runs[ilam])
                 return True
- #           elif ncheck >= ss.M_0_runs[ilam] and len(self.escape_point_candidates()[0]) > 0:
-                # calculation steps are left over on first interface
-
-#                return True
   
         if ncheck >= ss.M_0_runs[ilam]:
+            self.print_lambar('inter',ncheck,ss.M_0_runs[ilam])
             # This interface is ready, switch to the next one
             # Make sure that we have not reached B yet
             
@@ -499,6 +497,8 @@ class ffs_sampling_control():
             else:
                 # Arrived in B
                 ss.end_simulation()
+
+        self.print_lambar('inter',ncheck,ss.M_0_runs[ilam])
 
         return False
 

@@ -134,6 +134,7 @@ proc init_A {} {
 
 ###Debug flag: set 1 to turn on extra output. (Not threadsafe).
 set debug 0
+set max_steps 0
 
 #default arguments:
 set COORDS_TO_FILE 0
@@ -237,7 +238,7 @@ while { $in_progress } {
         integrate $int_step
         set i [expr ($i + $int_step)]
 
-        if {$i >= $max_steps} {
+        if { ($max_steps > 0) && ($i >= $max_steps)} {
             set in_progress 0
             set step_abort 1
         }

@@ -237,7 +237,7 @@ class ClientHandler(asyncore.dispatcher):
             if ss.ffs_control.parallel_escape == 0:
                 if ncpoints > 0:
                     last_escape_point, rp_id, rcval = ss.storepoints.return_most_recent_escape_point()
-                    ss.logger_freshs.info(cc.c_green + 'Resuming job 1 on ' + str(self.name) + '.' + cc.reset)
+                    ss.logger_freshs.info(cc.c_green + 'Resuming single job 1 on ' + str(self.name) + '.' + cc.reset)
                     self.add_as_escape(rp_id)
                     newtrace = False
                 else:
@@ -315,8 +315,8 @@ class ClientHandler(asyncore.dispatcher):
 
         job_string_complete = self.compose_message(job_string)
 
-        ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' + job_string_complete + \
-                                  cc.reset)
+        #ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' + job_string_complete + \
+        #                          cc.reset)
 
         # Send job string
         ss.client_runtime[str(self)] = time.time()
