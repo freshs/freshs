@@ -135,16 +135,16 @@ echo ""
 python ../client/main_client.py  -s $start_config -c client_espresso.cfg  -x $harness_exe -H $harness_dir
 
 ##diff the results
-outfile=$(ls --sort=time DB/*configpoints.sqlite | head -1)
-echo ""
-echo "Attempting comparison of outputs with reference"
-echo ""
-if [ "$log" -eq "1" ]
-then 
-    ./compare_DB.py $ref_file $outfile | tee $log_txt
-else
-    ./compare_DB.py $ref_file $outfile
-fi
+#outfile=$(ls --sort=time DB/*configpoints.sqlite | head -1)
+#echo ""
+#echo "Attempting comparison of outputs with reference"
+#echo ""
+#if [ "$log" -eq "1" ]
+#then 
+#    ./compare_DB.py $ref_file $outfile | tee $log_txt
+#else
+#    ./compare_DB.py $ref_file $outfile
+#fi
 
 ##collect profile data
 if [ $profile -eq "1" ]

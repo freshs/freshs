@@ -32,4 +32,4 @@ fi
                           -e $ESPRESSO_PATH \
                           -p bench_$tmax.txt
 
-
+echo "Espresso Spres test complete: output files should be in the directory OUTPUT"
