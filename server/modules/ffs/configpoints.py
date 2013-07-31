@@ -577,6 +577,14 @@ class configpoints:
             retval.append(list(row))
         return retval
 
+    # Return all configpoints which were not used ==> endpoints
+    def return_all_endpoints(self):
+        retval = []
+        self.cur.execute('select * from configpoints where deactivated = 0 and success = 1 and usecount = 0')
+        for row in self.cur:
+            retval.append(list(row))
+        return retval
+
     def return_ghost_success_count(self, interface):
         self.cur.execute('select count(*) from configpoints where lambda = ? and deactivated = 0 success = 1', [interface])
         retval = 0
