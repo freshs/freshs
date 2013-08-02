@@ -10,14 +10,14 @@ For an introduction see the file INSTALL
 
 If you are using FRESHS please cite the following in your publications:
 
-* K. Kratzer, J. T. Berryman, A. Taudt, and A. Arnold, The Flexible Rare Event Sampling Harness System (FRESHS), 2013. 
+* Kai Kratzer, Joshua T. Berryman, Aaron Taudt, and Axel Arnold, The Flexible Rare Event Sampling Harness System (FRESHS), 2013. 
 
 Sampling-related:
 
 FFS:
 * Allen, Warren & ten Wolde, Phys. Rev. Lett. 94, 018104 (2005)
 automatic, optimized interface placement:
-* K. Kratzer, Axel Arnold, and Rosalind J. Allen, J. Chem. Phys. 138, 164112 (2013))
+* Kai Kratzer, Axel Arnold, and Rosalind J. Allen, J. Chem. Phys. 138, 164112 (2013))
 
 SPRES:
 * Berryman & Schilling, J. Chem. Phys. 133, 244101 (2010)

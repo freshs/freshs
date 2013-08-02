@@ -527,7 +527,9 @@ class server(asyncore.dispatcher):
         if self.check_alive > 0:
             # Check if clients are alive (one after another)
             # if not, send new job, if not ok, disconnect
-            for client in self.last_seen:
+            # copy dict, because size can change during this iteration
+            last_seen_tmp = dict(self.last_seen)
+            for client in last_seen_tmp:
                 timespan = int(time.time() - self.last_seen[client])
                 if timespan > self.check_alive:
                     self.logger_freshs.warn(cc.c_red + 'Client ' + str(client.name) + ' was last seen ' + \
