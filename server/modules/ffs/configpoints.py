@@ -547,7 +547,7 @@ class configpoints:
         candidates = self.return_configpoints_ids(interface)
         countdict = {}
         for candidate in candidates:
-            countdict[str(candidate)] = self.server.ghostpoints.runs_on_point(candidate) + self.runs_on_point(candidate)
+            countdict[str(candidate)] = self.server.ghostpoints.runs_on_point(candidate)
         # get (one) point with lowest number
         # min([(countdict[x],x) for x in countdict])[1]
         point_id = min(countdict,key = lambda a: countdict.get(a))
