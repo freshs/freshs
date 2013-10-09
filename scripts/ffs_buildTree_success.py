@@ -51,6 +51,10 @@ def get_tracefile(lamind, tuuid):
     else:
         return ''
 
+
+def remove_brackets(rmstring):
+    return re.sub('\]','',re.sub('\[','',rmstring))
+
 # visit a configpoint and determine origin (recursive procedure)
 def visit(cfp):
     global tr_line
@@ -66,7 +70,7 @@ def visit(cfp):
         
 #lambda_id,configpoint,origin_point,calcsteps,ctime,runtime,success,runcount,myid,seed,lambda_old,weight,rcval,lpos,usecount
     tr_line.append([ cfp[0],cfp[13],cfp[12],cfp[3],cfp[4],cfp[5],cfp[9], uuid_tracefile ])
-    rep_line.append( [ re.sub('\]','',re.sub('\[','',cfp[2])), cfp[3], cfp[9] ] )
+    rep_line.append( [ remove_brackets(cfp[2]), cfp[3], cfp[9],remove_brackets(cfp[1]) ] )
     #if int(op[0]) != 0:
     if not 'escape' in op[2]:
         visit(op)
@@ -126,7 +130,7 @@ for cfp in cfpcand:
     fhrep=open( outdir + '/' + repfile,'w')
     # Visit this endpoint and determine origins recursively, from B to A
     visit(cfp)
-    fhrep.write('# start_point, steps, seed\n')
+    fhrep.write('# start_point, steps, seed, cfp\n')
     fhtr.write('# ' + tname + ': steps_tot, lambda_id, lambda, rc, psteps, ctime, runtime, seed, tracefile\n')
     # write reproducing information to file, from A to B
     for iline in rep_line[::-1]:

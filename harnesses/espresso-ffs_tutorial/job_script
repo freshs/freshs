@@ -1,0 +1,473 @@
+#!/bin/sh  ##this line is just to activate prettyprinters
+# Copyright (c) 2013 Kai Kratzer, University of Stuttgart,
+# Allmandring 3, 70569 Stuttgart, Germany; all rights
+# reserved unless otherwise stated.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+# MA 02111-1307 USA
+ 
+# example for writing a snapshot: keep this
+# to the minimum information needed to regenerate your system state
+# e.g., if particle charge never changes then hardcode it
+# rather than writing and re-loading.
+
+##########################################
+# Function definitions
+##########################################
+
+# save system snapshot
+proc save_snapshot {fn} {
+    set f_out [open "$fn" "w"]
+    blockfile $f_out write particles {id pos type q v f}
+    blockfile $f_out write bonds all
+    close $f_out
+}
+ 
+# load system snapshot
+proc load_snapshot {fn} {
+    # open the FIFO or file: shouldn't matter which.
+    set f_in [open "$fn" "r"]
+    # read all parameters which were stored by save_snapshot
+    while { [blockfile $f_in read auto] != "eof" } {}
+    close $f_in
+}
+
+# determine the (unique) basis of the name of the files
+proc filebase {} {
+    global clientname
+    global uuid
+    set ts [clock clicks]
+    return "${clientname}_time${ts}_id${uuid}"
+}
+
+# name of the directory for the trace path
+proc tracepath {} {
+    global storedir
+    global timestamp
+    global act_lambda
+    set path "${storedir}/${timestamp}/${act_lambda}"
+    file mkdir $path
+    return $path
+}
+ 
+# routine for setting the seed on each node
+proc set_seed {} {
+    global ran_seed
+    puts "Setting seed $ran_seed"
+    set cmd "t_random seed"
+    for {set i 0} {$i < [setmd n_nodes]} { incr i } { lappend cmd [expr $ran_seed + $i] }
+    eval $cmd
+    expr srand($ran_seed)
+}
+ 
+# calculate the reaction coordinate
+proc calc_rc {} {
+    global p_length
+    # TODO: Calculate the z-coordinate of the center of mass of the polymer 
+    # and return it as reaction coordinate
+    set com_z 0.0
+
+
+    return $com_z
+}
+ 
+# Setup the simulation box
+proc set_box {} {
+    global box_l_x
+    global box_l_y
+    global box_l_z
+
+    puts "Setting box $box_l_x, $box_l_y, $box_l_z."
+
+    setmd periodic 1 1 1
+    setmd box_l $box_l_x $box_l_y $box_l_z
+}
+
+# set integrator
+proc set_integrate {} {
+    puts "Setting integrator."
+    global timestep
+    # NVT integrator parameters
+    setmd time_step $timestep
+    setmd skin 0.4
+    thermostat langevin 1 1
+}
+
+# set interactions
+proc set_ia {} {
+    puts "Setting interactions."
+    global bond_k
+    global bond_max_dist
+    global bond_dist
+
+    # set fene interaction for polymer
+    inter 0 fene $bond_k $bond_max_dist $bond_dist
+    # set WCA for monomers
+    inter 0 0 lennard-jones 1 1 1.12246 auto
+    # set WCA interaction with pore
+    inter 0 1 lennard-jones 1 1 1.12246 auto
+}
+
+# set pore constraint
+proc set_pore {} {
+    global centerx
+    global centery
+    global centerz
+    global pore_rad
+    global pore_len
+
+    puts "Deleting all constraints."
+    constraint delete
+
+    puts "Setting pore."
+    # TODO: remove the exit 0 and uncomment the constraint pore command to set the pore (this is to ensure that you've read through this)
+    exit 0
+    #constraint pore center $centerx $centery $centerz axis 0 0 1 radius $pore_rad length [expr 0.5 * $pore_len] type 1
+}
+
+# setup random polymer
+proc set_polymer {} {
+    global p_length
+    global bond_dist
+    global centerx
+    global centery
+    global centerz
+    global pore_len
+    global pore_rad
+
+    # Tricking: polymer can not be set up using the pore constraint, therefore we use the cylinder constraint and 
+    # check the coordinates of the polymer afterwards
+    puts "constraint cylinder center $centerx $centery $centerz axis 0 0 1 radius $pore_rad length [expr 0.5 * $pore_len] direction -1 type 1"
+    constraint cylinder center $centerx $centery $centerz axis 0 0 1 radius $pore_rad length [expr 0.5 * $pore_len] direction -1 type 1
+
+    # get the position of the first bead
+    set pposz [expr $centerz - (0.5*$pore_len)]
+
+    # set the polymer, starting at the entry of the pore
+    puts "Setting polymer with $p_length monomers at $centerx, $centery, $pposz."
+
+    # TODO: remove the exit 0 and uncomment the polymer comomand to set the random polymer (this is to ensure that you've read through this)
+    exit 0
+    #polymer 1 $p_length $bond_dist pos $centerx $centery $pposz start 0 mode PSAW type 0 constraint
+}
+
+# delete polymer
+proc del_polymer {} {
+    puts "Deleting polymer."
+    global p_length
+    for {set i 0} {$i < $p_length} {incr i} {
+        part $i delete
+    }
+    # deleting all constraints, because they are set again in a new trial.
+    constraint delete
+}
+
+# calculate the distance in the xy-plane to the pore's center of a particle
+proc xydist2centerpore {x1 y1} {
+    global centerx
+    global centery
+    set dist [expr sqrt( pow($x1-$centerx,2) + pow($y1-$centery,2) )]
+    return $dist
+}
+
+# check if the polymer is valid
+proc determine_poly_ok {} {
+    global p_length
+    global centerz
+    global pore_len
+    global pore_rad
+
+    # check every particle not to be in the pore constraint domain
+    for {set i 0} {$i < $p_length} {incr i} {
+        # check z coordinate
+        set part_info [ part $i ]
+        set xcoord [lindex $part_info 2]
+        set ycoord [lindex $part_info 3]
+        set zcoord [lindex $part_info 4]
+        set zmax [expr $centerz - (0.5 * $pore_len)]
+        # check, if a particle is in forbidden domain, this is the case if a particle
+        # is not in the pore but in the z-range of the pore
+        if { [xydist2centerpore $xcoord $ycoord] >= $pore_rad} {
+            if { $zcoord >= $zmax } {
+                puts "At least particle $i has wrong coordinates: ($xcoord, $ycoord, $zcoord)"
+                return 0
+            }
+        }
+    }
+    puts "Polymer position is ok."
+    return 1
+}
+
+# init system in A and equilibrate
+proc init_A {} {
+    puts "init random configuration in A"
+    global A
+    global A_left
+    global vmdprepared
+
+    set_box
+    set_integrate
+    set_seed
+    set_ia
+
+    set order_param_ok 0
+    # try, until we get a valid polymer with a correct order parameter in A
+    while {!$order_param_ok} {
+        set_polymer
+
+        # TODO: comment the VMD parts after the first run
+        if { ! $vmdprepared } {
+            prepare_vmd_connection "polymerpore" 1000 1000 1
+            set vmdprepared 1
+        }
+        # TODO: comment the VMD parts after the first run
+        imd positions
+
+        set poly_ok [determine_poly_ok]
+        # obtain reaction coordinate
+        set rc [calc_rc]
+        if {$poly_ok && $rc >= $A_left && $rc < $A} {
+            set order_param_ok 1
+            puts "Order parameter is ok."
+        } else {
+            # something is wrong, delete polymer
+            puts "Order parameter is $rc. Polymer_ok is $poly_ok."
+            del_polymer
+        }
+    }
+    
+    # this is at the end, because we are tricking in the polymer setup
+    set_pore
+
+}
+ 
+# init the system only for loading snapshot
+proc init_basic {} {
+    puts "init basic for loading snapshot"
+    set_box
+    set_integrate
+    set_seed
+    set_pore
+    set_ia
+}
+
+
+##########################################
+# initial parameters, some of them can be 
+# overwritten by command-line-arguments 
+# from the client
+##########################################
+
+# box
+set box_l_x 30
+set box_l_y 30
+set box_l_z 60
+
+# polymer
+set p_length    64
+set bond_dist   1.0
+set bond_max_dist 1.0
+set bond_k      10.0
+
+# tube dimensions
+set pore_rad    5.0
+set pore_len   10.0
+
+# timestep and integration steps at a time
+set timestep 0.01
+set steps 10
+
+# border of basinA to the left
+set A_left 5
+
+set vmdprepared 0
+
+# pore center location
+set centerx [expr 0.5 *$box_l_x]
+set centery [expr 0.5 *$box_l_y]
+set centerz [expr 0.5 *$box_l_z]
+
+########################################## 
+# parse arguments (these are given by 
+# the FRESHS client)
+##########################################
+foreach {option value} $argv {
+  switch -glob -- $option {
+    -tmpdir             {set tmpdir $value }
+    -initial_config     {set initial_config $value }
+    -in_fifoname        {set in_fifoname $value }
+    -back_fifoname      {set back_fifoname $value }
+    -metadata_fifoname  {set metadata_fifoname $value }
+    -max_steps          {set max_steps $value }
+    -check_rc_every     {set check_rc_every $value }
+    -A                  {set A $value }
+    -B                  {set B $value }
+    -random_points      {set random_point $value }
+    -seed               {set ran_seed $value }
+    -next_interface     {set next_interface $value }
+    -act_lambda         {set act_lambda $value }
+    -jobtype            {set jobtype $value }
+    -rp_id              {set rp_id $value }
+    -clientname         {set clientname $value }
+    -timestamp          {set timestamp $value }
+    -uuid               {set uuid $value }
+    -storedir           {set storedir $value }
+    -timestep           {set timestep $value }
+    -pore_rad           {set pore_rad $value }
+    -p_length           {set p_length $value }
+    default             {puts "Additional not-used parameter $option"}
+  }
+}
+
+
+ 
+# check if escape_flux and set helper variable
+if {$jobtype == "1" } {
+    set escape_flux 1
+} else {
+    set escape_flux 0
+}
+
+# determining paths and filenames
+set currentfile [filebase]
+set currentpath [tracepath]
+
+set fullcfpfile "${currentpath}/${currentfile}.cfp"
+set fulltracefile "${currentpath}/${currentfile}.trace"
+
+# filenames for writing to DB
+set cfpfifo "${act_lambda}/${currentfile}.cfp"
+set tracebase "${act_lambda}/${currentfile}.trace"
+
+if {$initial_config == "None"} {
+    puts "JOBSCRIPT: Loading snapshot from fifo: ${in_fifoname}."
+    init_basic
+    # get filename from fifo
+    set fh [open "${in_fifoname}" "r"]
+    set fn_in [string trim [read "$fh"]]
+    close "$fh"
+    load_snapshot "${storedir}/${timestamp}/${fn_in}"
+} else {
+    #get snap from file
+    puts "JOBSCRIPT: self-generating an initial state with equilibration."
+    init_A
+}
+
+# calculate the reaction coordinate
+set rc [calc_rc]
+ 
+# check if RC is ok if we do a resumed escape trace
+if { $escape_flux } {
+    if {$rc < $A} {
+        set comefromok 1
+    } else {
+        set comefromok 0
+    }
+}
+
+set max_rc $rc
+ 
+set step_abort 0
+set calcsteps  0
+set in_progress 1
+
+puts "$calcsteps $rc"
+
+set all_rcs [list]
+
+##########################################
+# READY TO GO! This is a checking script!
+# ESPResSo rulez :-)
+##########################################
+while { $in_progress } {
+    # integrate equations of motion
+    integrate $steps
+    # TODO: comment the VMD parts after the first run
+    imd positions
+    
+    # calculate reaction coordinate
+    set rc [calc_rc]
+
+    # TODO: add the current reaction coordinate to the array all_rcs which is then reported as customdata to the database.
+    # From this, e.g. the distribution of reaction coordinates can be analyzed from all runs, e.g. per interface
+
+    set calcsteps [expr $calcsteps + $steps]
+    puts "$calcsteps $rc"
+    # save maximum reaction coordinate, this is important for exploring runs
+    if {$rc > $max_rc} {
+        set max_rc $rc
+    }
+    # are we in the initial MD run or not?
+    if {$escape_flux} {
+        if {$rc >= $next_interface && $comefromok} {
+            set in_progress 0
+            puts "Reached A."
+        } elseif {$rc < $A && ! $comefromok} {
+            set comefromok 1
+        } elseif {$rc >= $B} {
+            puts "Reached B. Re-equilibrating."
+            init_A
+            set calcsteps 0
+            set comefromok 1
+            set rc [calc_rc]
+        } elseif {$rc < $A_left} {
+            puts "Polymer diffused away. Re-init in A."
+            init_A
+        }
+    } else {
+        if {$rc >= $next_interface || $rc <= $A} {
+            puts "Reached interface."
+            set in_progress 0
+        }
+    }
+    if {$max_steps > 0} {
+        if {$calcsteps >= $max_steps} {
+            puts "Max steps reached!"
+            set step_abort 1
+            set in_progress 0
+        }
+    }
+}
+
+##########################################
+# prepare and report results
+##########################################
+set ctime_save [expr $calcsteps * $timestep]
+ 
+set results "\"time\": $ctime_save, \"steps\": $calcsteps, \"max_lam\": $max_rc, \"rc\": $rc, \"customdata\": \"'${all_rcs}'\""
+ 
+if { ! $step_abort && $rc >= $next_interface } {
+    # save configpoint on filesystem
+    save_snapshot "$fullcfpfile"
+ 
+    # write configpoint filename to fifo
+    set outcfp [open "$back_fifoname" "w"]
+    puts "$outcfp" "$cfpfifo"
+    close $outcfp
+} else {
+    # write configpoint filename to fifo
+    set outcfp [open "$back_fifoname" "w"]
+    puts "$outcfp" ""
+    close $outcfp
+    set results "${results}, \"step_abort\": True"
+}
+ 
+ 
+# Write metadata
+set fmeta [open "$metadata_fifoname" "w"]
+puts $fmeta "{ $results }"
+close $fmeta
+
+
