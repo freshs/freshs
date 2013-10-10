@@ -30,7 +30,7 @@
 # save system snapshot
 proc save_snapshot {fn} {
     set f_out [open "$fn" "w"]
-    blockfile $f_out write particles {id pos type q v f}
+    blockfile $f_out write particles {id pos type v f}
     blockfile $f_out write bonds all
     close $f_out
 }
