@@ -147,6 +147,8 @@ proc set_polymer {} {
     global pore_len
     global pore_rad
 
+    constraint delete
+
     # Tricking: polymer can not be set up using the pore constraint, therefore we use the cylinder constraint and 
     # check the coordinates of the polymer afterwards
     puts "constraint cylinder center $centerx $centery $centerz axis 0 0 1 radius $pore_rad length [expr 0.5 * $pore_len] direction -1 type 1"
