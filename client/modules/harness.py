@@ -145,7 +145,8 @@ class harness:
             ##Blocking wait for listener threads to finish.
             ##No point waiting for the feeder.
             if self.get_coords == True:
-                self.ocListener.lT.join()
+                # Tricking: setting timeout to a week, otherwise CTRL-C does not work
+                self.ocListener.lT.join(604800)
                 print "Client: coords read thread closed"
                 
                 ##collect the return data from the coords thread
