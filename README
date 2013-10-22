@@ -32,3 +32,5 @@ harnesses   The harness scripts of the simulations
 scripts     Analysis and helper programs
 server      The code of the FRESHS server
 test        Code for testing
+tutorial    Manuals for the FRESHS tutorials
+
