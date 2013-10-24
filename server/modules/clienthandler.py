@@ -248,6 +248,7 @@ class ClientHandler(asyncore.dispatcher):
             elif ss.ffs_control.parallel_escape == 1:
                 if ncpoints > 0:
 
+                    ss.logger_freshs.debug(cc.c_magenta + 'Retrieving points with residual calculation steps.' + cc.reset)
                     cand_pts, max_steps_pts = ss.ffs_control.escape_point_candidates()
 
                     # decide whether to proceed or start new job

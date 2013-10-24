@@ -55,6 +55,8 @@ class ffs_sampling_control():
         self.lamconf = ConfigParser.RawConfigParser()
         
         self.escape_clients = {}
+        # for parallel escape, points to exclude (e.g. if trace already exists)
+        self.escape_exclude = []
         
         # If there's no point in the escape trace, save the ctime and store it with the next point
         self.ctime_pending = 0
@@ -118,7 +120,7 @@ class ffs_sampling_control():
         if ss.configfile.has_option('ffs_control', 'min_origin'):
             self.min_origin = ss.configfile.getint('ffs_control', 'min_origin')
         else:
-            self.min_origin = 3
+            self.min_origin = 1
         if ss.configfile.has_option('ffs_control', 'min_origin_decay'):
             self.min_origin_decay = ss.configfile.getfloat('ffs_control', 'min_origin_decay')
             if self.min_origin_decay > 1.0:
@@ -254,6 +256,12 @@ class ffs_sampling_control():
             if ss.storepoints.return_nop(ss.act_lambda) >= ss.M_0_runs[ss.act_lambda]:
                 self.change_interface()
             ss.logger_freshs.info(cc.c_green + 'Current interface index: ' + str(ss.act_lambda) + cc.reset)
+            
+        if self.parallel_escape and ss.act_lambda == 0:
+            ss.logger_freshs.info(cc.c_green + 'Populating escape candidate exclude list, depending on the number of points this might take some time.' + cc.reset)
+            points_left = len(self.escape_point_candidates()[0])
+            exclude_num = len(self.escape_exclude)
+            ss.logger_freshs.info(cc.c_green + 'Populating escape candidate exclude list done. ' + str(points_left) + ' points have residual steps. ' + str(exclude_num) + ' points are ready.' + cc.reset)
 
 # -------------------------------------------------------------------------------------------------
 
@@ -388,26 +396,34 @@ class ffs_sampling_control():
 
         # get list of escape point rp_ids
         esc_pts_ids = ss.storepoints.return_configpoints_ids(0)
-        #ss.logger_freshs.debug(cc.c_magenta + "Candidate points for escape resume: " + str(esc_pts_ids) + cc.reset)
+        ss.logger_freshs.debug(cc.c_magenta + "Removing points where we know that they are already in a trace." + cc.reset)
+        for pt in esc_pts_ids[::-1]:
+            if pt in self.escape_exclude:
+                esc_pts_ids.remove(pt)
+
+        ss.logger_freshs.debug(cc.c_magenta + "Candidate points for escape resume: " + str(esc_pts_ids) + cc.reset)
         for cl in self.escape_clients:
             # remove points, on which we calculate already
             if self.escape_clients[cl] in esc_pts_ids:
-                #ss.logger_freshs.debug(cc.c_magenta + "Point " + self.escape_clients[cl] + " is calculated at the moment. Removing." + cc.reset)
+                ss.logger_freshs.debug(cc.c_magenta + "Point " + self.escape_clients[cl] + " is calculated at the moment. Removing." + cc.reset)
                 esc_pts_ids.remove(self.escape_clients[cl])
         for pt in esc_pts_ids[::-1]:
             # remove points which are origins from other points
             if ss.storepoints.id_in_origin(pt):
-                #ss.logger_freshs.debug(cc.c_magenta + "Point " + pt + " is origin of another point, found existing trace! Removing." + cc.reset)
+                ss.logger_freshs.debug(cc.c_magenta + "Point " + pt + " is origin of another point, found existing trace! Removing." + cc.reset)
                 esc_pts_ids.remove(pt)
+                self.escape_exclude.append(pt)
 
         if len(esc_pts_ids) > 0:
-            # now we have a list of last points, do traceback
+            ss.logger_freshs.debug(cc.c_magenta + "Tracking back " + str(len(esc_pts_ids)) + " points to determine the residual steps." + cc.reset)
             for pt in esc_pts_ids:
                 steps_until_point = ss.storepoints.traceback_escape_point(pt)
                 # if steps are left to calculate
                 if steps_until_point < self.escape_steps:
                     cand_pts.append(pt)
                     max_steps_pts.append(steps_until_point)
+                else:
+                    self.escape_exclude.append(pt)
 
         ss.logger_freshs.debug(cc.c_magenta + "Found " + str(cand_pts) + " with " + str(max_steps_pts) + " steps in total up to the particular point." + cc.reset)
         return cand_pts, max_steps_pts
@@ -546,7 +562,7 @@ class ffs_sampling_control():
         if ss.act_lambda == 0:
             return True
         else:
-            if self.min_origin > 1 and self.dorigins_count < self.min_origin_increase_count:
+            if self.min_origin > 1 and self.dorigins_count <= self.min_origin_increase_count:
                 self.dorigins = len(ss.storepoints.interface_statistics_backtrace(ss.act_lambda))
                 if self.dorigins == self.dorigins_last:
                     self.dorigins_count += 1
@@ -558,9 +574,10 @@ class ffs_sampling_control():
                     return False
                 else:
                     return True
-            elif self.dorigins_count >= 2:
+            elif self.min_origin_increase_count > 0 and self.dorigins_count > self.min_origin_increase_count:
                 self.dorigins_count = 0
-                ss.logger_freshs.warn(cc.c_red + 'Could not reach desired increase of origin trajectories after 3 loops, continuing.' + cc.reset)
+                ss.logger_freshs.info(cc.c_green + 'Could not reach desired increase of origin trajectories after ' + str(self.min_origin_increase_count) + ' loops, continuing.' + cc.reset)
+                self.min_origin_increase_count -= 1
                 return True
             else:
                 return True
