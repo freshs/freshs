@@ -1,7 +1,8 @@
 QUICK START
 -----------
 
-Please prepare your job_script which should be capable of storing and loading configuration snapshots and of returning the relevant metadata for the particular sampling method (at least reaction coordinate and calculation steps/time).
+FRESHS is written in python and must not be compiled. A good starting point is a tutorial from the 'tutorial' subfolder.
+If you would like to start directly with your own simulation, look at the examples in the 'harness' subfolder and prepare your job_script which should be capable of storing and loading configuration snapshots and of returning the relevant metadata for the particular sampling method (at least reaction coordinate and calculation steps/time).
 
 * SERVER
 -----------
