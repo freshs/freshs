@@ -543,15 +543,35 @@ class configpoints:
 
     # Select ghost point for calculation 
     def select_ghost_point(self, interface):
+        
         # get configpoints on current interface
-        candidates = self.return_configpoints_ids(interface)
+        allpoints = self.return_configpoints_ids(interface)
+        candidates = allpoints[:]
         countdict = {}
-        for candidate in candidates:
-            countdict[str(candidate)] = self.server.ghostpoints.runs_on_point(candidate)
-        # get (one) point with lowest number
-        # min([(countdict[x],x) for x in countdict])[1]
+        # "Obtaining number of runs from", len(candidates), "points"
+        for candidate in candidates[::-1]:
+            # check if point is beeing calculated at the moment
+            if candidate in self.server.ghost_clients.values():
+                candidates.remove(candidate)
+                continue
+
+            rop = self.server.ghostpoints.runs_on_point(candidate)
+            #print candidate, rop
+            # break if point with 0 runs is obtained. Then this point can be used in any case
+            countdict[str(candidate)] = rop
+            if rop == 0:
+                break
+
+        # last resort, if every point was sorted out before
+        if len(candidates) == 0:
+            gimmepoint = allpoints[random.randint(0,len(allpoints)-1)]
+            return self.return_point_by_id(gimmepoint), gimmepoint
+
+        # "getting (one) point with lowest number"
         point_id = min(countdict,key = lambda a: countdict.get(a))
-        return self.return_point_by_id(point_id), point_id
+        point_meta = self.return_point_by_id(point_id)
+        # "returning point meta information", point_meta
+        return point_meta, point_id
 
     # Return all entries corresponding to one interface
     def return_interface(self, interface):

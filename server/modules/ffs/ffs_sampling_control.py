@@ -147,7 +147,6 @@ class ffs_sampling_control():
 
         if ss.auto_interfaces:
             try:
-                # TODO: make this a config option?
                 loadfromdb = True
                 # read lamconf resume file anyway (because of ghosttimesave)
                 self.lamconf.read(ss.lamfile)
@@ -252,9 +251,12 @@ class ffs_sampling_control():
             if (ss.lambdas[ss.act_lambda] >= ss.B) and (ss.storepoints.return_nop(ss.act_lambda) >= ss.M_0_runs[ss.act_lambda]):
                 ss.end_simulation()
             
-            #self.interface_statistics_ok()
+            ss.logger_freshs.info(cc.c_green + 'Checking, if interface is ok...' + cc.reset)
+            self.check_run_required(ss.act_lambda)
+
             if ss.storepoints.return_nop(ss.act_lambda) >= ss.M_0_runs[ss.act_lambda]:
                 self.change_interface()
+
             ss.logger_freshs.info(cc.c_green + 'Current interface index: ' + str(ss.act_lambda) + cc.reset)
             
         if self.parallel_escape and ss.act_lambda == 0:
@@ -563,7 +565,9 @@ class ffs_sampling_control():
             return True
         else:
             if self.min_origin > 1 and self.dorigins_count <= self.min_origin_increase_count:
+                ss.logger_freshs.info(cc.c_green + 'Backtracking to analyze interface statistics...' + cc.reset)
                 self.dorigins = len(ss.storepoints.interface_statistics_backtrace(ss.act_lambda))
+                ss.logger_freshs.info(cc.c_green + str(self.dorigins) + ' different origin points found. Last count was ' + str(self.dorigins_last) + cc.reset)
                 if self.dorigins == self.dorigins_last:
                     self.dorigins_count += 1
                 else:
