@@ -50,6 +50,10 @@ class configpoints:
         self.have_pair_ij = 0
         # if you have problems with the database which cannot be written to disk, error: "database or disk is full"
         #self.cur.execute('PRAGMA temp_store = 2')
+
+        self.ghostcache = []
+        self.ghostlastcount = 0
+        self.ghostlastlam = -1
         
     # Connect to database
     def connect(self):
@@ -268,12 +272,12 @@ class configpoints:
 
     # Check if origin point is in database
     def origin_point_in_database(self, the_point):
-        print "Checking for ghostpoint on", the_point
+        # print "Checking for ghostpoint on", the_point
         self.cur.execute('select count(origin_point) from configpoints where origin_point = ?', [str(the_point)])
         for row in self.cur:
-            print "Found", row
+            # print "Found", row
             occurrence = int(row[0])
-        print "Checking", occurrence
+        # print "Checking", occurrence
         if occurrence >= 1:
             return 1
         else:
@@ -541,26 +545,61 @@ class configpoints:
             retval = str(row[0])
         return retval 
 
-    # Select ghost point for calculation 
-    def select_ghost_point(self, interface):
-        
-        # get configpoints on current interface
-        allpoints = self.return_configpoints_ids(interface)
+
+    # ghost point helper function. Selects efficiently (hopefully) a good starting point for a ghost
+    def ghost_point_helper(self, allpoints, mode='default'):
         candidates = allpoints[:]
         countdict = {}
+
         # "Obtaining number of runs from", len(candidates), "points"
         for candidate in candidates[::-1]:
             # check if point is beeing calculated at the moment
             if candidate in self.server.ghost_clients.values():
+                # candidate, "is calculated at the moment"
+                candidates.remove(candidate)
+                continue
+
+            if mode == 'default' and candidate in self.ghostcache:
+                # candidate, "is in ghost cache"
                 candidates.remove(candidate)
                 continue
 
             rop = self.server.ghostpoints.runs_on_point(candidate)
-            #print candidate, rop
+             #print candidate, rop
             # break if point with 0 runs is obtained. Then this point can be used in any case
             countdict[str(candidate)] = rop
-            if rop == 0:
+            # this is at a count of 0 for the first runs... then the point is taken immediately
+            if rop <= self.ghostlastcount:
+                # "Found", candidate, "with", rop, "runs on point"
                 break
+
+            self.ghostcache.append(candidate)
+
+        if len(candidates) == 0 and not mode == 'retry':
+            self.ghostcache = []
+            self.ghostlastcount += 1
+            # "retrying with emptied ghost cache and new count number", self.ghostlastcount
+            candidates, countdict = self.ghost_point_helper(allpoints, 'retry')
+
+        return candidates, countdict
+
+
+    # Select ghost point for calculation 
+    def select_ghost_point(self, interface):
+
+        # helper variables which are reset for each interface
+        if self.ghostlastlam != interface:
+            # "Resetting ghost variables for new interface"
+            self.ghostcache = []
+            self.ghostlastcount = 0
+            self.ghostlastlam = interface
+        
+        # get configpoints on current interface
+        allpoints = self.return_configpoints_ids(interface)
+
+        candidates, countdict = self.ghost_point_helper(allpoints, 'default')
+
+        # "Got", len(candidates), "ghost candidates."
 
         # last resort, if every point was sorted out before
         if len(candidates) == 0:

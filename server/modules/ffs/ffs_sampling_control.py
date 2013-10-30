@@ -459,10 +459,14 @@ class ffs_sampling_control():
             return True
 
         if ilam == 0 and self.parallel_escape == 1:
-            if len(self.escape_point_candidates()[0]) - nescape > 0:
+            nescape_candidates = len(self.escape_point_candidates()[0])
+            if nescape_candidates - nescape > 0:
                 ss.logger_freshs.info(cc.c_green + 'At least one escape trace still needs calculation steps.' + cc.reset)
                 self.print_lambar('inter',ncheck,ss.M_0_runs[ilam])
                 return True
+            # no escape trace must be continued at the moment, do something else.
+            elif nescape_candidates > 0:
+                return False
   
         if ncheck >= ss.M_0_runs[ilam]:
             self.print_lambar('inter',ncheck,ss.M_0_runs[ilam])
