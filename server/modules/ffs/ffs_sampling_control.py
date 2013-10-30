@@ -922,8 +922,8 @@ class ffs_sampling_control():
             if self.require_runs:
                 client.decr_runcount(the_jobs_lambda)
         else:
-            ss.logger_freshs.warn(cc.c_red + 'Not using info of ' + client.name + ' because of wrong lambda (' + \
-                                  str(the_jobs_lambda) + ') instead of (' + str(ss.act_lambda) + ')' + cc.reset)
+            ss.logger_freshs.info(cc.c_green + 'Not using info of ' + client.name + ' because of other lambda ' + \
+                                  str(the_jobs_lambda) + ', current is ' + str(ss.act_lambda) + cc.reset)
 
             ss.logger_freshs.debug(cc.c_magenta + 'Data was ' + str(ddata) + cc.reset)
 

@@ -179,6 +179,10 @@ class auto_interfaces():
 
         ss.logger_freshs.debug(cc.c_magenta + __name__ + ': start_explorer' + cc.reset)
         
+        if client in ss.explorer_clients:
+            ss.logger_freshs.debug(cc.c_magenta + __name__ + ': client is already explorer! Not starting again.' + cc.reset)
+            return False
+
         if self.arrived_in_B:
             return False
         

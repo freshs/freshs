@@ -71,10 +71,13 @@ class sampling_algorithm:
 
 #### MAIN SERVER CLASS ####
 class server(asyncore.dispatcher):
-    def __init__(self, timestamp = 'auto', configfile_name='auto'):
+    def __init__(self, timestamp = 'auto', configfile_name = 'auto', debugmode = 0):
         
-        # Logging        
-        logging.basicConfig(level=logging.INFO)
+        # Logging
+        if debugmode > 0:
+            logging.basicConfig(level=logging.DEBUG)
+        else:
+            logging.basicConfig(level=logging.INFO)
         self.logger_freshs = logging.getLogger('freshs')
 
         # Set global timestamp / set dbload if timestamp is given
@@ -113,6 +116,7 @@ class server(asyncore.dispatcher):
 
         self.disable_runs = False
 
+        self.idle_start_in_progress = False
 
         # Seed the RNG
         self.set_seed()
@@ -969,11 +973,14 @@ class server(asyncore.dispatcher):
     # Start idle clients
     def start_idle_clients(self):
 
+        if not self.idle_start_in_progress:
+            self.idle_start_in_progress = True
+        else:
+            return
+
         self.logger_freshs.debug(cc.c_magenta + __name__ + ': start_idle_clients' + cc.reset)
 
-        ##loop backwards over a list if you are deleting values
-        ##...otherwise the position of list items changes durig the iteration 
-        ##...and python misses some of them.
+        # loop backwards over a list if you are deleting values
         for idle_client in self.idle_clients[::-1]:
 
             if self.algorithm == sampling_algorithm.FFS:
@@ -990,6 +997,8 @@ class server(asyncore.dispatcher):
                     self.logger_freshs.info(cc.c_red +\
                            'Launched job on idle client:' +\
                             idle_client.name + cc.reset)
+
+        self.idle_start_in_progress = False
                 
                     
 # -------------------------------------------------------------------------------------------------

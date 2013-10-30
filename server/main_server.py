@@ -40,6 +40,7 @@ parser = OptionParser(usage="usage: %prog [options] [args]", version="%prog 1.0"
 
 parser.add_option("-r", "--restart", dest="timestamp", help="timestamp of run to restart", metavar="timestamp", type="string", default='auto')
 parser.add_option("-c", "--config", dest="config", help="configfile", metavar="configfile", type="string", default='auto')
+parser.add_option("-d", "--debug", dest="debug", help="enable debug mode", metavar="debugmode", type=int, default=0)
 
 (options, args) = parser.parse_args()
 
@@ -65,7 +66,7 @@ else:   # if filename is not given
 
 ##Call the server
     print "Server: reading server config file: "+options.config
-a = ss.server( timestamp = options.timestamp, configfile_name = options.config  )
+a = ss.server( timestamp = options.timestamp, configfile_name = options.config, debugmode = options.debug  )
 
 
 asyncore.loop()
