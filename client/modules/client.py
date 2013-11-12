@@ -45,6 +45,7 @@ import time
 
 # parsing
 import ast
+import re
 
 # import wrappers for simulation programs
 from  client_ffs   import client_ffs
@@ -60,10 +61,6 @@ class client(asyncore.dispatcher):
         sys.stdout.flush()
 
         self.read_configfile(configfile)
-
-        if self.ssh_tunnel > 0:
-            self.create_ssh_tunnel()
-            time.sleep(2)
 
         ##Allow CL arguments to overwrite the config file
         self.execprefix = execprefix
@@ -87,7 +84,12 @@ class client(asyncore.dispatcher):
         self.send_bytes=""
         asyncore.dispatcher.__init__(self)
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        if self.ssh_tunnel > 0:
+            self.create_ssh_tunnel()
+
         self.connect((self.host, self.port))
+
         self.msg=["ffs client v1"+'PKT_SEP']
         self.abort = False
 
@@ -178,12 +180,16 @@ class client(asyncore.dispatcher):
         else:
             self.initial_config_path = "None"
 
-        
-
+    # Create ssh tunnel if it does not exist already
     def create_ssh_tunnel(self):
-        tcmd = self.ssh_tunnelcommand.split(' ')
-        print "Opening tunnel with", self.ssh_tunnelcommand
-        subprocess.Popen(tcmd)
+        ntunnels = int(re.sub('\n','',subprocess.check_output('ps -ef | grep "' + self.ssh_tunnelcommand + '" | grep -v grep | wc -l',shell=True)))
+        if ntunnels > 0:
+            print "At least 1 ssh tunnel command is already running, not creating a new one."
+        else:
+            tcmd = self.ssh_tunnelcommand.split(' ')
+            print "Opening tunnel with", self.ssh_tunnelcommand
+            subprocess.Popen(tcmd)
+            time.sleep(2)
             
     # define some functions for comms/book-keeping.
     def handle_error(self):
