@@ -658,6 +658,9 @@ class server(asyncore.dispatcher):
                 if fsc.start_job(client):
                     # starting real run was successful
                     pass
+                elif self.act_lambda == 0 and fsc.exit_after_escape > 0:
+                    if client not in self.idle_clients:
+                        client.start_job_wait()
                 # If exploring mode
                 elif self.ai.exmode:
                     # try to start explorer                

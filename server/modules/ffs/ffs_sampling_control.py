@@ -59,7 +59,10 @@ class ffs_sampling_control():
         self.escape_exclude = []
         
         # If there's no point in the escape trace, save the ctime and store it with the next point
-        self.ctime_pending = 0
+        self.ctime_pending = 0.0
+        self.calcsteps_pending = 0
+        
+        self.last_added_point = ''
         
         # counter for different origin points
         self.dorigins = 0
@@ -71,17 +74,25 @@ class ffs_sampling_control():
        
 # -------------------------------------------------------------------------------------------------
 
+    def option_in_configile(self,option):
+        ss = self.server
+        if ss.configfile.has_option('ffs_control', option):
+            return True
+        return False
+
+# -------------------------------------------------------------------------------------------------
+
     def read_config(self):
         ss = self.server
         
         ss.logger_freshs.debug(cc.c_magenta + __name__ + ': read_config' + cc.reset)
         
-        if ss.configfile.has_option('ffs_control', 'reverse_direction'):
+        if self.option_in_configile('reverse_direction'):
             self.reverse_direction = ss.configfile.getint('ffs_control', 'reverse_direction')
         else:
             self.reverse_direction = 0
         
-        if ss.configfile.has_option('ffs_control', 'reverse_forward_DB') and self.reverse_direction > 0:
+        if self.option_in_configile('reverse_forward_DB') and self.reverse_direction > 0:
             self.reverse_forward_DB = str(ss.configfile.get('ffs_control', 'reverse_forward_DB'))
             self.fwd_timestamp = re.sub('.*/','',re.sub('_configpoints.sqlite', '', self.reverse_forward_DB) )
             # create database handler
@@ -93,42 +104,46 @@ class ffs_sampling_control():
                 ss.logger_freshs.warn(cc.c_red + 'Requested reverse simulation but no database given of the forward run! ' + \
                                         'Ignore this if you are able to set up the simulation in B without a forward simulation.' + cc.reset)
         
-        if ss.configfile.has_option('ffs_control', 'require_runs'):
+        if self.option_in_configile('require_runs'):
             self.require_runs = ss.configfile.getint('ffs_control', 'require_runs')
         else:
             self.require_runs = 1
-        if ss.configfile.has_option('ffs_control', 'min_success'):
+        if self.option_in_configile('min_success'):
             self.min_success = ss.configfile.getint('ffs_control', 'min_success')
         else:
             self.min_success = 2
-        if ss.configfile.has_option('ffs_control', 'parallel_escape'):
+        if self.option_in_configile('parallel_escape'):
             self.parallel_escape = ss.configfile.getint('ffs_control', 'parallel_escape')
         else:
             self.parallel_escape = 0
-        if ss.configfile.has_option('ffs_control', 'escape_steps'):
+        if self.option_in_configile('escape_steps'):
             self.escape_steps = ss.configfile.getint('ffs_control', 'escape_steps')
         else:
             self.escape_steps = 1000
-        if ss.configfile.has_option('ffs_control', 'escape_skip'):
+        if self.option_in_configile('escape_skip'):
             self.escape_skip = ss.configfile.getint('ffs_control', 'escape_skip')
         else:
             self.escape_skip = 0
-        if ss.configfile.has_option('ffs_control', 'max_ghosts_between'):
+        if self.option_in_configile('exit_after_escape'):
+            self.exit_after_escape = ss.configfile.getint('ffs_control', 'exit_after_escape')
+        else:
+            self.exit_after_escape = 0
+        if self.option_in_configile('max_ghosts_between'):
             self.max_ghosts_between = ss.configfile.getint('ffs_control', 'max_ghosts_between')
         else:
             self.max_ghosts_between = 3
-        if ss.configfile.has_option('ffs_control', 'min_origin'):
+        if self.option_in_configile('min_origin'):
             self.min_origin = ss.configfile.getint('ffs_control', 'min_origin')
         else:
             self.min_origin = 1
-        if ss.configfile.has_option('ffs_control', 'min_origin_decay'):
+        if self.option_in_configile('min_origin_decay'):
             self.min_origin_decay = ss.configfile.getfloat('ffs_control', 'min_origin_decay')
             if self.min_origin_decay > 1.0:
                 ss.logger_freshs.warn(cc.c_red + 'min_origin_decay is too high, cannot get more different traces than points requested! Setting to 0.3' + cc.reset)
                 self.min_origin_decay = 0.3
         else:
             self.min_origin_decay = 0.3
-        if ss.configfile.has_option('ffs_control', 'min_origin_increase_count'):
+        if self.option_in_configile('min_origin_increase_count'):
             self.min_origin_increase_count = ss.configfile.getint('ffs_control', 'min_origin_increase_count')
         else:
             self.min_origin_increase_count = 3
@@ -432,6 +447,19 @@ class ffs_sampling_control():
 
 # -------------------------------------------------------------------------------------------------
 
+    # check at the end of the escape run, if ctime is pending
+    # this may occur if using parallel escape and the last run does not
+    # find a configuration point on A
+    def check_for_ctime_pending(self):
+        ss = self.server
+        if self.ctime_pending > 0.0:
+            ss.logger_freshs.info(cc.c_green + 'Adding pending ctime to last calculated point.' + cc.reset)
+            ss.storepoints.add_ctime_steps(self.last_added_point, self.ctime_pending, self.calcsteps_pending)
+            self.ctime_pending = 0.0
+            self.calcsteps_pending = 0
+
+# -------------------------------------------------------------------------------------------------
+
     def check_run_required(self,ilam):
         ss = self.server
 
@@ -483,8 +511,14 @@ class ffs_sampling_control():
             if ss.lambdas[ilam] < ss.B:
 
                 if ilam == 0:
+                    self.check_for_ctime_pending()
                     ss.k_AB_part1 = ncurrent_points / ss.ctime
                     ss.logger_freshs.info(cc.c_magenta + 'k_AB_part1 = ' + str(ss.k_AB_part1) + cc.reset)
+                    if self.exit_after_escape > 0:
+                        ss.logger_freshs.info(cc.c_green + 'Exit after escape run is enabled in config. Exiting.' + cc.reset)
+                        ss.storepoints.commit()
+                        ss.ghostpoints.commit()
+                        raise SystemExit
 
                 if self.interface_statistics_ok():
                     # Everything seems to be alright, change interface
@@ -771,6 +805,7 @@ class ffs_sampling_control():
                                          )
 
             ss.storepoints.update_usecount_by_myid(origin_point)
+            self.last_added_point = runid
 
         else:
             ss.logger_freshs.warn(cc.c_red + 'Not using point of ' + client.name + ' because of wrong lambda (' + \
@@ -873,15 +908,19 @@ class ffs_sampling_control():
                     # write leftover steps to DB
                     if origin_point == 'escape':
                         self.ctime_pending += ctime
+                        self.calcsteps_pending += calcsteps
                         ss.logger_freshs.info(cc.c_green + 'ctime ' + str(ctime) + ' will be stored with the next valid point, ' + str(self.ctime_pending) + ' ctime pending.' + cc.reset) 
                     else:
                         if self.ctime_pending > 0.0:
                             ctime_save = ctime + self.ctime_pending
+                            calcsteps_save = calcsteps + self.calcsteps_pending
                             self.ctime_pending = 0.0
+                            self.calcsteps_pending = 0
                         else:
                             ctime_save = ctime
+                            calcsteps_save = calcsteps
 
-                        ss.storepoints.add_ctime_steps(origin_point, ctime_save, calcsteps)
+                        ss.storepoints.add_ctime_steps(origin_point, ctime_save, calcsteps_save)
                     # add it to the server variable
                         ss.logger_freshs.debug(cc.c_magenta + 'Added ctime ' + str(ctime) + ' to last escape point. Server ctime is now ' + \
                                            str(ss.ctime) + cc.reset)
@@ -952,6 +991,8 @@ class ffs_sampling_control():
         # get values from database
         lambda_max = ss.storepoints.biggest_lambda()
         sum_calcsteps = ss.storepoints.return_sum_calcsteps()
+        # add the calcsteps from the ghostDB, because the count for the computational cost
+        sum_calcsteps += ss.ghostpoints.return_sum_calcsteps()
         ctime_db = ss.storepoints.return_ctime()
         
         if abs(ctime_db - ss.ctime) > 1e-5:

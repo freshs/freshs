@@ -45,6 +45,14 @@ class auto_interfaces():
         self.auto_max_move_fac = 20
         
 # -------------------------------------------------------------------------------------------------
+
+    def option_in_configile(self,option):
+        ss = self.server
+        if ss.configfile.has_option('auto_interfaces', option):
+            return True
+        return False
+
+# ------------------------------------------------------------------------------------------------
         
     def read_config(self):
         ss = self.server
@@ -53,11 +61,13 @@ class auto_interfaces():
             return False 
 
         # Auto Interface switch
-        self.auto_interfaces = ss.configfile.getint('auto_interfaces', 'auto_interfaces')
+        if self.option_in_configile('auto_interfaces'):
+            self.auto_interfaces = ss.configfile.getint('auto_interfaces', 'auto_interfaces')
+        else:
+            self.auto_interfaces = 0
         # number of trials
         self.auto_trials = ss.configfile.getint('auto_interfaces', 'auto_trials')
         # number of runs, which will be performed, if interface position is determined
-        # (could be optimized, too)
         self.auto_runs = ss.configfile.getint('auto_interfaces', 'auto_runs')
         # min flux which is accepted. Be careful, this is only for the estimation! Don't be too strict.
         self.auto_flux_min = ss.configfile.getfloat('auto_interfaces', 'auto_flux_min')
@@ -72,6 +82,11 @@ class auto_interfaces():
         self.auto_histo = ss.configfile.getint('auto_interfaces', 'auto_histo')
         #self.auto_histo_thresh = ss.configfile.getfloat('auto_interfaces', 'auto_histo_thresh')
         self.auto_min_points = ss.configfile.getfloat('auto_interfaces', 'auto_min_points')
+        
+        if self.option_in_configile('auto_min_explorer_steps'):
+            self.auto_min_explorer_steps = ss.configfile.getint('auto_interfaces', 'auto_min_explorer_steps')
+        else:
+            self.auto_min_explorer_steps = 0
 
         return True
 
@@ -782,6 +797,16 @@ class auto_interfaces():
             ss.logger_freshs.info(cc.c_green + 'Exploremode is over, starting new job on '+ client.name + cc.reset)
             ss.check_for_job(client)
             return
+
+        if self.auto_histo:
+            if self.auto_min_explorer_steps > 0:
+                try:
+                    if ddata['calcsteps'] < self.auto_min_explorer_steps:
+                        ss.logger_freshs.info(cc.c_green + 'Client '+ client.name + ' has not performed enough steps, giving new job.' + cc.reset)
+                        ss.check_for_job(client)
+                        return
+                except Exception as e:
+                    ss.logger_freshs.warn(cc.c_red + str(e) + cc.reset)
 
         if "\"success\": True" in data:
             self.analyze_job_success(client, ddata, runid)

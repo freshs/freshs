@@ -413,9 +413,9 @@ class configpoints:
         return retconfigs, retids, retrcs 
 
     # add ctime to point. Point can be found by comparing calcsteps * dt with ctime.
-    def add_ctime_steps(self, origin_point_id, ctime, calcsteps):
-        self.cur.execute("update configpoints set ctime=ctime+? where myid = ?", [str(ctime), str(origin_point_id)])
-        self.cur.execute("update configpoints set calcsteps=calcsteps+? where myid = ?", [str(calcsteps), str(origin_point_id)])
+    def add_ctime_steps(self, point_id, ctime, calcsteps):
+        self.cur.execute("update configpoints set ctime=ctime+? where myid = ?", [str(ctime), str(point_id)])
+        self.cur.execute("update configpoints set calcsteps=calcsteps+? where myid = ?", [str(calcsteps), str(point_id)])
 
     # check, if id is somewhere in origin_point, meaning that point is part of a trace
     def id_in_origin(self, pt):
