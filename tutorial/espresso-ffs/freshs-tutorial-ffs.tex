@@ -169,6 +169,15 @@ To follow this tutorial you will need:
 \item VMD\footnote{\url{http://www.ks.uiuc.edu/Research/vmd/}} (optional) 
 \end{enumerate}
 
+Some package dependencies for a typical unix system might include:
+
+\begin{enumerate}
+\item {\bf For ESPResSo:} tcl-dev, automake, libtool, g++
+\item {\bf For FRESHS itself:} libsqlite3, numpy
+\item {\bf General:} csh (may be needed by vmd), texlive \& bibtex (may be used to build documentation) 
+\end{enumerate}
+
+
 
 % ----------------------------------------------------------------------------
 \section{Preparing the environment}
@@ -182,12 +191,12 @@ Checkout the latest ESPResSo code (alternatively, you can use your already exist
 git clone git://github.com/espressomd/espresso.git
 \end{verbatim}
 \end{mylisting}
-Make sure that you have the following enabled in your myconfig.h:
+Make sure that you have the following enabled in your myconfig.hpp:
 \begin{lstlisting}
 #define CONSTRAINTS
 #define LENNARD_JONES
 \end{lstlisting}
-Compile ESPResSo with these settings and note down the absolut path, where your `Espresso' executable is located. You will need that information later in the client's configuration file.
+Compile ESPResSo with these settings and note down the absolute path, where your `Espresso' executable is located. You will need that information later in the client's configuration file.
 
 
 \subsection{Getting FRESHS and the tutorial files}
@@ -289,7 +298,7 @@ host = localhost
 # port of the server which you entered in the server's config
 port = 
 ...
-# the path to the Espresso executable (no quotes, absolut path!)
+# the path to the Espresso executable (no quotes, absolute path!)
 executable = /home/myusername/espresso/Espresso
 # location of the harness dir where the 'job_script' is located (no quotes!)
 # (will be created in the next section)
@@ -443,7 +452,7 @@ for i in range(maxlam+1):
 \section{FAQ and troubleshooting}
 \begin{itemize}
  \item Clients do not find the executable:\\
-  Please give the absolut path to the executable and check, that it has the right permissions.
+  Please give the absolute path to the executable and check, that it has the right permissions.
  \item Killing clients:\\
 Sometimes, clients launched in a thread can not be killed by pressing CTRL+C. Therefore, it is useful to use e.g.
 \begin{mylisting}
