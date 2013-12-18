@@ -480,6 +480,8 @@ class ffs_sampling_control():
 
         if ilam == 0 and self.parallel_escape == 0:
             if nescape > 0:
+                ss.logger_freshs.info(cc.c_red + __name__ + ': declining to run parallel escapes' + cc.reset)
+                ss.logger_freshs.info(cc.c_red + __name__ + ': ...perhaps change parallel_escape in the server config.' + cc.reset)
                 return False
 
         if ss.run_count[ilam] < ss.M_0_runs[ilam] and ncheck < ss.M_0_runs[ilam]:
