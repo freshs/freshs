@@ -126,12 +126,13 @@ class client_ffs:
                 calcsteps += steps
                 ctime     += time
 
-                print "Client: collected " + str((steps, time, rc))
+                print "Client: collected MD output" + str((steps, time, rc))
 
                 flRc = float(rc)
 
                 if 'step_abort' in all_meta:
                     if all_meta['step_abort']:
+                        print "Client: job was aborted, discarding"
                         success = False
                 else:
                     success = True
@@ -142,6 +143,8 @@ class client_ffs:
                     # Verify that escape conditions have been met.
                     # This is necessary for simulation tools
                     # which do not do this logic themselves
+                    # ...but can cause problems if they *do* 
+                    # perform the logic themselves
 
                     if flRc >= float(B):
                         print "Client: reached B, resetting"
@@ -190,7 +193,7 @@ class client_ffs:
             exit( e )
         h.clean()
         
-        print "Constructing result string"
+        print "Client: Constructing result string"
 
         if success:
             results_base = "\"jobtype\": 1, \"success\": True, \"points\": " + str(points[-1])
