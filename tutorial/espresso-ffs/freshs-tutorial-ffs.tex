@@ -191,6 +191,18 @@ Checkout the latest ESPResSo code (alternatively, you can use your already exist
 git clone git://github.com/espressomd/espresso.git
 \end{verbatim}
 \end{mylisting}
+
+Once you have cloned the development code, to switch to a release that is known to work (e.g. 3.2.0), rather than the latest one, you might want to try:
+
+\begin{mylisting}
+\begin{verbatim}
+cd espresso
+git checkout tags/3.2.0
+\end{verbatim}
+\end{mylisting}
+
+
+
 Make sure that you have the following enabled in your myconfig.hpp:
 \begin{lstlisting}
 #define CONSTRAINTS
@@ -207,7 +219,10 @@ The recommended way is to checkout the latest FRESHS development code from githu
 git clone https://github.com/freshs/freshs.git
 \end{verbatim}
 \end{mylisting}
-Alternatively, you can also download the .tar.bz2-package from the webpage, but the development code should have the latest updates included.
+
+
+Alternatively, you can also download the a release .tar.bz2-package from the webpage, but the development code should have the latest updates included.
+
 
 After checking out the code from github, several subdirectories should be located in the freshs-directory, here is an overview:
 \begin{itemize}
