@@ -185,7 +185,11 @@ Some package dependencies for a typical unix system might include:
 In this section we will get the required tools and prepare the directory structure, configuration files and simulation tools.
 
 \subsection{ESPResSo}
-Checkout the latest ESPResSo code (alternatively, you can use your already existing code snapshot):
+
+ESPResSo is a scriptable molecular dynamics code used mostly for soft matter simulations.  The website at [\url{http://espressomd.org/}] contains documentation and discussions.  It is completely different from QUANTUMESPRESSO and only somewhat related to ESPResSo++.
+
+Get the latest ESPResSo code:
+
 \begin{mylisting}
 \begin{verbatim}
 git clone git://github.com/espressomd/espresso.git
@@ -202,12 +206,12 @@ git checkout tags/3.2.0
 \end{mylisting}
 
 
-
 Make sure that you have the following enabled in your myconfig.hpp:
 \begin{lstlisting}
 #define CONSTRAINTS
 #define LENNARD_JONES
 \end{lstlisting}
+
 Compile ESPResSo with these settings and note down the absolute path, where your `Espresso' executable is located. You will need that information later in the client's configuration file.
 
 
@@ -221,18 +225,18 @@ git clone https://github.com/freshs/freshs.git
 \end{mylisting}
 
 
-Alternatively, you can also download the a release .tar.bz2-package from the webpage, but the development code should have the latest updates included.
+Alternatively, you can also download a release package from the webpage, but the development code should have the latest updates included.
 
 
-After checking out the code from github, several subdirectories should be located in the freshs-directory, here is an overview:
+After checking out the code from github, several subdirectories should be located in the \verb+freshs+ directory, here is an overview:
 \begin{itemize}
- \item client: The code of the client which connects to the server and launches the harness scripts and the simulation tool.
- \item doc: Documentation of the framework.
- \item harnesses: Example harness scripts.
- \item scripts: Analysis scripts to analyze data during and after the simulation. These scripts can also serve as templates for own analysis scripts.
- \item server: The code of the server which implements all methods and distributes jobs to the simulation clients.
- \item test: Directory containing some test codes. Not used in this tutorial.
- \item tutorial: The tutorial files.
+ \item \verb+client+: The code of the client which connects to the server and launches the harness scripts and the simulation tool.
+ \item \verb+doc+: Documentation of the framework.
+ \item \verb+harnesses+: Example harness scripts.
+ \item \verb+scripts+: Analysis scripts to analyze data during and after the simulation. These scripts can also serve as templates for own analysis scripts.
+ \item \verb+server+: The code of the server which implements all methods and distributes jobs to the simulation clients.
+ \item \verb+test+: Directory containing some test codes. Not used in this tutorial.
+ \item \verb+tutorial+: The tutorial files.
 \end{itemize}
 
 % ----------------------------------------------------------------------------
@@ -331,7 +335,7 @@ checking_script = 1
 
 \subsection{Preparing the harness script}
 
-Espresso scripts are typically written in TCL (``Tool Control Language'').  This is a scripting language that offers the usual constructs of loops, function definitions and so on.  TCL is partly {\bf whitespace sensitive} so take care not to break the layout of the script, eg.: 
+ESPResSo scripts are typically written in TCL (``Tool Control Language'').  This is a scripting language that offers the usual constructs of loops, function definitions and so on.  TCL is partly {\bf whitespace sensitive} so take care not to break the layout of the script, eg.: 
 \begin{mylisting}
 \begin{verbatim}
 if { $a == 1 } then 
@@ -362,16 +366,18 @@ harnesses/espresso-ffs_tutorial
 Open the file job\_script and get a general idea what this script does (the comments in the file should help a lot). Then, look for comments containing a `TODO' and fix the particular parts. Hints:
 \begin{itemize}
  \item calc\_rc: \verb+[lindex [part <$id>] 4]+
-gives the z-coordinate of the particle with index id. Alternatively, you could have a look in the Espresso user's guide, at the \verb+analyze centermass+ command.
+gives the z-coordinate of the particle with index id. Alternatively, you could have a look in the ESPResSo user's guide, at the \verb+analyze centermass+ command.
  \item The command to add something to a TCL list is `lappend'.
 \end{itemize}
-The harness script contains sections to visualize the polymer using VMD. Therefore, VMD must be installed. However, this is only reasonable for the first run, to ensure that the system is set up correctly. For the productive run, this sections should be commented, you'll see why when you start the client.
+The harness script contains sections to visualize the polymer using VMD. Therefore, VMD must be installed. However, this is only reasonable for the first run, to ensure that the system is set up correctly. For the production run, this sections should be commented-out, you'll see why when you start the client.
 
 
 % ----------------------------------------------------------------------------
 \section{Launching FRESHS}
 
-FRESHS consists of two separate python programs, the {\it server} and the {\it client}.  Parallelism is achieved by running multiple copies of the client; which are controlled centrally by the server. In addition, ESPResSo can calculate the physics in parallel, too. Note, that this makes only sense for larger systems, not for a polymer of $32$ beads like in our example. Here, it should be faster to use multiple clients.
+FRESHS consists of two separate python programs, the {\it server} and the {\it client}.  Parallelism is achieved by running multiple copies of the client; which are controlled centrally by the server. In addition, ESPResSo can calculate the physics in parallel, too. Note, that this makes only sense for larger systems, not for a polymer of $32$ beads like in our example. 
+
+Here it should be faster to use multiple clients, but don't use more clients than you have cores on your computer. The command \verb+top+ (press \verb+q+ to exit) should show you how much of your system resources are being used.
 
 Open a new terminal, navigate to the server directory and start the server with
 \begin{mylisting}
@@ -387,14 +393,35 @@ python main_client.py -c client-espresso-ffs_tutorial.conf
 \end{mylisting}
 which starts a client connecting to the server.
 
-If things aren't working, then check the error messages and make sure that you set the right paths to the harness and to the various executables.  If things are hanging you can e.g. kill all clients using the following command:
+To start many clients, you might want to use a for loop, e.g. for the bash shell:
+\begin{mylisting}
+\begin{verbatim}
+for i in 1 2 3 4
+do
+   python main_client.py -c client-espresso-ffs_tutorial.conf 2>elog$i >log$i &
+done
+\end{verbatim}
+\end{mylisting}
+
+this construct will send the client output to log1, log2 etc.~and the errors to elog1\ldots elog4.
+
+
+
+If things aren't working, then check the error messages and make sure that you set the right paths to the harness and to the various executables.  If things are hanging you can kill all clients using the following command:
 \begin{mylisting}
 \begin{verbatim}
 kill `ps -ef | grep main_client.py | grep client-espresso-ffs | awk '{print $2}'`
 \end{verbatim}
 \end{mylisting}
 
-If everything is running, have a look at the command line output of the server and if you see numbers counting up, lean back and relax, grab a coffee or go to the toilet. Then proceed with the next section.
+If you are comfortable that no other python programs are running then this command will also clean things up:
+\begin{mylisting}
+\begin{verbatim}
+killall python Espresso
+\end{verbatim}
+\end{mylisting}
+
+If everything seems to be working, look at the output of your server and of your different client instances. Then have a little rest and proceed with the next section.
 
 \section{Analysis tools}
 
