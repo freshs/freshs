@@ -240,12 +240,34 @@ proc init_A {} {
         set poly_ok [determine_poly_ok]
         # obtain reaction coordinate
         set rc [calc_rc]
+
+        puts "Pre integration: rc is $rc. Polymer_ok is $poly_ok."
+
+        ##Do a short integration inside a try-catch, in case
+        ##there are any weird configs generated
+        if {$poly_ok && $rc >= $A_left && $rc < $A} {
+             inter forcecap 10
+             set_pore
+             if { [catch { integrate 1000 } ret ] } {
+                 puts "Initial integration crashed: $ret"
+                 set poly_ok 0
+             } else {
+                inter forcecap   0
+                if { [catch { integrate 1000 } ret ] } {
+                   puts "Integration without cap crashed: $ret"
+                   set poly_ok 0
+                } 
+             }
+        }
+        inter forcecap   0
+
         if {$poly_ok && $rc >= $A_left && $rc < $A} {
             set order_param_ok 1
             puts "Order parameter is ok."
         } else {
             # something is wrong, delete polymer
-            puts "Order parameter is $rc. Polymer_ok is $poly_ok."
+            puts "Retrying: Order parameter is $rc. Polymer_ok is $poly_ok."
+            puts "Required lambda: $A_left <= $rc < $A."
             del_polymer
         }
     }
@@ -278,7 +300,7 @@ set box_l_y 30
 set box_l_z 60
 
 # polymer
-set p_length    64
+set p_length    32
 set bond_dist   1.0
 set bond_max_dist 1.0
 set bond_k      10.0
@@ -293,13 +315,18 @@ set steps 10
 
 # border of basinA to the left
 set A_left 5
-
+set storedir "."
 set vmdprepared 0
 
 # pore center location
 set centerx [expr 0.5 *$box_l_x]
 set centery [expr 0.5 *$box_l_y]
 set centerz [expr 0.5 *$box_l_z]
+
+##Check that Espresso was compiled with the right switches in myconfig.h
+require_feature "LENNARD_JONES"
+require_feature "CONSTRAINTS"
+
 
 ########################################## 
 # parse arguments (these are given by 
@@ -362,7 +389,7 @@ if {$initial_config == "None"} {
     close "$fh"
     load_snapshot "${storedir}/${timestamp}/${fn_in}"
 } else {
-    #get snap from file
+    #generate a random state
     puts "JOBSCRIPT: self-generating an initial state with equilibration."
     init_A
 }
