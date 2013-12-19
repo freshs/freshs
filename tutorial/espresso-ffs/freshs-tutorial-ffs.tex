@@ -148,7 +148,7 @@ For this simulation, we use a box with dimensions $30\times30\times60$ and perio
 
 The number of steps of an initial MD run is limited. However, if the polymer diffuses too much away from the pore, we have to interrupt the simulation before the center of mass is at the other side of the simulation box because of the periodic boundary conditions. Therefore, we initialize our system again in A, if the center of mass is lower than e.g. $\lambda=5$.
 
-The length of the polymer can also be tuned in the configuration file. We start with a shorter polymer, e.g. $N=64$. The polymer uses FENE interactions for the bonds. The other interactions (e.g. polymer-pore) are set to Weeks-Chandler-Andersen interactions.
+The length of the polymer can also be tuned in the configuration file. We start with a shorter polymer, e.g. $N=32$. The polymer uses FENE interactions for the bonds. The other interactions (e.g. polymer-pore) are set to Weeks-Chandler-Andersen interactions.
 
 Now, we proceed with the software requirements and the setup of the environment.
 
@@ -244,7 +244,7 @@ use_ghosts = 1
 # pore diameter and polymer length.
 # Think about a directory, where the snapshots can be stored
 user_msg = "servername": "polytranslocsrv", "storedir": 
-"/insert/path/to/data/directory", "p_length": 64, "pore_rad": 5
+"/insert/path/to/data/directory", "p_length": 32, "pore_rad": 5
 
 [ffs_control]
 # enable parallel escape runs
@@ -315,6 +315,29 @@ checking_script = 1
 
 
 \subsection{Preparing the harness script}
+
+Espresso scripts are typically written in TCL (``Tool Control Language'').  This is a scripting language that offers the usual constructs of loops, function definitions and so on.  TCL is partly {\bf whitespace sensitive} so take care not to break the layout of the script, eg.: 
+\begin{mylisting}
+\begin{verbatim}
+if { $a == 1 } then 
+{ puts "It's true what they say, a really is equal to 1"}
+\end{verbatim}
+\end{mylisting}
+
+Will not work. The correct format is:
+\begin{mylisting}
+\begin{verbatim}
+if { $a == 1 } then { 
+  puts "It's true what they say, a really is equal to 1"
+}
+\end{verbatim}
+\end{mylisting}
+
+or if you want: \verb+if { $a == 1 }{puts "This works too"}+.
+
+
+
+
 The harness script for this tutorial is based on the espresso\_plain example from the harness directory and is located at
 \begin{mylisting}
 \begin{verbatim}
@@ -323,8 +346,8 @@ harnesses/espresso-ffs_tutorial
 \end{mylisting}
 Open the file job\_script and get a general idea what this script does (the comments in the file should help a lot). Then, look for comments containing a `TODO' and fix the particular parts. Hints:
 \begin{itemize}
- \item calc\_rc: \verb+[lindex [part <id>] 4]+
-gives the z-coordinate of the particle with index id. Loop over all particles with ids 0 to \$p\_length.
+ \item calc\_rc: \verb+[lindex [part <$id>] 4]+
+gives the z-coordinate of the particle with index id. Alternatively, you could have a look in the Espresso user's guide, at the \verb+analyze centermass+ command.
  \item The command to add something to a TCL list is `lappend'.
 \end{itemize}
 The harness script contains sections to visualize the polymer using VMD. Therefore, VMD must be installed. However, this is only reasonable for the first run, to ensure that the system is set up correctly. For the productive run, this sections should be commented, you'll see why when you start the client.
@@ -333,7 +356,7 @@ The harness script contains sections to visualize the polymer using VMD. Therefo
 % ----------------------------------------------------------------------------
 \section{Launching FRESHS}
 
-FRESHS consists of two separate python programs, the {\it server} and the {\it client}.  Parallelism is achieved by running multiple copies of the client; which are controlled centrally by the server. In addition, ESPResSo can calculate the physics in parallel, too. Note, that this makes only sense for larger systems, not for a polymer of $64$ beads like in our example. Here, it should be faster to use multiple clients.
+FRESHS consists of two separate python programs, the {\it server} and the {\it client}.  Parallelism is achieved by running multiple copies of the client; which are controlled centrally by the server. In addition, ESPResSo can calculate the physics in parallel, too. Note, that this makes only sense for larger systems, not for a polymer of $32$ beads like in our example. Here, it should be faster to use multiple clients.
 
 Open a new terminal, navigate to the server directory and start the server with
 \begin{mylisting}
