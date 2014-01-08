@@ -132,7 +132,7 @@ class client_ffs:
 
                 if 'step_abort' in all_meta:
                     if all_meta['step_abort']:
-                        print "Client: job was aborted, discarding"
+                        print "Client: job was aborted because of maximum steps."
                         success = False
                 else:
                     success = True
