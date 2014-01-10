@@ -55,6 +55,9 @@ class configpoints:
         self.ghostlastcount = 0
         self.ghostlastlam = -1
         
+        self.realcache = []
+        self.realcachelambda = -1
+        
     # Connect to database
     def connect(self):
         try:
@@ -209,45 +212,37 @@ class configpoints:
         return self.return_random_point(biglam)
         
     # Return random point from interface
-    def return_random_point(self,the_lambda):
+    def return_random_point(self,the_lambda,mode='default'):
 
         retpoints = []
-        retpoint_ids = ''
+        retpoints_ids = []
+        if mode == 'default':
+            self.cur.execute('select myid from configpoints where deactivated = 0 and success = 1 and lambda = ?',[the_lambda])
+            for row in self.cur:
+                retpoints_ids.append(row)
+        elif mode == 'last_interface_complete' and self.realcachelambda != the_lambda:
+            # refresh cache
+            self.cur.execute('select myid from configpoints where deactivated = 0 and success = 1 and lambda = ?',[the_lambda])
+            for row in self.cur:
+                retpoints_ids.append(row[0])
+            self.realcache = retpoints_ids[:]
+            self.realcachelambda = the_lambda                
+        elif mode == 'last_interface_complete' and self.realcachelambda == the_lambda:
+            # use cache
+            retpoints_ids = self.realcache[:]
 
-        ##Create a view of the DB to save searching repeatedly for the set of candidate points
-        viewname = 'v_'+str(the_lambda)
-        self.cur.execute(\
-   'create temp view if not exists '+viewname+' as select * from configpoints where deactivated = 0 and success = 1 and lambda = '+\
-                         str(the_lambda))
-        ##Note that passing arguments doesn't work for view creation in sqlite,
-        ##you have to mung the string directly.
+        npoints = len(retpoints_ids)
+        
+        # return if there are no points
+        if npoints == 0:
+            return [], ''
 
+        # get a random number
+        index = random.randint(0, npoints - 1)
 
-        # Count the allowed points
-        self.cur.execute('select count(*) from '+viewname)
-        n_points = self.cur.fetchone()[0]
-        if n_points == 0 :
-            self.cur.execute('drop view if exists '+viewname)
-            return retpoints, retpoint_ids
-
-        ##get a random number
-        index = random.randint(0, n_points - 1)
-
-        ##do the select
-        ##order by seed is less efficient than order by rowid; but should be deterministic, unlike rowid.
-        ##Note: if the seed is NULL, or appears twice, then should tiebreak by rowid anyway.
-        self.cur.execute(\
-            'select configpoint, myid from '+viewname+' order by seed limit 1 offset ?',\
-             [index])
-
-        ##save the info
-        r = self.cur.fetchone() 
-        retpoints = ast.literal_eval(str(r[0]))
-        retpoint_ids = str(r[1])
-            
-
-        self.cur.execute('drop view if exists '+viewname)
-        return retpoints, retpoint_ids
+        selptid = retpoints_ids[index]
+        
+        return self.return_point_by_id(selptid), selptid
 
     # Return a config point based on its unique id.
     def return_point_by_id(self, rp_id):

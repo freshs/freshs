@@ -348,11 +348,13 @@ class ClientHandler(asyncore.dispatcher):
             self.remove_from_explorer()
             
             # Get potential calculation point
-            random_point, rp_id = ss.storepoints.return_random_point(rp_lambda)
+            ss.logger_freshs.debug(cc.c_magenta + 'Obtaining random point from last interface.' + cc.reset)
+            # get random point from last interface
+            random_point, rp_id = ss.storepoints.return_random_point(rp_lambda,'last_interface_complete')
         
             self.incr_runcount(current_lambda)
-    
             # Check if this point is in ghost database.
+            ss.logger_freshs.debug(cc.c_magenta + 'Checking if point is in ghost DB.' + cc.reset)
             indatabase = ss.ghostpoints.origin_point_in_database_and_active(rp_id)
             
         else:
@@ -365,8 +367,10 @@ class ClientHandler(asyncore.dispatcher):
                 max_steps = ai.auto_max_steps
             # Get calculation point
             if len(ss.lambdas) == ss.act_lambda:
-                random_point, rp_id = ss.storepoints.return_random_point(ss.act_lambda-1)
+                # last interface is complete but no new lambda is known
+                random_point, rp_id = ss.storepoints.return_random_point(ss.act_lambda-1,'last_interface_complete')
             else:
+                # last interface is still in progress but pre-calculation is requested. Use points from current interface.
                 random_point, rp_id = ss.storepoints.return_random_point(ss.act_lambda)
 
         ss.logger_freshs.debug(cc.c_magenta + 'Indatabase: ' + str(indatabase) + ', ghostcount = ' + str(self.ghostcount) + cc.reset)

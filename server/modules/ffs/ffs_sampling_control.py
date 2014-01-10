@@ -270,12 +270,14 @@ class ffs_sampling_control():
             
             ss.logger_freshs.info(cc.c_green + 'Checking, if interface is ok...' + cc.reset)
             self.check_run_required(ss.act_lambda)
+            #if not self.interface_statistics_ok():
+            #    self.adjust_numruns(ss.act_lambda)
 
             if ss.storepoints.return_nop(ss.act_lambda) >= ss.M_0_runs[ss.act_lambda]:
                 self.change_interface()
 
             ss.logger_freshs.info(cc.c_green + 'Current interface index: ' + str(ss.act_lambda) + cc.reset)
-            
+
         #if self.parallel_escape and ss.act_lambda == 0:
         #    ss.logger_freshs.info(cc.c_green + 'Populating escape candidate exclude list, depending on the number of points this might take some time.' + cc.reset)
         #    points_left = len(self.escape_point_candidates()[0])
@@ -480,6 +482,21 @@ class ffs_sampling_control():
 
 # -------------------------------------------------------------------------------------------------
 
+    def adjust_numruns(self,ilam):
+        ss = self.server
+        ss.logger_freshs.debug(cc.c_magenta + __name__ + ': adjust_numruns' + cc.reset)
+        ss.logger_freshs.info(cc.c_green + 'All traces originate from less than ' + str(self.get_min_success()) + ' points, increasing number of trials!' + cc.reset)
+        if ss.auto_interfaces:
+            min_req = int( 1.5*(self.get_min_success() - self.dorigins) )
+            if min_req > ss.ai.auto_trials:
+                ss.M_0_runs[ilam] += min_req
+            else:
+                ss.M_0_runs[ilam] += ss.ai.auto_trials
+        else:
+            ss.M_0_runs[ilam] += int(ss.configfile.getint('runs_per_interface', 'lambda' + str(ss.act_lambda)) / 2.0 + 1)
+
+# -------------------------------------------------------------------------------------------------
+
     def check_run_required(self,ilam):
         ss = self.server
 
@@ -545,15 +562,7 @@ class ffs_sampling_control():
                     # Everything seems to be alright, change interface
                     self.change_interface()
                 else:
-                    ss.logger_freshs.info(cc.c_green + 'All traces originate from less than ' + str(self.get_min_success()) + ' points, increasing number of trials!' + cc.reset)
-                    if ss.auto_interfaces:
-                        min_req = int( 1.5*(self.get_min_success() - self.dorigins) )
-                        if min_req > ss.ai.auto_trials:
-                            ss.M_0_runs[ilam] += min_req
-                        else:
-                            ss.M_0_runs[ilam] += ss.ai.auto_trials
-                    else:
-                        ss.M_0_runs[ilam] += int(ss.configfile.getint('runs_per_interface', 'lambda' + str(ss.act_lambda)) / 2.0 + 1)
+                    self.adjust_numruns(ilam)
                     # check again
                     return self.check_run_required(ilam)
                 
