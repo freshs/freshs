@@ -24,6 +24,9 @@ import sqlite3
 # point selection: SQlite RNG is not high quality; and cannot be seeded.
 import random
 
+# math
+import numpy as np
+
 # Logging
 import logging
 
@@ -219,7 +222,7 @@ class configpoints:
         if mode == 'default':
             self.cur.execute('select myid from configpoints where deactivated = 0 and success = 1 and lambda = ?',[the_lambda])
             for row in self.cur:
-                retpoints_ids.append(row)
+                retpoints_ids.append(row[0])
         elif mode == 'last_interface_complete' and self.realcachelambda != the_lambda:
             # refresh cache
             self.cur.execute('select myid from configpoints where deactivated = 0 and success = 1 and lambda = ?',[the_lambda])
@@ -239,16 +242,27 @@ class configpoints:
 
         # get a random number
         index = random.randint(0, npoints - 1)
-
         selptid = retpoints_ids[index]
+        #print "Choosing", selptid, "as random point"
+        selpt = self.return_point_by_id(selptid)
         
-        return self.return_point_by_id(selptid), selptid
+        return selpt, selptid
 
     # Return a config point based on its unique id.
     def return_point_by_id(self, rp_id):
-
-        self.cur.execute('select configpoint from configpoints where myid = ?', [rp_id])
-        r = self.cur.fetchone() 
+        #print rp_id
+        if isinstance(rp_id,tuple):
+            try:
+                print "Warn in configpoints: received tuple instead of plain id, converting..."
+                rp_id = str(rp_id[0])
+            except Exception as e:
+                print e
+        try:
+            self.cur.execute('select configpoint from configpoints where myid = ?', [rp_id])
+            r = self.cur.fetchone()
+        except Exception as e:
+            print e
+            print "rp_id was", rp_id
 
         return str(r[0])
 
@@ -351,6 +365,16 @@ class configpoints:
             if biglam == None:
                 biglam = 0
         return biglam  
+
+    # return the maximum of the reaction coordinate
+    def return_max_rc(self,ilam):
+        self.cur.execute('select max(rcval) from configpoints where lambda = ? and success = 1 and deactivated = 0', [ilam])
+        lam = 0.0
+        for row in self.cur:
+            lam = row[0]
+            if lam == None:
+                lam = 0.0
+        return float(lam)
 
     # Return complete database line where origin_point matches (for copying the ghost-line to real world)
     def get_line_origin_point(self, point):
@@ -472,8 +496,8 @@ class configpoints:
     def update_usecount_by_myid(self,myid):
         self.cur.execute("update configpoints set usecount=usecount+1 where myid = ?", [str(myid)])        
         
-    def return_origin_ids(self,ilambda):
-        self.cur.execute('select origin_point from configpoints where lambda = ? and deactivated = 0', [ilambda])
+    def return_origin_ids(self,ilambda,success=1):
+        self.cur.execute('select origin_point from configpoints where lambda = ? and deactivated = 0 and success = ?', [ilambda,success])
         retval = []
         for row in self.cur:
             retval.append(str(row[0]))
@@ -498,22 +522,23 @@ class configpoints:
     # return all origin ids of given id array
     def return_origin_ids_by_ids(self, ids):
         origin_points = []
-        if len(ids) > 0:
-            while len(ids) > 0:
-                # split into queries of 500 (sqlite max is 999 for one query)
-                if len(ids) >= 500:
-                    ids_tmp = ids[0:500]
-                else:
-                    ids_tmp = ids[:]
-                aps = '?'
-                for iid in range(len(ids_tmp)-1):
-                    aps += ' or myid = ?'
-                tquery = 'select origin_point from configpoints where myid = ' + aps
-                #print "Query:", tquery
-                self.cur.execute(tquery, ids_tmp)
-                for row in self.cur:
-                    origin_points.append(str(row[0]))
-                ids = ids[len(ids_tmp):]
+        nids = len(ids)
+        if nids > 0:
+            # "Obtaining origin points of", nids, "points"
+            allorigins = []
+            allids = []
+            self.cur.execute('select origin_point,myid from configpoints')
+            # "Processing."
+            for row in self.cur:
+                allorigins.append(str(row[0]))
+                allids.append(str(row[1]))
+
+            # "Creating boolean array"
+            boolarray = np.in1d(allids,ids)
+            for iel in range(len(allids)):
+                if boolarray[iel]:
+                    origin_points.append(allorigins[iel])
+
         return origin_points
 
     # return number of different points on first interface by backtracing
@@ -521,15 +546,14 @@ class configpoints:
         # get origin points from current interface
         newids = self.return_origin_ids(lam)
         # remove dupliactes
+        print "Processing lambda", lam, ", different ids left:", len(newids)
         newids = list(set(newids))
 
         if lam > 1:
             for i in range(lam-1):
-                #newids_tmp = []
-                #for sel in newids:
-                #    newids_tmp.append(self.return_origin_id_by_id(sel))
+                print "Processing lambda", lam-1-i, ", different ids left:", len(newids)
                 newids = list(set(self.return_origin_ids_by_ids(newids)))
-                #print self.return_origin_point_by_id(newids[0])
+                
 
         return newids
 
@@ -599,10 +623,13 @@ class configpoints:
         # last resort, if every point was sorted out before
         if len(candidates) == 0:
             gimmepoint = allpoints[random.randint(0,len(allpoints)-1)]
-            return self.return_point_by_id(gimmepoint), gimmepoint
+            print "No candidates left, using", gimmepoint
+            gimmepoint_data = self.return_point_by_id(gimmepoint)
+            return gimmepoint_data, gimmepoint
 
         # "getting (one) point with lowest number"
         point_id = min(countdict,key = lambda a: countdict.get(a))
+        #print point_id, "has the lowest number of points"
         point_meta = self.return_point_by_id(point_id)
         # "returning point meta information", point_meta
         return point_meta, point_id
