@@ -14,7 +14,7 @@ all: clean tests status
 status:
 	@grep -e FAIL -e SUCCESS *_log.txt
 
-tests: riot_spres ell_spres ell_ffs espresso_spres espresso_ffs
+tests: riot_spres espresso_spres espresso_ffs
 
 .PHONY: riot_spres
 riot_spres: LOG=-l riot_spres_log.txt
@@ -49,7 +49,7 @@ have_espresso :
 clean:
 	rm -f *~ *\# 20[1-9][0-9]-[0-1][0-9]*
 	rm -Rf CONF
-	rm -f *auto* DB/* OUTPUT/* initialcfg.xyz ellOutTraj.etj
+	rm -f *auto* DB/* OUTPUT/* initialcfg.xyz 
 	rm -f profile.dat prof*.txt *_log.txt server.log
 
 .PHONY : clobber

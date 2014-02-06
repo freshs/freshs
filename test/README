@@ -4,10 +4,8 @@ Test directory for FRESHS
 
 To run all tests, type: make at the command line.
 
-Currently implemented tests rely on the presence of Espresso (the espresso_spres and espresso_ffs tests)
-or on the presence of the "ell" code made in the Schilling group (ell_spres and ell_ffs).
+Currently implemented tests rely on the presence of Espresso (the espresso_spres and espresso_ffs tests).
 
-The ell code is distributed with this harness, so the ell tests should pass even if nothing else does.
 
 
 
