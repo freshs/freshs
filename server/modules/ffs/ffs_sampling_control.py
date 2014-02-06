@@ -57,6 +57,8 @@ class ffs_sampling_control():
         self.escape_clients = {}
         # for parallel escape, points to exclude (e.g. if trace already exists)
         self.escape_exclude = []
+        # for keeping the current trace in cache
+        self.escape_trace = {}
         
         # If there's no point in the escape trace, save the ctime and store it with the next point
         self.ctime_pending = 0.0
@@ -268,17 +270,19 @@ class ffs_sampling_control():
             
             ss.logger_freshs.info(cc.c_green + 'Checking, if interface is ok...' + cc.reset)
             self.check_run_required(ss.act_lambda)
+            #if not self.interface_statistics_ok():
+            #    self.adjust_numruns(ss.act_lambda)
 
             if ss.storepoints.return_nop(ss.act_lambda) >= ss.M_0_runs[ss.act_lambda]:
                 self.change_interface()
 
             ss.logger_freshs.info(cc.c_green + 'Current interface index: ' + str(ss.act_lambda) + cc.reset)
-            
-        if self.parallel_escape and ss.act_lambda == 0:
-            ss.logger_freshs.info(cc.c_green + 'Populating escape candidate exclude list, depending on the number of points this might take some time.' + cc.reset)
-            points_left = len(self.escape_point_candidates()[0])
-            exclude_num = len(self.escape_exclude)
-            ss.logger_freshs.info(cc.c_green + 'Populating escape candidate exclude list done. ' + str(points_left) + ' points have residual steps. ' + str(exclude_num) + ' points are ready.' + cc.reset)
+
+        #if self.parallel_escape and ss.act_lambda == 0:
+        #    ss.logger_freshs.info(cc.c_green + 'Populating escape candidate exclude list, depending on the number of points this might take some time.' + cc.reset)
+        #    points_left = len(self.escape_point_candidates()[0])
+        #    exclude_num = len(self.escape_exclude)
+        #    ss.logger_freshs.info(cc.c_green + 'Populating escape candidate exclude list done. ' + str(points_left) + ' points have residual steps. ' + str(exclude_num) + ' points are ready.' + cc.reset)
 
 # -------------------------------------------------------------------------------------------------
 
@@ -412,35 +416,53 @@ class ffs_sampling_control():
         max_steps_pts = []
 
         # get list of escape point rp_ids
-        esc_pts_ids = ss.storepoints.return_configpoints_ids(0)
-        ss.logger_freshs.debug(cc.c_magenta + "Removing points where we know that they are already in a trace." + cc.reset)
-        for pt in esc_pts_ids[::-1]:
-            if pt in self.escape_exclude:
-                esc_pts_ids.remove(pt)
+        if ss.dbload and len(self.escape_trace) == 0:
+            ss.logger_freshs.debug(cc.c_magenta + 'Retrieving point IDs.' + cc.reset)
+            esc_pts_ids = ss.storepoints.return_configpoints_ids(0)
+            ss.logger_freshs.debug(cc.c_magenta + 'Removing points already in a trace' + cc.reset)
+            for pt in esc_pts_ids[::-1]:
+                # remove points which are origins from other points
+                if ss.storepoints.id_in_origin(pt):
+                    ss.logger_freshs.debug(cc.c_magenta + "Point " + pt + " is origin of another point, found existing trace! Removing." + cc.reset)
+                    esc_pts_ids.remove(pt)
+                    #self.escape_exclude.append(pt)
+
+        else:
+            esc_pts_ids = self.escape_trace.keys()
 
         ss.logger_freshs.debug(cc.c_magenta + "Candidate points for escape resume: " + str(esc_pts_ids) + cc.reset)
+        
+        #ss.logger_freshs.debug(cc.c_magenta + "Removing points where we know that they are already in a trace." + cc.reset)
+        #for pt in esc_pts_ids[::-1]:
+        #    if pt in self.escape_exclude:
+        #        esc_pts_ids.remove(pt)
+
         for cl in self.escape_clients:
             # remove points, on which we calculate already
             if self.escape_clients[cl] in esc_pts_ids:
                 ss.logger_freshs.debug(cc.c_magenta + "Point " + self.escape_clients[cl] + " is calculated at the moment. Removing." + cc.reset)
                 esc_pts_ids.remove(self.escape_clients[cl])
-        for pt in esc_pts_ids[::-1]:
-            # remove points which are origins from other points
-            if ss.storepoints.id_in_origin(pt):
-                ss.logger_freshs.debug(cc.c_magenta + "Point " + pt + " is origin of another point, found existing trace! Removing." + cc.reset)
-                esc_pts_ids.remove(pt)
-                self.escape_exclude.append(pt)
 
         if len(esc_pts_ids) > 0:
             ss.logger_freshs.debug(cc.c_magenta + "Tracking back " + str(len(esc_pts_ids)) + " points to determine the residual steps." + cc.reset)
             for pt in esc_pts_ids:
-                steps_until_point = ss.storepoints.traceback_escape_point(pt)
+                if self.escape_trace.has_key(pt):
+                    ss.logger_freshs.debug(cc.c_magenta + 'Using points from cache.' + cc.reset)
+                    steps_until_point = self.escape_trace[pt]
+                else:
+                    ss.logger_freshs.info(cc.c_green + 'Tracking back escape run in database, adding to cache.' + cc.reset)
+                    steps_until_point = ss.storepoints.traceback_escape_point(pt)
+                    self.escape_trace[pt] = steps_until_point
+
                 # if steps are left to calculate
                 if steps_until_point < self.escape_steps:
                     cand_pts.append(pt)
                     max_steps_pts.append(steps_until_point)
                 else:
-                    self.escape_exclude.append(pt)
+                    if self.escape_trace.has_key(pt):
+                        self.escape_trace.pop(pt)
+                    #self.escape_exclude.append(pt)
+        #ss.logger_freshs.debug(cc.c_magenta + 'Escape exclude list contains'  + str(len(self.escape_exclude)) + 'entries.' + cc.reset)
 
         ss.logger_freshs.debug(cc.c_magenta + "Found " + str(cand_pts) + " with " + str(max_steps_pts) + " steps in total up to the particular point." + cc.reset)
         return cand_pts, max_steps_pts
@@ -457,6 +479,21 @@ class ffs_sampling_control():
             ss.storepoints.add_ctime_steps(self.last_added_point, self.ctime_pending, self.calcsteps_pending)
             self.ctime_pending = 0.0
             self.calcsteps_pending = 0
+
+# -------------------------------------------------------------------------------------------------
+
+    def adjust_numruns(self,ilam):
+        ss = self.server
+        ss.logger_freshs.debug(cc.c_magenta + __name__ + ': adjust_numruns' + cc.reset)
+        ss.logger_freshs.info(cc.c_green + 'All traces originate from less than ' + str(self.get_min_success()) + ' points, increasing number of trials!' + cc.reset)
+        if ss.auto_interfaces:
+            min_req = int( 1.5*(self.get_min_success() - self.dorigins) )
+            if min_req > ss.ai.auto_trials:
+                ss.M_0_runs[ilam] += min_req
+            else:
+                ss.M_0_runs[ilam] += ss.ai.auto_trials
+        else:
+            ss.M_0_runs[ilam] += int(ss.configfile.getint('runs_per_interface', 'lambda' + str(ss.act_lambda)) / 2.0 + 1)
 
 # -------------------------------------------------------------------------------------------------
 
@@ -480,8 +517,7 @@ class ffs_sampling_control():
 
         if ilam == 0 and self.parallel_escape == 0:
             if nescape > 0:
-                ss.logger_freshs.info(cc.c_red + __name__ + ': declining to run parallel escapes' + cc.reset)
-                ss.logger_freshs.info(cc.c_red + __name__ + ': ...perhaps change parallel_escape in the server config.' + cc.reset)
+                ss.logger_freshs.info(cc.c_green + __name__ + ': Running serial escape run as requested in configuration file (parallel_escape=0).' + cc.reset)
                 return False
 
         if ss.run_count[ilam] < ss.M_0_runs[ilam] and ncheck < ss.M_0_runs[ilam]:
@@ -526,15 +562,7 @@ class ffs_sampling_control():
                     # Everything seems to be alright, change interface
                     self.change_interface()
                 else:
-                    ss.logger_freshs.info(cc.c_green + 'All traces originate from less than ' + str(self.get_min_success()) + ' points, increasing number of trials!' + cc.reset)
-                    if ss.auto_interfaces:
-                        min_req = int( 1.5*(self.get_min_success() - self.dorigins) )
-                        if min_req > ss.ai.auto_trials:
-                            ss.M_0_runs[ilam] += min_req
-                        else:
-                            ss.M_0_runs[ilam] += ss.ai.auto_trials
-                    else:
-                        ss.M_0_runs[ilam] += int(ss.configfile.getint('runs_per_interface', 'lambda' + str(ss.act_lambda)) / 2.0 + 1)
+                    self.adjust_numruns(ilam)
                     # check again
                     return self.check_run_required(ilam)
                 
@@ -678,6 +706,29 @@ class ffs_sampling_control():
 
 
 # -------------------------------------------------------------------------------------------------
+
+    def build_escape_cache(self, origin_point, runid, calcsteps):
+        ss = self.server
+
+        #if origin_point not in self.escape_exclude and origin_point != 'escape':
+        #    self.escape_exclude.append(origin_point)
+
+        try:
+            if origin_point != 'escape':
+                self.escape_trace[runid] = self.escape_trace.pop(origin_point)
+
+            if self.escape_trace.has_key(runid):
+                self.escape_trace[runid] += calcsteps
+            else:
+                self.escape_trace[runid] = calcsteps
+            
+            ss.logger_freshs.debug(cc.c_magenta + 'Escape trace overview:' + str(self.escape_trace) + cc.reset)
+        except Exception as e:
+            ss.logger_freshs.warn(cc.c_red + 'Building escape trace cache failed: ' + str(e) + cc.reset)
+            ss.logger_freshs.warn(cc.c_red + 'This is not fatal but may be slow for a large number of points.' + cc.reset)
+
+
+# -------------------------------------------------------------------------------------------------
 # Parse received result
 # -------------------------------------------------------------------------------------------------
     def parse_message(self, data, ddata, client, runid):
@@ -806,6 +857,9 @@ class ffs_sampling_control():
                                          customdata \
                                          )
 
+            if the_jobs_lambda == 0 and self.parallel_escape > 0:
+                self.build_escape_cache(origin_point, runid, ddata['calcsteps'])
+
             ss.storepoints.update_usecount_by_myid(origin_point)
             self.last_added_point = runid
 
@@ -905,7 +959,7 @@ class ffs_sampling_control():
                 ctime = ddata['ctime']
                 
                 # count ctime in parallel run.
-                if self.parallel_escape == 1:
+                if self.parallel_escape > 0:
                     ss.ctime += ctime
                     # write leftover steps to DB
                     if origin_point == 'escape':
@@ -926,6 +980,9 @@ class ffs_sampling_control():
                     # add it to the server variable
                         ss.logger_freshs.debug(cc.c_magenta + 'Added ctime ' + str(ctime) + ' to last escape point. Server ctime is now ' + \
                                            str(ss.ctime) + cc.reset)
+
+
+                    self.build_escape_cache(origin_point, runid, ddata['calcsteps'])
             
             else:
                 try:

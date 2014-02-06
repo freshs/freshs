@@ -509,7 +509,7 @@ class server(asyncore.dispatcher):
                 '        | |    | | \ \| |____ ____) | |  | |____) |        \n' + \
                 '        |_|    |_|  \_\______|_____/|_|  |_|_____/         \n' + \
                 ' --------------------------------------------------------- \n' + \
-                ' (c) 2011,2012,2013\n' + \
+                ' (c) 2011,2012,2013,2014\n' + \
                 ' The FRESH System\n' + \
                 ' Uni Stuttgart, Uni Luxembourg\n' + \
                 '\n' + \
@@ -613,12 +613,14 @@ class server(asyncore.dispatcher):
             if self.algorithm == sampling_algorithm.FFS:
                 if self.act_lambda == 0:
                     self.logger_freshs.info(cc.c_magenta + cc.bold \
+                    + self.timestamp + ': ' \
                     + 'Clients: ' + str(len(self.clients)) + ', Idle: ' + str(len(self.idle_clients)) \
                     + ', Ghosts: ' + str(len(self.ghost_clients)) + ', Explorers: ' + str(len(self.explorer_clients)) \
                     + ', ctime: ' + str(self.ctime) \
                     + cc.reset)
                 else:
                     self.logger_freshs.info(cc.c_magenta + cc.bold \
+                    + self.timestamp + ': ' \
                     + 'Clients: ' + str(len(self.clients)) + ', Idle: ' + str(len(self.idle_clients)) \
                     + ', Ghosts: ' + str(len(self.ghost_clients)) + ', Explorers: ' + str(len(self.explorer_clients)) \
                     + ', ctime: ' + str(self.ctime) \
