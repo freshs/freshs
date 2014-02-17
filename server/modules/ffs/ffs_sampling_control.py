@@ -276,6 +276,12 @@ class ffs_sampling_control():
             if ss.storepoints.return_nop(ss.act_lambda) >= ss.M_0_runs[ss.act_lambda]:
                 self.change_interface()
 
+            try:
+                pts = ss.storepoints.return_configpoints_ids(ss.act_lambda-1)
+                ss.ghostpoints.build_ghost_exclude_cache(ss.act_lambda,pts)
+            except Exception as e:
+                print e
+
             ss.logger_freshs.info(cc.c_green + 'Current interface index: ' + str(ss.act_lambda) + cc.reset)
 
         #if self.parallel_escape and ss.act_lambda == 0:
@@ -393,6 +399,12 @@ class ffs_sampling_control():
 
         ss.storepoints.commit()
         ss.ghostpoints.commit()
+        try:
+            ss.ghostpoints.noghostonpoint = []
+            pts = ss.storepoints.return_configpoints_ids(ss.act_lambda-1)
+            ss.ghostpoints.build_ghost_exclude_cache(ss.act_lambda,pts)
+        except Exception as e:
+            print e
         self.print_lambar('AB')
         ss.M_0.append(0)
         ss.run_count.append(0)

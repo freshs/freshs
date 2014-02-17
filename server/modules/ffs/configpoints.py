@@ -57,6 +57,7 @@ class configpoints:
         self.ghostcache = []
         self.ghostlastcount = 0
         self.ghostlastlam = -1
+        self.noghostonpoint = []
         
         self.realcache = []
         self.realcachelambda = -1
@@ -213,38 +214,41 @@ class configpoints:
     def random_point_B(self):
         biglam = self.biggest_lambda()
         return self.return_random_point(biglam)
-        
-    # Return random point from interface
-    def return_random_point(self,the_lambda,mode='default'):
 
-        retpoints = []
-        retpoints_ids = []
-        if mode == 'default':
-            self.cur.execute('select myid from configpoints where deactivated = 0 and success = 1 and lambda = ?',[the_lambda])
-            for row in self.cur:
-                retpoints_ids.append(row[0])
-        elif mode == 'last_interface_complete' and self.realcachelambda != the_lambda:
-            # refresh cache
-            self.cur.execute('select myid from configpoints where deactivated = 0 and success = 1 and lambda = ?',[the_lambda])
-            for row in self.cur:
-                retpoints_ids.append(row[0])
-            self.realcache = retpoints_ids[:]
-            self.realcachelambda = the_lambda                
-        elif mode == 'last_interface_complete' and self.realcachelambda == the_lambda:
-            # use cache
-            retpoints_ids = self.realcache[:]
-
-        npoints = len(retpoints_ids)
+    # returns random value from list
+    def random_list_entry(self,tarray):
+        npoints = len(tarray)
         
         # return if there are no points
         if npoints == 0:
-            return [], ''
+            print "DANG! No point in list!"
+            return None
+        return tarray[random.randint(0, npoints - 1)]
+        
+        
+    # Return random point from interface
+    def return_random_point(self,the_lambda,mode='default'):
+        if mode == 'default':
+            retpoints_ids = []
+            self.cur.execute('select myid from configpoints where deactivated = 0 and success = 1 and lambda = ?',[the_lambda])
+            for row in self.cur:
+                retpoints_ids.append(row[0])
+            selptid = self.random_list_entry(retpoints_ids)
+        elif mode == 'last_interface_complete' and self.realcachelambda != the_lambda:
+            #print "refresh cache"
+            self.realcache = []
+            self.cur.execute('select myid from configpoints where deactivated = 0 and success = 1 and lambda = ?',[the_lambda])
+            for row in self.cur:
+                self.realcache.append(row[0])
+            self.realcachelambda = the_lambda
+            selptid = self.random_list_entry(self.realcache)
+        elif mode == 'last_interface_complete' and self.realcachelambda == the_lambda:
+            #print "using cache"
+            selptid = self.random_list_entry(self.realcache)
 
-        # get a random number
-        index = random.randint(0, npoints - 1)
-        selptid = retpoints_ids[index]
-        #print "Choosing", selptid, "as random point"
         selpt = self.return_point_by_id(selptid)
+        
+        #print "Choosing", selptid, "as random point"
         
         return selpt, selptid
 
@@ -293,7 +297,10 @@ class configpoints:
             return 0
 
     # Check if origin point is in database
-    def origin_point_in_database_and_active(self, the_point):
+    def origin_point_in_database_and_active(self, the_point, no_ghosts_running = False):
+        if the_point in self.noghostonpoint:
+            return False
+        #print "ghost database lookup"
         self.cur.execute('select count(origin_point) from configpoints where deactivated = 0 and usecount = 0 and origin_point = ?', [str(the_point)])
         for row in self.cur:
             occurrence = int(row[0])
@@ -302,7 +309,23 @@ class configpoints:
             return True
         else:
             # "No active origin point in database"
+            # append the point only, if no ghosts are running and collecting ghost points!
+            if no_ghosts_running and (the_point not in self.noghostonpoint):
+                #print "no ghost on point", the_point, "adding to cache. Cache entries:", len(self.noghostonpoint)
+                self.noghostonpoint.append(the_point)
             return False
+
+    def build_ghost_exclude_cache(self,lam,pts):
+        #print "Building ghost exclude cache."
+        # get all points where unused ghosts exist
+        self.cur.execute('select origin_point from configpoints where deactivated = 0 and usecount = 0 and lambda = ?', [lam])
+        # remove them from list of all points
+        for row in self.cur:
+            pt = str(row[0])
+            if pt in pts:
+                pts.remove(pt)
+        self.noghostonpoint = pts[:]
+        #print "'No ghost' - cache entries:", len(self.noghostonpoint)
 
     def return_usecount(self, the_point):
         self.cur.execute('select usecount from configpoints where origin_point = ?', [str(the_point)])
@@ -546,12 +569,12 @@ class configpoints:
         # get origin points from current interface
         newids = self.return_origin_ids(lam)
         # remove dupliactes
-        print "Processing lambda", lam, ", different ids left:", len(newids)
+        #print "Processing lambda", lam, ", different ids left:", len(newids)
         newids = list(set(newids))
 
         if lam > 1:
             for i in range(lam-1):
-                print "Processing lambda", lam-1-i, ", different ids left:", len(newids)
+                #print "Processing lambda", lam-1-i, ", different ids left:", len(newids)
                 newids = list(set(self.return_origin_ids_by_ids(newids)))
                 
 
@@ -623,7 +646,7 @@ class configpoints:
         # last resort, if every point was sorted out before
         if len(candidates) == 0:
             gimmepoint = allpoints[random.randint(0,len(allpoints)-1)]
-            print "No candidates left, using", gimmepoint
+            #print "No candidates left, using", gimmepoint
             gimmepoint_data = self.return_point_by_id(gimmepoint)
             return gimmepoint_data, gimmepoint
 

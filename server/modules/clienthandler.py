@@ -355,7 +355,11 @@ class ClientHandler(asyncore.dispatcher):
             self.incr_runcount(current_lambda)
             # Check if this point is in ghost database.
             ss.logger_freshs.debug(cc.c_magenta + 'Checking if point is in ghost DB.' + cc.reset)
-            indatabase = ss.ghostpoints.origin_point_in_database_and_active(rp_id)
+            if len(ss.ghost_clients) > 0:
+                no_ghosts_running = False
+            else:
+                no_ghosts_running = True
+            indatabase = ss.ghostpoints.origin_point_in_database_and_active(rp_id, no_ghosts_running)
             
         else:
             ai = self.server.ai
@@ -381,7 +385,7 @@ class ClientHandler(asyncore.dispatcher):
 
             self.ghostcount += 1
 
-            self.remove_from_ghost()
+            #self.remove_from_ghost()
             
             # Check if ghostrun was successful
             if int(ghostline[6]) == 1:
@@ -452,7 +456,7 @@ class ClientHandler(asyncore.dispatcher):
                             # set done because we use only one client which calculates on this point
                             done = 1                    
             
-            self.remove_from_ghost()
+            #self.remove_from_ghost()
             
             # Is there a random point left?
             if len(random_point) > 0:
