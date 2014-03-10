@@ -401,8 +401,9 @@ class server(asyncore.dispatcher):
         else:
             self.test_rc_every = 1
       
-        self.auto_interfaces = 0 
-	if self.configfile.has_section('auto_interfaces'): 
+        self.auto_interfaces = 0
+        
+        if self.configfile.has_section('auto_interfaces'): 
             if self.configfile.has_option('auto_interfaces', 'auto_interfaces'):
                 self.auto_interfaces = self.configfile.getint('auto_interfaces', 'auto_interfaces')
     
@@ -411,6 +412,12 @@ class server(asyncore.dispatcher):
             self.use_ghosts = self.configfile.getint('general', 'use_ghosts')
         else:
             self.use_ghosts = 0
+
+        # check if number of ghosts should be limited
+        if self.configfile.has_option('general', 'max_ghosts'):
+            self.max_ghosts = self.configfile.getint('general', 'max_ghosts')
+        else:
+            self.max_ghosts = 0
 
         if self.configfile.has_option('general', 't_infocheck'):
             self.t_infocheck = self.configfile.getfloat('general', 't_infocheck')
@@ -607,7 +614,7 @@ class server(asyncore.dispatcher):
         
 # -------------------------------------------------------------------------------------------------
 
-    # print status. This could be called by a periodic threading function
+    # print status. This is e.g. called by the periodic threading function
     def print_status(self):
         try:
             if self.algorithm == sampling_algorithm.FFS:
@@ -677,7 +684,6 @@ class server(asyncore.dispatcher):
                                 # Last possibility: let client wait
                                 if client not in self.idle_clients:
                                     client.start_job_wait()
-
                 # Start other jobs
                 else:
                     # ghost check switches on exploring mode if no lambda is known
@@ -908,7 +914,6 @@ class server(asyncore.dispatcher):
             self.last_seen[str(client)] = time.time()
             client.answer_alive()
             return
-
     
         # Check if client sent result
         if "\"jobtype\":" in data:
@@ -917,7 +922,6 @@ class server(asyncore.dispatcher):
                 #ddata = eval(data,{'__builtins__':{}},{'True': True, 'False': False})
                 ddata = ast.literal_eval(data)
                 #ddata = eval(data)
-
             except:
                 self.logger_freshs.info(cc.c_red + 'Server: Warning! Could not parse data packet: ' + data + cc.reset) 
                 self.logger_freshs.info(cc.c_red + 'Server: Warning! Dropping packet.' + cc.reset) 

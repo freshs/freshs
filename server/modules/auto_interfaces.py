@@ -45,7 +45,7 @@ class auto_interfaces():
         self.auto_max_move_fac = 20
         
 # -------------------------------------------------------------------------------------------------
-
+    # check if option is in configfile
     def option_in_configile(self,option):
         ss = self.server
         if ss.configfile.has_option('auto_interfaces', option):
@@ -53,7 +53,7 @@ class auto_interfaces():
         return False
 
 # ------------------------------------------------------------------------------------------------
-        
+    # read the configuration file for this module
     def read_config(self):
         ss = self.server
 
@@ -75,6 +75,7 @@ class auto_interfaces():
         self.auto_flux_max = ss.configfile.getfloat('auto_interfaces', 'auto_flux_max')
         self.auto_moveunit = ss.configfile.getfloat('auto_interfaces', 'auto_moveunit')
         self.auto_mindist = ss.configfile.getfloat('auto_interfaces', 'auto_mindist')
+        self.auto_mindist_orig = self.auto_mindist
         # order parameter can be considered as int (e.g. number of particles with property x)
         self.auto_lambda_is_int = ss.configfile.getint('auto_interfaces', 'auto_lambda_is_int')
         # set max steps for exploring client. Client must support this.
@@ -88,10 +89,15 @@ class auto_interfaces():
         else:
             self.auto_min_explorer_steps = 0
 
+        if self.option_in_configile('auto_mindist_detect'):
+            self.auto_mindist_detect = ss.configfile.getint('auto_interfaces', 'auto_mindist_detect')
+        else:
+            self.auto_mindist_detect = 0
+
         return True
 
 # -------------------------------------------------------------------------------------------------    
-        
+    # change the exploring mode interface
     def change_ex_interface(self):
         self.ex_launched.append(0)
         self.ex_success.append(0)
@@ -99,9 +105,60 @@ class auto_interfaces():
         self.ex_returned.append(0)
         self.max_lams.append([])
         self.ex_act_lambda += 1
+
+# -------------------------------------------------------------------------------------------------  
+
+    def get_mindist(self,interface):
+        ss = self.server
+
+        mindist = self.auto_mindist_orig
+        
+        if self.auto_mindist_detect == 0:
+            return mindist
+
+        ## idea: get maximum stepwidth of runs from customdata
+        #import re
+        #import numpy as np
+        ##print "Getting data in customfield on interface", interface
+        ## 2d array, 1 element corresponds to one trajectory
+        #cudtmp = ss.storepoints.return_customdata(interface)
+        ## loop over trajectories
+        #for el in cudtmp:
+        #    histodata = []
+        #    # extract rcs after label 'allrcs'
+        #    #print "Reading rcs."
+        #    candi = re.sub('.*allrcs','', el).split()
+        #    #print "Converting to float."
+        #    histodata = np.array(candi).astype(np.float)
+        #    #print "Maximum stepwidth.", len(histodata)
+        #    if len(histodata) > 1:
+        #        curmax = np.max(np.diff(histodata))
+        #    else:
+        #        # "only 1 val:", histodata
+        #        curmax = 0
+        #    if curmax > mindist:
+        #        #print "max is", curmax
+        #        mindist = curmax
+
+        ## maximum rcval - last known interface
+        mindist = ss.storepoints.return_max_rc(interface) - ss.lambdas[-1]
+        if self.auto_lambda_is_int > 0:
+            # add 1, if int
+            mindist += 1
+        else:
+            # add fraction of original mindist
+            mindist += self.auto_mindist_orig / 10.
+
+        # reset if not valid or smaller than original mindist
+        if mindist < 0 or self.auto_mindist_orig > mindist:
+            mindist = self.auto_mindist_orig
+
+        return mindist
         
 # -------------------------------------------------------------------------------------------------
+    # set initial values for the exploring mode
     def init_variables(self):
+        ss = self.server
         self.ex_launched = [0]      # launched runs
         self.ex_success  = [0]      # successcount
         self.ex_ctime    = [0.0]    # ctime
@@ -114,9 +171,12 @@ class auto_interfaces():
         self.ex_ghost_cand = []     # array for storing virtual explored points, they are transferred into ghost_db at success    
         self.max_lams = [[]]
         self.ex_lambdas = []
+        # obtain minimal interface distance
+        self.auto_mindist = self.get_mindist( ss.storepoints.biggest_lambda() )
+        ss.logger_freshs.info(cc.c_green + "Minimal interface distance is " + str(self.auto_mindist) + cc.reset)
         
 # -------------------------------------------------------------------------------------------------
-
+    # turn on exploring mode
     def exmode_on(self):
         ss = self.server
         

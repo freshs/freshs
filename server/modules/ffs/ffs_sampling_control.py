@@ -130,6 +130,10 @@ class ffs_sampling_control():
             self.exit_after_escape = ss.configfile.getint('ffs_control', 'exit_after_escape')
         else:
             self.exit_after_escape = 0
+        if self.option_in_configile('send_mean_steps'):
+            self.send_mean_steps = ss.configfile.getint('ffs_control', 'send_mean_steps')
+        else:        
+            self.send_mean_steps = 0
         if self.option_in_configile('max_ghosts_between'):
             self.max_ghosts_between = ss.configfile.getint('ffs_control', 'max_ghosts_between')
         else:
@@ -148,7 +152,7 @@ class ffs_sampling_control():
         if self.option_in_configile('min_origin_increase_count'):
             self.min_origin_increase_count = ss.configfile.getint('ffs_control', 'min_origin_increase_count')
         else:
-            self.min_origin_increase_count = 3
+            self.min_origin_increase_count = 2
 
 
 
@@ -506,6 +510,8 @@ class ffs_sampling_control():
                 ss.M_0_runs[ilam] += ss.ai.auto_trials
         else:
             ss.M_0_runs[ilam] += int(ss.configfile.getint('runs_per_interface', 'lambda' + str(ss.act_lambda)) / 2.0 + 1)
+
+        ss.start_idle_clients()
 
 # -------------------------------------------------------------------------------------------------
 
@@ -872,7 +878,7 @@ class ffs_sampling_control():
             if the_jobs_lambda == 0 and self.parallel_escape > 0:
                 self.build_escape_cache(origin_point, runid, ddata['calcsteps'])
 
-            ss.storepoints.update_usecount_by_myid(origin_point)
+            ss.storepoints.queue_usecount_by_myid(origin_point)
             self.last_added_point = runid
 
         else:
@@ -962,7 +968,7 @@ class ffs_sampling_control():
         
         # Should not be necessary, but safety first...
         client.remove_from_escape()
-        
+
         if the_jobs_lambda == ss.act_lambda or the_jobs_lambda == 0:
             
             # if client has no success on first interface
@@ -1020,18 +1026,16 @@ class ffs_sampling_control():
                                       'Not storing unsuccesful run in database because of incomplete data, ' + str(exc) + \
                                       cc.reset)
                     ss.logger_freshs.debug(cc.c_red + 'Data was: ' + str(ddata) + cc.reset)                
-            
-            ss.logger_freshs.debug(cc.c_green + \
-                                   'Run was not successful, not incrementing counter.' + \
-                                   cc.reset)
+
+            ss.logger_freshs.debug(cc.c_green + 'Run was not successful, not incrementing counter.' + cc.reset)
             if 'origin_points' in ddata:
-                ss.storepoints.update_usecount_by_myid(ddata['origin_points'])
+                ss.storepoints.queue_usecount_by_myid(ddata['origin_points'])
                 
                 
             else:
                 ss.logger_freshs.warn(cc.c_red + 'No origin point in data of ' + client.name + \
                                         ', not incrementing use-count' + cc.reset)
-                  
+
             # we need one more run because this one was not successful if we are not in require_runs mode
             if self.require_runs:
                 client.decr_runcount(the_jobs_lambda)

@@ -21,6 +21,10 @@
 import asyncore
 import sys
 import os
+import signal
+
+def handle_sigint(signum, frame):
+    print "Please wait while the database is updated."
 
 reldir = os.path.dirname(__file__)
 if not reldir:
@@ -64,10 +68,20 @@ else:   # if filename is not given
                        '\tLook at examples in the test directory.')
     exit(8)
 
+
 ##Call the server
     print "Server: reading server config file: "+options.config
-a = ss.server( timestamp = options.timestamp, configfile_name = options.config, debugmode = options.debug  )
+try:
+    a = ss.server( timestamp = options.timestamp, configfile_name = options.config, debugmode = options.debug  )
+    asyncore.loop()
+except:
+    signal.signal(signal.SIGINT, handle_sigint)
+    a.storepoints.commit()
+    a.ghostpoints.commit()
+    print "\nServer shut down safely."
+    sys.exit(0)
+finally:
+    print "\nSee you. Exit."
+    sys.exit(0)
 
-
-asyncore.loop()
 

@@ -35,6 +35,10 @@ class ghosting():
         # Check if next lambda exists.
         if len(ss.lambdas) >= ss.act_lambda + 2:
             if ss.use_ghosts:
+                # Check if number of ghosts is limited in config file
+                if ss.max_ghosts > 0 and len(ss.ghost_clients) >= ss.max_ghosts:
+                    ss.logger_freshs.info(cc.c_green + 'Maximum number of simultaneous ghost runs reached. Not starting more.' + cc.reset)
+                    return False
                 # Check if starting configurations exist (should, if this function is called...),
                 # check if not on last interface
                 if (ss.storepoints.return_nop(ss.act_lambda) > 0) and (ss.lambdas[ss.act_lambda] < ss.B):

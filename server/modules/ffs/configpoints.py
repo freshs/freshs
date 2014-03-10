@@ -54,13 +54,21 @@ class configpoints:
         # if you have problems with the database which cannot be written to disk, error: "database or disk is full"
         #self.cur.execute('PRAGMA temp_store = 2')
 
+        # ghost point cache
         self.ghostcache = []
         self.ghostlastcount = 0
         self.ghostlastlam = -1
         self.noghostonpoint = []
         
-        self.realcache = []
+        # interface points cache
+        self.realcache = {}
         self.realcachelambda = -1
+        
+        # number of successful points cache.
+        self.nop_cache = {}
+        
+        # update usecount only on commit, store a queue
+        self.usecountqueue = {}
         
     # Connect to database
     def connect(self):
@@ -77,6 +85,34 @@ class configpoints:
         self.con.close()
 
     def commit(self):
+        try:
+            if len(self.usecountqueue) > 0:
+                print "\nUpdating usecounts in DB,",len(self.usecountqueue),"entries. Please wait."
+                # construct queries with case statements for better performance
+                count = 0
+                tquery = "UPDATE configpoints SET usecount=usecount+ CASE myid "
+                processed_keys = []
+                for key in self.usecountqueue.keys():
+                    processed_keys.append(key)
+                    tquery += "WHEN '" + str(key) + "' THEN " + str(self.usecountqueue[key]) + " "
+                    count += 1
+                    if count % 10000 == 0:
+                        print count
+                        tquery += "END WHERE myid IN " + str(tuple(processed_keys))
+                        self.cur.execute(tquery)
+                        processed_keys = []
+                        tquery = "UPDATE configpoints SET usecount=usecount+ CASE myid "
+
+                if len(processed_keys) > 0:    
+                    # add a where clause that only lines with the candidate myids are considered
+                    tquery += "END WHERE myid IN " + str(tuple(processed_keys))
+                    print count
+                    self.cur.execute(tquery)
+
+                print "Ready."
+                self.usecountqueue = {}
+        except Exception as e:
+            print e
         self.con.commit()
 
     # Create table layout
@@ -93,15 +129,17 @@ class configpoints:
             print self.dbfile + ":", exc
             
 
-
     # Add config point to database
     def add_point(self,interface, newpoint, originpoint, calcsteps, ctime, runtime, runcount,pointid=0, seed=0, rcval=0.0, lpos=0.0, usecount=0, deactivated=0,uuid='',customdata=''):
         entries = []
         # Create table entry
         success = 0
-        # check for success (important for ghost table)
+        # check for success
         if newpoint != '':
             success = 1
+            # incr cache if it exists already for this interface
+            if self.nop_cache.has_key(interface):
+                self.nop_cache[interface] += 1
         entries.append((interface, str(newpoint), str(originpoint), calcsteps, ctime, runtime, success, runcount, pointid, seed, 0, 0.0, rcval, lpos, usecount, deactivated, uuid, customdata))
             
         for t in entries:
@@ -124,11 +162,14 @@ class configpoints:
 
     # Return number of active points (nop) on interface
     def return_nop(self,interface):
-        self.cur.execute('select count(*) from configpoints where lambda = ? and success = 1 and deactivated = 0', [interface])
-        retval = 0
-
-        r = self.cur.fetchone()
-        return r[0]
+        # check if cache has been built for this interface
+        if self.nop_cache.has_key(interface):
+            return self.nop_cache[interface]
+        else:
+            self.cur.execute('select count(*) from configpoints where lambda = ? and success = 1 and deactivated = 0', [interface])
+            r = int(self.cur.fetchone()[0])
+            self.nop_cache[interface] = r
+            return r
 
     # Return number of active points (nop) on interface
     def return_nop_nonsuccess(self,interface):
@@ -228,29 +269,33 @@ class configpoints:
         
     # Return random point from interface
     def return_random_point(self,the_lambda,mode='default'):
+        # default action: get all points from DB and choose one
         if mode == 'default':
-            retpoints_ids = []
-            self.cur.execute('select myid from configpoints where deactivated = 0 and success = 1 and lambda = ?',[the_lambda])
+            retpoints_ids = {}
+            self.cur.execute('select myid,configpoint from configpoints where deactivated = 0 and success = 1 and lambda = ?',[the_lambda])
             for row in self.cur:
-                retpoints_ids.append(row[0])
-            selptid = self.random_list_entry(retpoints_ids)
+                retpoints_ids[row[0]]=str(row[1])
+            selptid = random.choice(retpoints_ids.keys())
+            return retpoints_ids[selptid], selptid
+        # last interface is complete but no cache has been built yet
         elif mode == 'last_interface_complete' and self.realcachelambda != the_lambda:
             #print "refresh cache"
-            self.realcache = []
-            self.cur.execute('select myid from configpoints where deactivated = 0 and success = 1 and lambda = ?',[the_lambda])
+            self.realcache = {}
+            self.cur.execute('select myid,configpoint from configpoints where deactivated = 0 and success = 1 and lambda = ?',[the_lambda])
             for row in self.cur:
-                self.realcache.append(row[0])
+                self.realcache[row[0]]=str(row[1])
             self.realcachelambda = the_lambda
-            selptid = self.random_list_entry(self.realcache)
+            selptid = random.choice(self.realcache.keys())
+            return self.realcache[selptid], selptid
+        # fastest: use point from cache dict
         elif mode == 'last_interface_complete' and self.realcachelambda == the_lambda:
             #print "using cache"
-            selptid = self.random_list_entry(self.realcache)
+            selptid = random.choice(self.realcache.keys())
+            return self.realcache[selptid], selptid
 
-        selpt = self.return_point_by_id(selptid)
-        
-        #print "Choosing", selptid, "as random point"
-        
-        return selpt, selptid
+        else:
+            print "Something went wrong while choosing point."
+            return "",""
 
     # Return a config point based on its unique id.
     def return_point_by_id(self, rp_id):
@@ -300,6 +345,8 @@ class configpoints:
     def origin_point_in_database_and_active(self, the_point, no_ghosts_running = False):
         if the_point in self.noghostonpoint:
             return False
+        if len(self.usecountqueue) > 0:
+            self.commit()
         #print "ghost database lookup"
         self.cur.execute('select count(origin_point) from configpoints where deactivated = 0 and usecount = 0 and origin_point = ?', [str(the_point)])
         for row in self.cur:
@@ -316,6 +363,8 @@ class configpoints:
             return False
 
     def build_ghost_exclude_cache(self,lam,pts):
+        if len(self.usecountqueue) > 0:
+            self.commit()
         #print "Building ghost exclude cache."
         # get all points where unused ghosts exist
         self.cur.execute('select origin_point from configpoints where deactivated = 0 and usecount = 0 and lambda = ?', [lam])
@@ -328,14 +377,33 @@ class configpoints:
         #print "'No ghost' - cache entries:", len(self.noghostonpoint)
 
     def return_usecount(self, the_point):
+        # Commit all changes because usecount can be in queue
+        if len(self.usecountqueue) > 0:
+            self.commit()
         self.cur.execute('select usecount from configpoints where origin_point = ?', [str(the_point)])
         for row in self.cur:
             usecount = int(row[0])
         #print "Point was used", usecount, "times."
         return usecount
 
+    # return mean of field "calcsteps" on interface
+    def return_mean_steps(self, interface):
+        meansteps = 0
+        self.cur.execute('select avg(calcsteps) from configpoints where lambda = ?', [interface])
+        try:
+            for row in self.cur:
+                meansteps = int(row[0])
+        except:
+            return 0
+        if meansteps == None:
+            return 0
+        return meansteps
+
 
     def return_nop_used_from_interface(self,interface,success=-1):
+        # Commit all changes because usecount can be in queue
+        if len(self.usecountqueue) > 0:
+            self.commit()
         if success < 0:
             self.cur.execute('select sum(usecount) from configpoints where lambda = ? and deactivated = 0', [interface])
         else:
@@ -401,6 +469,8 @@ class configpoints:
 
     # Return complete database line where origin_point matches (for copying the ghost-line to real world)
     def get_line_origin_point(self, point):
+        if len(self.usecountqueue) > 0:
+            self.commit()
 #        retval = (interface, str(newpoint), str(originpoint), calcsteps, ctime, runtime, success, runcount, pointid, seed, 0, 0.0)
         retval = ()
         self.cur.execute("select * from configpoints where origin_point = ? and usecount = 0 and deactivated = 0 limit 1", [str(point)])
@@ -516,9 +586,16 @@ class configpoints:
     def update_usecount(self,origin_point):
         self.cur.execute("update configpoints set usecount=usecount+1 where configpoint = ?", [str(origin_point)])
         
+    def queue_usecount_by_myid(self,myid):
+        # do update of usecount on commit, build queue:
+        if self.usecountqueue.has_key(myid):
+            self.usecountqueue[myid]+=1
+        else:
+            self.usecountqueue[myid]=1
+
     def update_usecount_by_myid(self,myid):
-        self.cur.execute("update configpoints set usecount=usecount+1 where myid = ?", [str(myid)])        
-        
+        self.cur.execute("update configpoints set usecount=usecount+1 where myid = ?", [str(myid)])
+
     def return_origin_ids(self,ilambda,success=1):
         self.cur.execute('select origin_point from configpoints where lambda = ? and deactivated = 0 and success = ?', [ilambda,success])
         retval = []
@@ -683,6 +760,8 @@ class configpoints:
 
     # Return all configpoints which were not used ==> endpoints
     def return_all_endpoints(self):
+        if len(self.usecountqueue) > 0:
+            self.commit()
         retval = []
         self.cur.execute('select * from configpoints where deactivated = 0 and success = 1 and usecount = 0')
         for row in self.cur:
@@ -837,6 +916,18 @@ class configpoints:
         for row in self.cur:
             cud.append(row[0])
         return cud
+
+    def return_customdata_by_id(self,ptid):
+        cud = []
+        self.cur.execute('select customdata from configpoints where myid = ?', [ptid])
+        for row in self.cur:
+            cud.append(row[0])
+        return cud
+
+    def return_dest_point_by_op_and_seed(self,op,seed):
+        self.cur.execute('select myid from configpoints where origin_point = ? and seed = ?', [op,str(seed)])
+        for row in self.cur:
+            return row[0]
 
     def return_calcsteps_list(self, the_lambda):
         csl = []

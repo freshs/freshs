@@ -166,8 +166,7 @@ class ClientHandler(asyncore.dispatcher):
         #    ss.storepoints.update_M_0(1)
         ss.run_count[lam] += 1
 
-        ss.logger_freshs.debug(cc.c_magenta + self.name + ': Increasing runcount, lambda ' + str(lam) + cc.reset)
-        ss.logger_freshs.debug(cc.c_magenta + 'Runcount: ' + str(ss.run_count) + cc.reset)
+        ss.logger_freshs.debug(cc.c_magenta + self.name + ': Increasing runcount, lambda ' + str(lam) + '. Runcount: ' + str(ss.run_count) + cc.reset)
 
     def decr_runcount(self,lam):
         ss = self.server
@@ -330,8 +329,6 @@ class ClientHandler(asyncore.dispatcher):
 
         ss = self.server
         self.remove_from_idle()
-        # ghosts are started separately
-        self.remove_from_ghost()
 
         max_steps = 0
         
@@ -385,8 +382,6 @@ class ClientHandler(asyncore.dispatcher):
 
             self.ghostcount += 1
 
-            #self.remove_from_ghost()
-            
             # Check if ghostrun was successful
             if int(ghostline[6]) == 1:
                 data = "\"jobtype\": 2, \"success\": True, \"points\": " + str(ghostline[1])
@@ -456,8 +451,6 @@ class ClientHandler(asyncore.dispatcher):
                             # set done because we use only one client which calculates on this point
                             done = 1                    
             
-            #self.remove_from_ghost()
-            
             # Is there a random point left?
             if len(random_point) > 0:
                 # Start normal job2
@@ -489,6 +482,9 @@ class ClientHandler(asyncore.dispatcher):
                 if ss.ffs_control.reverse_direction > 0:
                     job_string += ", \"reverse_direction\": 1"
                 
+                if ss.ffs_control.send_mean_steps > 0:
+                    job_string += ", \"mean_steps\": " + str(ss.storepoints.return_mean_steps(current_lambda))
+                
                 job_string_complete = self.compose_message(job_string)
 
                 #ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' + job_string_complete + \
@@ -504,6 +500,7 @@ class ClientHandler(asyncore.dispatcher):
                 
                 # Are there currently enough runs launched?
                 ss.check_for_job(self)
+
                 
 # --------------------------------------------------------------------------                
 # FFS Ghost run for probabilities
