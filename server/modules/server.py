@@ -83,12 +83,12 @@ class server(asyncore.dispatcher):
         # Set global timestamp / set dbload if timestamp is given
         self.timestamp = self.get_timestamp(timestamp)
         
-       
         # Read the configfile
         self.read_config(configfile_name)
 
         self.logger_freshs.addHandler(logging.FileHandler(self.folder_log + self.timestamp +\
                         '_freshs.log', mode='a', encoding=None, delay=False))
+
 
         # Show message of the day
         self.show_motd()
@@ -339,6 +339,7 @@ class server(asyncore.dispatcher):
 		    cfgcpflag = 'samplecfg'
 	    else:
 		self.configfile.read( configfile_name )
+                self.logger_freshs.info(cc.c_green + 'Read sections: ' + str(self.configfile.sections()) + cc.reset)
 		cfgcpflag = 'bycfgname'
 	except:
 	    print("Failed to read config file:"+configfile_name)
@@ -377,16 +378,29 @@ class server(asyncore.dispatcher):
         # Choose the sampling algorithm
         self.logger_freshs.debug(cc.c_magenta + 'Server: repeat, Config file name is:' +\
                                                                       configfile_name + cc.reset)
-        self.algo_name = self.configfile.get('general', 'algo_name').lower()
-
+        
         if self.configfile.has_option('general', 'check_alive'):
             self.check_alive = self.configfile.getint('general', 'check_alive')
         else:
             self.check_alive = 0
+
         if self.configfile.has_option('general', 'kick_absent_clients'):
             self.kick_absent_clients = self.configfile.getint('general', 'kick_absent_clients')
         else:
             self.kick_absent_clients = 0
+
+        if self.configfile.has_option('general', 'algo_name'):
+            self.algo_name = self.configfile.get('general', 'algo_name').lower()
+        else:
+            self.logger_freshs.info(cc.c_red +\
+                     'Warning: config file does not have option general/algo_name.' +\
+                   cc.reset)
+            self.logger_freshs.info(cc.c_red +\
+                     'Config file sections present are:' + str(self.configfile.sections()) +\
+                   cc.reset)
+            self.logger_freshs.info(cc.c_red +'Case sensitivity issue maybe?'+cc.reset)
+            exit( 8 )
+            
 
         self.allow_race = True
         if self.configfile.has_option('general', 'allow_race'):
@@ -424,7 +438,6 @@ class server(asyncore.dispatcher):
         else:
             self.t_infocheck = 30.0
 
-
         # do we hit the filesystem or not?
         if self.configfile.has_option('general', 'clients_use_filesystem'):
             self.clients_use_fs = self.configfile.getboolean('general', 'clients_use_filesystem')
@@ -458,6 +471,7 @@ class server(asyncore.dispatcher):
             if self.configfile.has_option('spres_control', 'replace_flux_at_A'):
                 self.replace_flux_at_A =\
                    self.configfile.getboolean('spres_control', 'replace_flux_at_A')
+
 
 # -------------------------------------------------------------------------------------------------
 
