@@ -81,7 +81,7 @@ except:
     print "\nServer shut down safely."
     sys.exit(0)
 finally:
-    print "\nSee you. Exit."
+    print "\nQuitting."
     sys.exit(0)
 
 
