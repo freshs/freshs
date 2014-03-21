@@ -164,7 +164,11 @@ class ffs_sampling_control():
         
         ss.logger_freshs.debug(cc.c_magenta + __name__ + ': load_from_db' + cc.reset)
         
-        ss.act_lambda = ss.storepoints.biggest_lambda()
+        try:
+            ss.act_lambda = ss.storepoints.biggest_lambda()
+        except Exception as e:
+            print e
+            exit(1)
 
         if ss.auto_interfaces:
             try:
@@ -175,6 +179,17 @@ class ffs_sampling_control():
                 if loadfromdb:
                     # load lambdas from DB
                     tmp_lamlist = ss.storepoints.return_lamlist()
+                    tmp_lamlistghost = ss.ghostpoints.return_lamlist()
+                    # check if there exist ghost points on interface but no real runs
+                    for lam in tmp_lamlistghost:
+                        if lam not in tmp_lamlist and len(tmp_lamlist) > 0:
+                            if lam > tmp_lamlist[-1]:
+                                tmp_lamlist.append(lam)
+                                ss.logger_freshs.info(cc.c_magenta + 'Adding lambda from ghost database: ' + str(lam) + cc.reset)
+                            else:
+                                ss.logger_freshs.warn(cc.c_red + 'Can not add interface position from ghost database. Please clean/remove ghost database.' + cc.reset)
+                                raise SystemExit
+
                     ilam = len(tmp_lamlist)
                     ss.lambdas = tmp_lamlist[:]
                     ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'borderA'))
@@ -544,8 +559,9 @@ class ffs_sampling_control():
 
         if ilam == 0 and self.parallel_escape == 1:
             nescape_candidates = len(self.escape_point_candidates()[0])
-            if nescape_candidates - nescape > 0:
-                ss.logger_freshs.info(cc.c_green + 'At least one escape trace still needs calculation steps.' + cc.reset)
+            nesc_left = nescape_candidates - nescape
+            if nesc_left > 0:
+                ss.logger_freshs.info(cc.c_green + str(nesc_left) + 'escape trace(s) must be continued.' + cc.reset)
                 self.print_lambar('inter',ncheck,ss.M_0_runs[ilam])
                 return True
             # no escape trace must be continued at the moment, do something else.

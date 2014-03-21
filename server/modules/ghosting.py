@@ -25,6 +25,8 @@ import time
 class ghosting():
     def __init__(self, server):
         self.server = server
+        # mean of calcsteps when the first time is asked for ghosts per interface
+        self.mean_of_calcsteps = {}
 
 # -------------------------------------------------------------------------------------------------
     def ghost_possible(self):
@@ -37,8 +39,20 @@ class ghosting():
             if ss.use_ghosts:
                 # Check if number of ghosts is limited in config file
                 if ss.max_ghosts > 0 and len(ss.ghost_clients) >= ss.max_ghosts:
-                    ss.logger_freshs.info(cc.c_green + 'Maximum number of simultaneous ghost runs reached. Not starting more.' + cc.reset)
+                    ss.logger_freshs.debug(cc.c_magenta + 'Maximum number of simultaneous ghost runs reached. Not starting more.' + cc.reset)
                     return False
+                
+                # check if ghosting would slow down server
+                if ss.auto_ghosts > 0:
+                    if not self.mean_of_calcsteps.has_key(ss.act_lambda):
+                        ss.logger_freshs.debug(cc.c_magenta + 'Obtaining mean_of_calcsteps from database.' + cc.reset)
+                        ms = ss.storepoints.return_mean_steps(ss.act_lambda)
+                        self.mean_of_calcsteps[ss.act_lambda] = ms
+
+                    if self.mean_of_calcsteps[ss.act_lambda] < ss.auto_ghosts:
+                        ss.logger_freshs.debug(cc.c_magenta + 'Not starting ghost run because according to auto_ghosts the runs are too short.' + cc.reset)
+                        return False
+                
                 # Check if starting configurations exist (should, if this function is called...),
                 # check if not on last interface
                 if (ss.storepoints.return_nop(ss.act_lambda) > 0) and (ss.lambdas[ss.act_lambda] < ss.B):

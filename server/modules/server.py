@@ -268,53 +268,55 @@ class server(asyncore.dispatcher):
     def create_dbs(self):
     
         self.logger_freshs.debug(cc.c_magenta + __name__ + ': create_dbs' + cc.reset)
-    
-        if self.algo_name == 'ffs':
+        try:
+            if self.algo_name == 'ffs':
 
-            import configpoints
+                import configpoints
 
-            # create instance of DB for configpoint-handling / open existing DB
-            confdbfile = self.timestamp + '_configpoints.sqlite'
-            self.storepoints=configpoints.configpoints(self, self.folder_db + confdbfile)
+                # create instance of DB for configpoint-handling / open existing DB
+                confdbfile = self.timestamp + '_configpoints.sqlite'
+                self.storepoints=configpoints.configpoints(self, self.folder_db + confdbfile)
+                
+                # create instance of DB for pre-runs:
+                ghostdbfile = self.timestamp + '_ghost.sqlite'
+                self.ghostpoints=configpoints.configpoints(self, self.folder_db + ghostdbfile)
+
+                # Symlink DBs
+                try:
+                    os.remove(self.folder_db + 'configpoints.sqlite')
+                    os.remove(self.folder_db + 'ghostpoints.sqlite')
+                except:
+                    pass
+                try:
+                    os.symlink(confdbfile, self.folder_db + 'configpoints.sqlite')
+                    os.symlink(ghostdbfile, self.folder_db + 'ghostpoints.sqlite')
+                except:
+                    pass
+
+            elif self.algo_name == 'spres':  
+
+                ##open or create a DB with the correct timepoint
+                confdbfile = self.timestamp + '_configpoints.sqlite'
+
+                if self.configfile.getint('spres_control','use_multDB') > 0:
+                    import configpoints_spres_multDB
+                    self.storepoints=configpoints_spres_multDB.configpoints(self,  self.folder_db + confdbfile, self.epoch)
+
+                else:
+                    import configpoints_spres
+                    self.storepoints=configpoints_spres.configpoints(self,  self.folder_db + confdbfile)
+
+
+            elif self.algo_name == 'nsffs':
             
-            # create instance of DB for pre-runs:
-            ghostdbfile = self.timestamp + '_ghost.sqlite'
-            self.ghostpoints=configpoints.configpoints(self, self.folder_db + ghostdbfile)
+                import configpoints
 
-            # Symlink DBs
-            try:
-                os.remove(self.folder_db + 'configpoints.sqlite')
-                os.remove(self.folder_db + 'ghostpoints.sqlite')
-            except:
-                pass
-            try:
-                os.symlink(confdbfile, self.folder_db + 'configpoints.sqlite')
-                os.symlink(ghostdbfile, self.folder_db + 'ghostpoints.sqlite')
-            except:
-                pass
-
-        elif self.algo_name == 'spres':  
-
-            ##open or create a DB with the correct timepoint
-            confdbfile = self.timestamp + '_configpoints.sqlite'
-
-            if self.configfile.getint('spres_control','use_multDB') > 0:
-                import configpoints_spres_multDB
-                self.storepoints=configpoints_spres_multDB.configpoints(self,  self.folder_db + confdbfile, self.epoch)
-
-            else:
-                import configpoints_spres
-                self.storepoints=configpoints_spres.configpoints(self,  self.folder_db + confdbfile)
-
-
-        elif self.algo_name == 'nsffs':
-        
-            import configpoints
-
-            # create instance of DB for configpoint-handling / open existing DB
-            confdbfile = self.timestamp + '_configpoints.sqlite'
-            self.storepoints=configpoints.configpoints(self, self.folder_db + confdbfile)
-
+                # create instance of DB for configpoint-handling / open existing DB
+                confdbfile = self.timestamp + '_configpoints.sqlite'
+                self.storepoints=configpoints.configpoints(self, self.folder_db + confdbfile)
+        except Exception as e:
+            print e
+            exit(1)
 
 # -------------------------------------------------------------------------------------------------
 
@@ -418,6 +420,12 @@ class server(asyncore.dispatcher):
             self.max_ghosts = self.configfile.getint('general', 'max_ghosts')
         else:
             self.max_ghosts = 0
+
+        # check for auto_ghost switch
+        if self.configfile.has_option('general', 'auto_ghosts'):
+            self.auto_ghosts = self.configfile.getint('general', 'auto_ghosts')
+        else:
+            self.auto_ghosts = 0
 
         if self.configfile.has_option('general', 't_infocheck'):
             self.t_infocheck = self.configfile.getfloat('general', 't_infocheck')
