@@ -37,6 +37,22 @@ sys.path.append(reldir + '/modules/spres')
 
 #print "Python path is:"+str(sys.path)
 
+# "Testing a few dependencies:"
+
+try:
+    import numpy
+except Exception as e:
+    print 'IMPORT ERROR: ' +str(e)
+    exit(8)
+
+try:
+    import math
+except Exception as e:
+    print 'IMPORT ERROR: ' +str(e)
+    exit(8)
+
+
+
 from modules  import server as ss
 from optparse import OptionParser
 
@@ -81,7 +97,7 @@ except:
     print "\nServer shut down safely."
     sys.exit(0)
 finally:
-    print "\nSee you. Exit."
+    print "\nQuitting."
     sys.exit(0)
 
 
