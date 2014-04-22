@@ -393,7 +393,7 @@ class server(asyncore.dispatcher):
             self.algo_name = self.configfile.get('general', 'algo_name').lower()
         else:
             self.logger_freshs.info(cc.c_red +\
-                     'Warning: config file does not have option general/algo_name.' +\
+                     'Warning: config file does not have option "general/algo_name".' +\
                    cc.reset)
             self.logger_freshs.info(cc.c_red +\
                      'Config file sections present are:' + str(self.configfile.sections()) +\
