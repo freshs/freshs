@@ -299,11 +299,17 @@ class ClientHandler(asyncore.dispatcher):
                     ", \"timestamp\": \"" + ss.timestamp + "\"" + \
                     ", \"uuid\": \"" + self.get_uuid() + "\""
         
+        # backward simulation. Need point in B from forward run
         if ss.ffs_control.reverse_direction > 0 and last_escape_point == 'None':
             # get configpoint from forward database
-            equi_B_point = ss.ffs_control.fwd_db.random_point_B()[0]
-            job_string += ", \"random_points\": " + str(equi_B_point) + ", \"reverse_equilibrate\": 1"
-        
+            equi_B_point = ss.ffs_control.fwd_db.random_point_B_fwd(ss.ffs_control.reverse_lambda_offset)[0]
+            job_string += ", \"random_points\": " + str(equi_B_point) + ", \"equilibrate_point\": 1"
+        # simulation continue from previous one with existing DB. Get configpoints from last state in this DB.
+        elif ss.ffs_control.continue_simulation > 0 and last_escape_point == 'None':
+            random_A_point = ss.ffs_control.cnti_db.random_point_existing_DB_B()[0]
+            job_string += ", \"random_points\": " + str(random_A_point) + ", \"equilibrate_point\": 1"
+            job_string += ", \"other_timestamp\": \"" + ss.ffs_control.cnti_timestamp + "\""
+        # resume previous run
         elif last_escape_point != 'None':
             job_string += ", \"random_points\": " + str(last_escape_point)
 

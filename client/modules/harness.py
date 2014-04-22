@@ -165,7 +165,7 @@ class harness:
                 calcsteps = metadata['steps']
                 ctime     = metadata['time']
             
-                print "Client: set metadata: "+str(metadata)
+                #print "Client: set metadata: "+str(metadata)
 
             return( calcsteps, ctime, this_rc, metadata )
             

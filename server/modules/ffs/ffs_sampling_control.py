@@ -105,7 +105,12 @@ class ffs_sampling_control():
             if self.reverse_direction > 0:
                 ss.logger_freshs.warn(cc.c_red + 'Requested reverse simulation but no database given of the forward run! ' + \
                                         'Ignore this if you are able to set up the simulation in B without a forward simulation.' + cc.reset)
-        
+
+        if self.option_in_configile('reverse_lambda_offset'):
+            self.reverse_lambda_offset = ss.configfile.getint('ffs_control', 'reverse_lambda_offset')
+        else:
+            self.reverse_lambda_offset = 0
+
         if self.option_in_configile('require_runs'):
             self.require_runs = ss.configfile.getint('ffs_control', 'require_runs')
         else:
@@ -114,6 +119,22 @@ class ffs_sampling_control():
             self.min_success = ss.configfile.getint('ffs_control', 'min_success')
         else:
             self.min_success = 2
+        if self.option_in_configile('continue_simulation'):
+            self.continue_simulation = ss.configfile.getint('ffs_control', 'continue_simulation')
+        else:
+            self.continue_simulation = 0
+        if self.option_in_configile('continue_db') and self.continue_simulation > 0:
+            self.continue_db = str(ss.configfile.get('ffs_control', 'continue_db'))
+            self.cnti_timestamp = re.sub('.*/','',re.sub('_configpoints.sqlite', '', self.continue_db) )
+            # create database handler
+            self.cnti_db = configpoints.configpoints(ss, self.continue_db)
+            ss.logger_freshs.info(cc.c_green + cc.bold + 'Continuing simulation from separate existing db.' + cc.reset)
+        else:
+            self.continue_db = ''
+            if self.continue_simulation > 0:
+                ss.logger_freshs.warn(cc.c_red + 'Requested to continue existing simulation but no database given! ' + \
+                                        'Ignore this if you are able to set up the simulation in B without a forward simulation.' + cc.reset)
+
         if self.option_in_configile('parallel_escape'):
             self.parallel_escape = ss.configfile.getint('ffs_control', 'parallel_escape')
         else:
@@ -320,7 +341,7 @@ class ffs_sampling_control():
         ss.M_0_runs = []
         if self.reverse_direction > 0:
             tmpA = ss.A
-            ss.A = -ss.B
+            ss.A = -self.fwd_db.return_last_lpos(self.reverse_lambda_offset)
             ss.B = -tmpA
 
         ss.lambdas = [ss.A]
@@ -741,21 +762,28 @@ class ffs_sampling_control():
 
 # -------------------------------------------------------------------------------------------------
 
-    def build_escape_cache(self, origin_point, runid, calcsteps):
+    def build_escape_cache(self, origin_point, runid, calcsteps,mode='success'):
         ss = self.server
 
         #if origin_point not in self.escape_exclude and origin_point != 'escape':
         #    self.escape_exclude.append(origin_point)
 
         try:
-            if origin_point != 'escape':
-                self.escape_trace[runid] = self.escape_trace.pop(origin_point)
+            if mode == 'success':
+                if origin_point != 'escape':
+                    # update the trace with latest point, keeping the calcsteps value
+                    self.escape_trace[runid] = self.escape_trace.pop(origin_point)
 
-            if self.escape_trace.has_key(runid):
-                self.escape_trace[runid] += calcsteps
+                # add calcsteps to dict at the new runid
+                if self.escape_trace.has_key(runid):
+                    self.escape_trace[runid] += calcsteps
+                else:
+                    self.escape_trace[runid] = calcsteps
             else:
-                self.escape_trace[runid] = calcsteps
-            
+                # cancel trajectory if no success (= no further point) or maximum steps are reached
+                if self.escape_trace.has_key(origin_point):
+                    self.escape_trace.pop(origin_point)
+
             ss.logger_freshs.debug(cc.c_magenta + 'Escape trace overview:' + str(self.escape_trace) + cc.reset)
         except Exception as e:
             ss.logger_freshs.warn(cc.c_red + 'Building escape trace cache failed: ' + str(e) + cc.reset)
@@ -1016,7 +1044,7 @@ class ffs_sampling_control():
                                            str(ss.ctime) + cc.reset)
 
 
-                    self.build_escape_cache(origin_point, runid, ddata['calcsteps'])
+                    self.build_escape_cache(origin_point, runid, ddata['calcsteps'],'nosuccess')
             
             else:
                 try:

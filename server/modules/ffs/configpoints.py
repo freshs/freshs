@@ -255,9 +255,19 @@ class configpoints:
             
         return retpoints, retpoint_ids, rcval               
     
-    def random_point_B(self):
+    def random_point_B_fwd(self,offset=0):
+        biglam = self.biggest_lambda() - offset
+        return self.return_random_point(biglam)
+
+    def random_point_existing_DB_B(self):
         biglam = self.biggest_lambda()
         return self.return_random_point(biglam)
+
+    def return_last_lpos(self,offset=0):
+        lam = self.biggest_lambda() - offset
+        self.cur.execute('select lpos from configpoints where lambda = ? limit 1', [lam])
+        for row in self.cur:
+            return float(row[0])
 
     # returns random value from list
     def random_list_entry(self,tarray):
@@ -328,6 +338,8 @@ class configpoints:
             retconfig = ast.literal_eval(str(row[0]))
             retid = str(row[1])
             retrc = float(row[2])
+        if retid == '':
+            print "No point found for pt_id", pt_id
         return retconfig, retid, retrc
 
 
@@ -893,12 +905,12 @@ class configpoints:
         return asuccess, anonsuccess, nnall
 
 
-    def return_probabilities(self):
+    def return_probabilities(self,offset=0):
         probabs = []
         asuccess = []
         anonsuccess = []
         nnall = []
-        biglam = self.biggest_lambda()
+        biglam = self.biggest_lambda() - offset
         for i in range(1,biglam+1):
             nonsuccess = self.return_nop_nonsuccess(i)
             anonsuccess.append(nonsuccess)

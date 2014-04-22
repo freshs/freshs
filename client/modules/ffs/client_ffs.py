@@ -75,18 +75,21 @@ class client_ffs:
         
         try:
             # start loading the input pipes for the MD process
-            use_previous_point = False
+            use_existing_point = False
             
             # Checking for previous points
             if 'random_points' in parameterset:
                 print "Random points key in paramset"
                 if not 'None' in str(parameterset['random_points']):
                     # Use previous point
-                    use_previous_point = True
+                    use_existing_point = True
                 
-            if use_previous_point:
+            if use_existing_point:
                 # we are at least on A...
-                comefromok = False
+                if 'equilibrate_point' in parameterset:
+                    comefromok = True
+                else:
+                    comefromok = False
                 h.send( True, True, True, parameterset['random_points'] )
 
                 optionlist = "-tmpdir " + h.tmpdir + \
@@ -134,6 +137,12 @@ class client_ffs:
                     if all_meta['step_abort']:
                         print "Client: job was aborted because of maximum steps."
                         success = False
+                elif 'reached_B_escape' in all_meta:
+                    if all_meta['reached_B_escape']:
+                        print "Escape job reached B, asking server for new config"
+                        success = False
+                    else:
+                        success = True
                 else:
                     success = True
 

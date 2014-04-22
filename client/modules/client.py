@@ -219,7 +219,7 @@ class client(asyncore.dispatcher):
             try:
                 parameterset=ast.literal_eval(data+"\n")
             except:
-                print('Client: Warning! Could not parse data packet: ' + data + '...') 
+                print('Client: Warning! Could not parse data packet: ' + data) 
                 print('Client: Warning! Dropping packet.') 
                 return
 

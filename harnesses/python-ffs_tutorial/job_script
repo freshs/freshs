@@ -1,0 +1,209 @@
+#!/usr/bin/python
+# Copyright (c) 2014 Kai Kratzer, University of Stuttgart,
+# Allmandring 3, 70569 Stuttgart, Germany; all rights
+# reserved unless otherwise stated.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+# MA 02111-1307 USA
+ 
+# example for writing a snapshot: keep this
+# to the minimum information needed to regenerate your system state
+# e.g., if particle charge never changes then hardcode it
+# rather than writing and re-loading.
+
+import re
+import random
+import numpy as np
+import sys
+import time
+
+# friction coefficient
+gamma = 1.
+# temperature
+T = 1.
+# timestep
+dt = 0.01
+# number of integration steps between rc check
+nsteps = 1
+
+
+# 1D potential with minima at \pm 1.936
+def V(x):
+    return x**4.-7.5*x**2.+14.0625
+
+# derivative of the potential
+def Vprime(x):
+    return 4.*x**3.-15.*x
+
+# Langevin integrator
+def integrate(steps=1):
+    global x,v,a
+    for i in range(steps):
+        x = x + v*dt + 0.5*a*dt**2.
+        a_new = -Vprime(x) - gamma * v + np.sqrt(2. * gamma * T / dt) * random.gauss(0., 1.)
+        v = v + .5 * dt * ( a + a_new )
+        a = a_new
+
+# write the current state to file
+def save_snapshot(fname):
+    print "Saving snapshot to", fname
+    fh = open(fname,'w')
+    fh.write('%.16f %.16f\n' % (x, v))
+    fh.close()
+
+# load a state from file
+def load_snapshot(fname):
+    print "Reading snapshot from", fname
+    global x,v,a
+    fh = open(fname,'r')
+    for line in fh:
+        xtmp, vtmp = line.strip().split()
+        x = float(xtmp)
+        v = float(vtmp)
+        a = -Vprime(x)
+        break
+    fh.close()
+
+# return reaction coordinate
+def calc_rc():
+    return x
+    
+# initialize and equilibrate system in state A 
+def init_A():
+    global x,v,a
+    while True:
+        print "Drawing random configuration from A."
+        # set initial position to -1.936 \pm 0.43
+        x = -1.936 + ((random.random()-0.5)*0.86)
+        # velocity will be equilibrated by thermostat
+        v = 0.
+        a = -Vprime(x)
+        print "Equilibrating."
+        integrate(500)
+        if calc_rc() < borderA:
+            print "Configuration found:", x, v, a
+            break
+
+# parse command line arguments (alternatively, argparse can be used, but this is dynamic)
+optval = {}
+for eli in range(len(sys.argv)):
+    if (eli+1) % 2 == 0:
+        optval[re.sub('-','', sys.argv[eli],1)] = sys.argv[eli+1]
+
+# extract variables
+metafifo = optval['metadata_fifoname']
+seed = int(optval['seed'])
+act_lambda = int(optval['act_lambda'])
+tmpdir = optval['tmpdir']
+outdump = optval['back_fifoname']
+clientname = optval['clientname']
+timestamp = optval['timestamp']
+borderA = float(optval['A'])
+
+if 'max_steps' in optval:
+    max_steps = int(optval['max_steps'])
+else:
+    max_steps = 0
+ 
+try:
+    uuid = optval['uuid']
+except:
+    uuid = ''
+    
+if act_lambda == 0:
+    escape_flux = True
+    rc_max = float(optval['B'])
+else:
+    escape_flux = False
+
+rc_next = float(optval['next_interface'])
+
+# decide to load the initial config (then we are in A) or a dump.
+# This is not necessary if an initial dump exists
+if not "initial_config.dat" in str(sys.argv) and 'in_fifoname' in optval:
+    # loading snapshot from fifo
+    indump = optval['in_fifoname']
+    # this will set the last coordinates, velocities and the box size
+    load_snapshot(indump)
+    rc = calc_rc()
+    all_rcs = ''
+else:
+    # Not loading dump file, using initial state with equilibration.
+    init_A()
+    rc = calc_rc()
+    # save first rc when starting new trial
+    all_rcs = str(rc) + ' '
+
+if escape_flux:
+    if rc < borderA:
+        comefromok = True
+    else:
+        comefromok = False
+
+max_rc = rc
+total_steps = 0
+in_progress = True
+step_abort = False
+
+print total_steps, rc
+
+# READY TO GO: This is an example for a script which checks the reaction coordinate itself
+while in_progress:
+    # integrate
+    integrate(nsteps)
+    total_steps += nsteps
+    if rc > max_rc:
+        max_rc = rc
+    rc = calc_rc()
+    all_rcs += str(rc) + ' '
+
+    if escape_flux:
+        if rc >= rc_next and comefromok:
+            in_progress = False
+        elif rc < borderA and not comefromok:
+            comefromok = True
+        elif rc >= rc_max:
+            init_A(datfile, seed, dt)
+            rc = calc_rc()
+            comefromok = True
+    else:
+        if rc >= rc_next or rc <= borderA:
+            in_progress = False
+ 
+    if max_steps > 0:
+        if total_steps >= max_steps:
+            print "Max steps reached!"
+            step_abort = True
+            in_progress = False
+
+print "Performed", total_steps, "steps and reached",rc
+# remove space char
+all_rcs = all_rcs[:-1]
+
+# build metadata
+metadata = "\"rc\": %.14f, \"steps\": %i, \"time\": %.14f, \"max_lam\": %.14f" % (rc, total_steps, total_steps*dt,max_rc)
+metadata += ", \"customdata\": \"'" + all_rcs + "'\""
+
+if step_abort:
+    metadata += ", \"step_abort\": True"
+
+# save snapshot to fifo
+save_snapshot(outdump)
+
+# write to output metadata
+fmeta=open(metafifo,'w')
+fmeta.write("{" + metadata + "}\n" )
+fmeta.close()
+
