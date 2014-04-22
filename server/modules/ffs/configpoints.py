@@ -103,10 +103,13 @@ class configpoints:
                         processed_keys = []
                         tquery = "UPDATE configpoints SET usecount=usecount+ CASE myid "
 
-                if len(processed_keys) > 0:    
+                if len(processed_keys) > 1:    
                     # add a where clause that only lines with the candidate myids are considered
                     tquery += "END WHERE myid IN " + str(tuple(processed_keys))
                     print count
+                    self.cur.execute(tquery)
+                elif len(processed_keys) == 1:
+                    tquery += "END WHERE myid = '" + str(processed_keys[0]) + "'"
                     self.cur.execute(tquery)
 
                 print "Ready."
@@ -813,12 +816,11 @@ class configpoints:
 
     def return_lamlist(self):
         lamlist = []
-        for at_lam in range(10):
-            self.cur.execute('select lpos from configpoints')
-            for row in self.cur:
-                if row[0] not in lamlist:
-                    lamlist.append(row[0])
-        return lamlist
+        self.cur.execute('select lpos from configpoints')
+        for row in self.cur:
+            if row[0] not in lamlist:
+                lamlist.append(row[0])
+        return sorted(lamlist)
 
     def return_origin_point(self, the_point):
         origin_point = []
