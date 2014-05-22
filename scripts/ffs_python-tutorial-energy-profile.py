@@ -188,7 +188,7 @@ roh_q /= np.max(np.abs(roh_q),axis=0)
 dG_q = dG(roh_q)
 
 fout=open(outdir + '/data_dG.dat', 'w')
-fout.write("# q G tau_0 tau_n psi_A psi_B roh\n")
+fout.write("# q G tau_0 psi_A psi_B roh\n")
 
 for iel in range(len(qs)):
     #print qs[iel], dG_q[iel]
