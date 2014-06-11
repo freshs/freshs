@@ -119,12 +119,12 @@ class client_spres:
 
                 ##assume that saving to file means reading from a file
                 if save_configs != "0":
-		    start_config = points[0][0]
+                    start_config = points[0][0]
                     get_coords   = True   ##only open a read fifo, to get the filename of the crds
                     send_coords  = False
                     in_fifo      = "None"
                 else:
-		    start_config = "None"
+                    start_config = "None"
                     get_coords   = True   ##open two fifos, send and receive
                     send_coords  = True
                     in_fifo      = h.crds_in_fifoname
@@ -156,7 +156,7 @@ class client_spres:
                 optionlist += " -coords_to_file "+save_configs+"/"+uuid
             
 
-	    print "client: optionlist: "+str(optionlist)[0:128]+"..."
+            print "client: optionlist: "+str(optionlist)[0:128]+"..."
 
             ##Wrap the code that uses threading/subprocesses
             ##in a try-catch to clean up on interrupts, ctrl-C etc.
