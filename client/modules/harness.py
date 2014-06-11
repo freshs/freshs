@@ -53,7 +53,7 @@ class harness:
 
         ###create pipes to transfer MD coords into/read them back from
         try:
-            self.tmpdir             = tempfile.mkdtemp()
+            self.tmpdir             = tempfile.mkdtemp(prefix='freshs')
         except e:
             print "client: Failed to create tmp dir %s" % e
             
