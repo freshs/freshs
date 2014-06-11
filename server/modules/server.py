@@ -468,7 +468,12 @@ class server(asyncore.dispatcher):
 
         ##Algo-specific setup
         if self.algo_name == "spres":
-            self.tau               = self.configfile.getint('spres_control', 'tau')
+
+            ##allow non-integer timesteps for event-driven MD
+            self.tau               = self.configfile.getfloat('spres_control', 'tau')
+            if self.tau - int(self.tau) == 0.0: 
+                       self.tau = int(self.tau)
+
             if self.configfile.has_option('spres_control', 'test_absorb_at_B_every'):
                 self.absorb_at_B  =\
                   self.configfile.getint('spres_control', 'test_absorb_at_B_every')
