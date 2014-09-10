@@ -68,7 +68,6 @@ class feedThread( threading.Thread ):
 
         line_count = 0
 
-
         if self.client.cli.nlines_in > 0:
             os.write(self.fifoHandle, str(len(self.dataLines))+"\n")##send the number of lines to expect
 
@@ -82,13 +81,27 @@ class feedThread( threading.Thread ):
             else :
                 space_sepped = ""
 
-            os.write(self.fifoHandle, space_sepped+"\n")##send each line
+            try:
+                os.write(self.fifoHandle, space_sepped+"\n")##send each line
+            except:
+                print("Client failed to write to fifo, handle:     "+str(self.fifoHandle))
+                print("Client failed to write to fifo, path:       "+self.fifoPath)
+                print("Client failed to write to fifo, line count: "+str(line_count))
+                print("Client failed to write to fifo, line was:   "+space_sepped)
+                raise
+                
             line_count = line_count + 1
 
+            
             ##catch any request to exit
             if self.stop_event.isSet():
+                    print("Client fed "+str(line_count)+" lines to fifo: "+self.fifoPath);
+                    print("Client quitting feed on STOP event")
                     return line_count
 
+
+        print("Client fed "+str(line_count)+" lines to fifo: "+self.fifoPath);
+        
         return line_count
 
 
