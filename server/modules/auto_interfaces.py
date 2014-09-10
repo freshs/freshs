@@ -52,19 +52,34 @@ class auto_interfaces():
             return True
         return False
 
+# -------------------------------------------------------------------------------------------------
+    # check if section is in configfile
+    def  section_in_configile(self,option):
+        ss = self.server
+        if ss.configfile.has_section(option):
+            return True
+        return False
+
 # ------------------------------------------------------------------------------------------------
     # read the configuration file for this module
     def read_config(self):
         ss = self.server
 
-        if not ss.configfile.has_section('auto_interfaces'):
-            return False 
-
+        # Check that this section is even present
+        if not  self.section_in_configile('auto_interfaces'):
+            self.auto_interfaces = 0
+            return False
+            
         # Auto Interface switch
         if self.option_in_configile('auto_interfaces'):
             self.auto_interfaces = ss.configfile.getint('auto_interfaces', 'auto_interfaces')
         else:
             self.auto_interfaces = 0
+
+        if self.auto_interfaces == 0:
+            return False
+
+
         # number of trials
         self.auto_trials = ss.configfile.getint('auto_interfaces', 'auto_trials')
         # number of runs, which will be performed, if interface position is determined
