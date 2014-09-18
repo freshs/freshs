@@ -90,11 +90,11 @@ else:   # if filename is not given
 try:
     a = ss.server( timestamp = options.timestamp, configfile_name = options.config, debugmode = options.debug  )
     asyncore.loop()
-except:
+except Exception as e:
     signal.signal(signal.SIGINT, handle_sigint)
     a.storepoints.commit()
     a.ghostpoints.commit()
-    print "\nServer shut down safely."
+    print "\nServer caught exception: "+str(e)+" and shut down safely."
     sys.exit(0)
 finally:
     print "\nQuitting."
