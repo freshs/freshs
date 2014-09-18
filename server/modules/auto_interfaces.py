@@ -35,6 +35,7 @@ class auto_interfaces():
 
         # This is where the act_lam id starts. Should be larger than number of possible interfaces.        
         self.loffset = 1337
+        
         # unique act_lam id for explorers
         self.ex_act_lambda = self.loffset
         
@@ -66,7 +67,7 @@ class auto_interfaces():
         ss = self.server
 
         # Check that this section is even present
-        if not  self.section_in_configile('auto_interfaces'):
+        if not self.section_in_configile('auto_interfaces'):
             self.auto_interfaces = 0
             return False
             
@@ -80,24 +81,29 @@ class auto_interfaces():
             return False
 
 
-        # number of trials
-        self.auto_trials = ss.configfile.getint('auto_interfaces', 'auto_trials')
-        # number of runs, which will be performed, if interface position is determined
-        self.auto_runs = ss.configfile.getint('auto_interfaces', 'auto_runs')
-        # min flux which is accepted. Be careful, this is only for the estimation! Don't be too strict.
-        self.auto_flux_min = ss.configfile.getfloat('auto_interfaces', 'auto_flux_min')
-        # max flux which is accepted. Be careful, this is only for the estimation! Don't be too strict.
-        self.auto_flux_max = ss.configfile.getfloat('auto_interfaces', 'auto_flux_max')
-        self.auto_moveunit = ss.configfile.getfloat('auto_interfaces', 'auto_moveunit')
-        self.auto_mindist = ss.configfile.getfloat('auto_interfaces', 'auto_mindist')
-        self.auto_mindist_orig = self.auto_mindist
-        # order parameter can be considered as int (e.g. number of particles with property x)
-        self.auto_lambda_is_int = ss.configfile.getint('auto_interfaces', 'auto_lambda_is_int')
-        # set max steps for exploring client. Client must support this.
-        self.auto_max_steps = ss.configfile.getint('auto_interfaces', 'auto_max_steps')
-        self.auto_histo = ss.configfile.getint('auto_interfaces', 'auto_histo')
-        #self.auto_histo_thresh = ss.configfile.getfloat('auto_interfaces', 'auto_histo_thresh')
-        self.auto_min_points = ss.configfile.getfloat('auto_interfaces', 'auto_min_points')
+        try:
+            # number of trials
+            self.auto_trials = ss.configfile.getint('auto_interfaces', 'auto_trials')
+            # number of runs, which will be performed, if interface position is determined
+            self.auto_runs = ss.configfile.getint('auto_interfaces', 'auto_runs')
+            # min flux which is accepted. Be careful, this is only for the estimation! Don't be too strict.
+            self.auto_flux_min = ss.configfile.getfloat('auto_interfaces', 'auto_flux_min')
+            # max flux which is accepted. Be careful, this is only for the estimation! Don't be too strict.
+            self.auto_flux_max = ss.configfile.getfloat('auto_interfaces', 'auto_flux_max')
+            self.auto_moveunit = ss.configfile.getfloat('auto_interfaces', 'auto_moveunit')
+            self.auto_mindist = ss.configfile.getfloat('auto_interfaces', 'auto_mindist')
+            self.auto_mindist_orig = self.auto_mindist
+            # order parameter can be considered as int (e.g. number of particles with property x)
+            self.auto_lambda_is_int = ss.configfile.getint('auto_interfaces', 'auto_lambda_is_int')
+            # set max steps for exploring client. Client must support this.
+            self.auto_max_steps = ss.configfile.getint('auto_interfaces', 'auto_max_steps')
+            self.auto_histo = ss.configfile.getint('auto_interfaces', 'auto_histo')
+            #self.auto_histo_thresh = ss.configfile.getfloat('auto_interfaces', 'auto_histo_thresh')
+            self.auto_min_points = ss.configfile.getfloat('auto_interfaces', 'auto_min_points')
+        except Exception as e:
+            print("Problem while reading auto_interfaces config, exception: "+str(e))
+            pass
+            
         
         if self.option_in_configile('auto_min_explorer_steps'):
             self.auto_min_explorer_steps = ss.configfile.getint('auto_interfaces', 'auto_min_explorer_steps')
