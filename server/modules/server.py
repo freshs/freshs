@@ -72,7 +72,7 @@ class sampling_algorithm:
 #### MAIN SERVER CLASS ####
 class server(asyncore.dispatcher):
     def __init__(self, timestamp = 'auto', configfile_name = 'auto', debugmode = 0):
-        
+
         # Logging
         if debugmode > 0:
             logging.basicConfig(level=logging.DEBUG)
@@ -82,10 +82,12 @@ class server(asyncore.dispatcher):
 
         # Set global timestamp / set dbload if timestamp is given
         self.timestamp = self.get_timestamp(timestamp)
+
         
         # Read the configfile
         self.read_config(configfile_name)
 
+        
         self.logger_freshs.addHandler(logging.FileHandler(self.folder_log + self.timestamp +\
                         '_freshs.log', mode='a', encoding=None, delay=False))
 
@@ -122,11 +124,15 @@ class server(asyncore.dispatcher):
         self.set_seed()
 
         # Initialize Interfaces # TODO: algorithmspecific
-        self.A = self.configfile.getfloat('hypersurfaces', 'borderA')  # starting region
-        self.B = self.configfile.getfloat('hypersurfaces', 'borderB')  # target region
-        self.lambdas = [self.A]                             # interface variable
-
-        self.fill_lambdas()
+        try:
+            self.A = self.configfile.getfloat('hypersurfaces', 'borderA')  # starting region
+            self.B = self.configfile.getfloat('hypersurfaces', 'borderB')  # target region
+            self.lambdas = [self.A]                             # interface variable
+            self.fill_lambdas()
+        except Exception as e:
+            print "Failed to read interfaces from the config file, exception: "+str(e)
+            print "Guess of problem: section labels are case sensitive."
+            pass
         
         self.nohs = self.noi - 1
 
@@ -329,23 +335,23 @@ class server(asyncore.dispatcher):
 
         # read server's config file, make timestamp backup
         self.configfile = ConfigParser.RawConfigParser()
-	try:
-	    if configfile_name == 'auto':
-		configfile_name = self.timestamp + '_server.conf'
-		if self.dbload:
-		    self.configfile.read(configfile_name)
-		else:
-		    configfile_name = reldir + '/../server-sample-ffs.conf'
-		    self.logger_freshs.info(cc.c_green + 'Loading the SAMPLE FFS CONFIGURATION file.' + cc.reset)
-		    self.configfile.read(configfile_name)
-		    cfgcpflag = 'samplecfg'
-	    else:
-		self.configfile.read( configfile_name )
+        try:
+            if configfile_name == 'auto':
+                configfile_name = self.timestamp + '_server.conf'
+                if self.dbload:
+                    self.configfile.read(configfile_name)
+                else:
+                    configfile_name = reldir + '/../server-sample-ffs.conf'
+                    self.logger_freshs.info(cc.c_green + 'Loading the SAMPLE FFS CONFIGURATION file.' + cc.reset)
+                    self.configfile.read(configfile_name)
+                    cfgcpflag = 'samplecfg'
+            else:
+                self.configfile.read( configfile_name )
                 self.logger_freshs.info(cc.c_green + 'Read sections: ' + str(self.configfile.sections()) + cc.reset)
-		cfgcpflag = 'bycfgname'
-	except:
-	    print("Failed to read config file:"+configfile_name)
-	    pass
+                cfgcpflag = 'bycfgname'
+        except:
+            print("Failed to read config file:"+configfile_name)
+            pass
 
 
         # FOLDERS
