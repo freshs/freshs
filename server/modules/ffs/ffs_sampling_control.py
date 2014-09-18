@@ -565,8 +565,8 @@ class ffs_sampling_control():
         ss.logger_freshs.debug(cc.c_magenta + 'M_0_runs: ' + str(ss.M_0_runs) + cc.reset)
         ss.logger_freshs.debug(cc.c_magenta + 'lambda: ' + str(ilam) + cc.reset)
         ss.logger_freshs.debug(cc.c_magenta + 'ESC_cl: ' + str(self.escape_clients)  + cc.reset)
-        # number of escape clients running
         
+        # number of escape clients running
         nescape = len(self.escape_clients)
 
         if ilam == 0 and self.parallel_escape == 0:
@@ -582,7 +582,7 @@ class ffs_sampling_control():
             nescape_candidates = len(self.escape_point_candidates()[0])
             nesc_left = nescape_candidates - nescape
             if nesc_left > 0:
-                ss.logger_freshs.info(cc.c_green + str(nesc_left) + ' escape trace(s) must be continued.' + cc.reset)
+                ss.logger_freshs.info(cc.c_green + str(nesc_left) + ' non-running escape trace(s) to be restarted.' + cc.reset)
                 self.print_lambar('inter',ncheck,ss.M_0_runs[ilam])
                 return True
             # no escape trace must be continued at the moment, do something else.
@@ -607,6 +607,8 @@ class ffs_sampling_control():
                     self.check_for_ctime_pending()
                     ss.k_AB_part1 = ncurrent_points / ss.ctime
                     ss.logger_freshs.info(cc.c_magenta + 'k_AB_part1 = ' + str(ss.k_AB_part1) + cc.reset)
+                    ss.logger_freshs.info(cc.c_magenta + '( based on ' + str(ncurrent_points) +\
+                                                         ' interface crossings in total time: '+str(ss.ctime)+' )'+cc.reset)
                     if self.exit_after_escape > 0:
                         ss.logger_freshs.info(cc.c_green + 'Exit after escape run is enabled in config. Exiting.' + cc.reset)
                         ss.storepoints.commit()
@@ -762,13 +764,14 @@ class ffs_sampling_control():
 
 # -------------------------------------------------------------------------------------------------
 
-    def build_escape_cache(self, origin_point, runid, calcsteps,mode='success'):
+    def build_escape_cache(self, origin_point, runid, calcsteps, mode='success'):
         ss = self.server
 
         #if origin_point not in self.escape_exclude and origin_point != 'escape':
         #    self.escape_exclude.append(origin_point)
 
         try:
+
             if mode == 'success':
                 if origin_point != 'escape':
                     # update the trace with latest point, keeping the calcsteps value
@@ -780,11 +783,11 @@ class ffs_sampling_control():
                 else:
                     self.escape_trace[runid] = calcsteps
             else:
-                # cancel trajectory if no success (= no further point) or maximum steps are reached
+                # cancel trajectory if no success (= no further point) and/or maximum steps are reached
                 if self.escape_trace.has_key(origin_point):
                     self.escape_trace.pop(origin_point)
 
-            ss.logger_freshs.debug(cc.c_magenta + 'Escape trace overview:' + str(self.escape_trace) + cc.reset)
+            ss.logger_freshs.info(cc.c_magenta + 'Escape trace overview:' + str(self.escape_trace) + cc.reset)
         except Exception as e:
             ss.logger_freshs.warn(cc.c_red + 'Building escape trace cache failed: ' + str(e) + cc.reset)
             ss.logger_freshs.warn(cc.c_red + 'This is not fatal but may be slow for a large number of points.' + cc.reset)
@@ -920,7 +923,10 @@ class ffs_sampling_control():
                                          )
 
             if the_jobs_lambda == 0 and self.parallel_escape > 0:
-                self.build_escape_cache(origin_point, runid, ddata['calcsteps'])
+                ss.logger_freshs.info(cc.c_magenta + 'Escape cache with runid: '+str(runid)+\
+                                                             ' and steps: '+str(ddata['calcsteps'])+\
+                                                             ' success.'+cc.reset)
+                self.build_escape_cache(origin_point, runid, ddata['calcsteps'], 'success')
 
             ss.storepoints.queue_usecount_by_myid(origin_point)
             self.last_added_point = runid
@@ -1044,6 +1050,10 @@ class ffs_sampling_control():
                                            str(ss.ctime) + cc.reset)
 
 
+                    ss.logger_freshs.info(cc.c_magenta + 'Escape cache with runid: '+str(runid)+\
+                                                                      ' and steps: '+str(ddata['calcsteps'])+\
+                                                                      ' no success.'+cc.reset)
+            
                     self.build_escape_cache(origin_point, runid, ddata['calcsteps'],'nosuccess')
             
             else:
