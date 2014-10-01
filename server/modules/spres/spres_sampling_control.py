@@ -489,8 +489,6 @@ class spres_sampling_control():
 
 		    scale     += chance
 
-		    ##print str(row)+" "+str(fromRow)
-		    ##print self.epoch_points_old
 
                     count      = len(self.epoch_points_old[row][fromRow])
                     chance_per = chance / float(count)

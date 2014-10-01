@@ -188,7 +188,7 @@ class ffs_sampling_control():
         try:
             ss.act_lambda = ss.storepoints.biggest_lambda()
         except Exception as e:
-            print e
+            ss.logger_freshs.error(cc.c_red + __name__ + 'Error!: '+str(e) + cc.reset) 
             exit(1)
 
         if ss.auto_interfaces:
@@ -320,7 +320,7 @@ class ffs_sampling_control():
                 pts = ss.storepoints.return_configpoints_ids(ss.act_lambda-1)
                 ss.ghostpoints.build_ghost_exclude_cache(ss.act_lambda,pts)
             except Exception as e:
-                print e
+                ss.logger_freshs.error(cc.c_red + __name__ + 'Error!: '+str(e) + cc.reset) 
 
             ss.logger_freshs.info(cc.c_green + 'Current interface index: ' + str(ss.act_lambda) + cc.reset)
 
@@ -444,7 +444,7 @@ class ffs_sampling_control():
             pts = ss.storepoints.return_configpoints_ids(ss.act_lambda-1)
             ss.ghostpoints.build_ghost_exclude_cache(ss.act_lambda,pts)
         except Exception as e:
-            print e
+            ss.logger_freshs.error(cc.c_red + __name__ + 'Error!: '+str(e) + cc.reset) 
         self.print_lambar('AB')
         ss.M_0.append(0)
         ss.run_count.append(0)

@@ -60,13 +60,13 @@ def visit(cfp):
     global tr_line
     global rep_line
     op = cfph.return_origin_point_by_id(cfp[2])
-    print "origin point of", cfp[8], "is", op[8]
+    print("origin point of", cfp[8], "is", op[8])
     
     try:
         uuid_tracefile = get_tracefile(cfp[0], cfp[16])
     except Exception as exc:
         uuid_tracefile = ''
-        print exc
+        print(exc)
         
 #lambda_id,configpoint,origin_point,calcsteps,ctime,runtime,success,runcount,myid,seed,lambda_old,weight,rcval,lpos,usecount
     tr_line.append([ cfp[0],cfp[13],cfp[12],cfp[3],cfp[4],cfp[5],cfp[9], uuid_tracefile ])
@@ -77,7 +77,7 @@ def visit(cfp):
 
 # check usage
 if len(sys.argv) < 2:
-    print "Usage:", sys.argv[0], "<../server/DB/configpoint-DB-file>"
+    print("Usage:", sys.argv[0], "<../server/DB/configpoint-DB-file>")
     exit(1)
 
 # construct timestamp out of DB filename
@@ -121,7 +121,7 @@ for cfp in cfpcand:
     # step count
     steps_tot = 0
     tname = 'trace' + str(tracecount)
-    print tname
+    print(tname)
     tracefile = tname + '.dat'
     tracepath = tname + '.path'
     repfile = tname + '.rep'
@@ -162,7 +162,7 @@ for cfp in cfpcand:
 fhtp.close()
 
 
-print "Wrote to output folder", outdir
+print("Wrote to output folder", outdir)
 
 
 

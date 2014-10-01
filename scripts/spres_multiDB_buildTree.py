@@ -27,9 +27,9 @@ import sys
 ##start execution.
 arguments = sys.argv
 if len(arguments) < 2:
-    print "buildTree.py: require as arguments a time-ordered list of SQLite database files\n"
-    print "Prints out a tree diagram with IDs relative weights of configs within bins,"
-    print ".. combine this view with the bin probability data (by default writted to the directory OUTPUT) for best results.\n"
+    print("buildTree.py: require as arguments a time-ordered list of SQLite database files\n")
+    print("Prints out a tree diagram with IDs relative weights of configs within bins,")
+    print(".. combine this view with the bin probability data (by default writted to the directory OUTPUT) for best results.\n")
     exit( str(arguments) )
 
 bin={}
@@ -46,8 +46,8 @@ for argc in range(1,len(arguments)):
 
     db_name=arguments[argc]
 
-    print "#reading db: "
-    print "#"+str(db_name)
+    print("#reading db: ")
+    print("#"+str(db_name))
 
     ##open the target database
     db1  = sqlite3.connect(db_name)
@@ -66,7 +66,7 @@ for argc in range(1,len(arguments)):
     ##find the root point
     cur1.execute('select * from '+tab1)
     lines = cur1.fetchall()
-    print "#Got "+str(len(lines))+" at time 0"
+    print("#Got "+str(len(lines))+" at time 0")
     while len(lines) > 0:
         nextT=0
         for line in lines:
@@ -82,17 +82,14 @@ for argc in range(1,len(arguments)):
             posterior_weight[configId] = line[11] 
             rc[configId]          = line[12]
         
-            #print str(configId)+"<---"+str(originId)
-            #print str(posterior_weight)
-
             ##write the path segment
-            print str(calcSteps[originId])+" "+str(rc[originId])+\
+            print(str(calcSteps[originId])+" "+str(rc[originId])+\
                 " "+str(bin[originId])+\
-                " "+str(posterior_weight[originId])+" "+str(originId)
-            print str(calcSteps[configId])+" "+str(rc[configId])+\
+                " "+str(posterior_weight[originId])+" "+str(originId))
+            print(str(calcSteps[configId])+" "+str(rc[configId])+\
                 " "+str(bin[configId])+\
-                " "+str(posterior_weight[configId])+" "+str(configId)
-            print ""
+                " "+str(posterior_weight[configId])+" "+str(configId))
+            print("")
         
         lines=[]
     

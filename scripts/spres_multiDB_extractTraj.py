@@ -33,9 +33,9 @@ file_suff=".dat" ##default output file suffix
 ##start execution.
 arguments = sys.argv
 if len(arguments) < 2:
-    print "extractTraj.py: require as arguments:"+\
+    print("extractTraj.py: require as arguments:"+\
           "the index of a minimum bin for trajectory endpoints.\n"+\
-          "and a time-ordered list of DB files (newest first)\n"
+          "and a time-ordered list of DB files (newest first)\n")
     exit( str(arguments) )
 
 max_l     = float(arguments[1])
@@ -58,19 +58,19 @@ else:
 ##get the size
 cur1.execute('select count(*) from '+tab1)
 n1 = cur1.fetchone()[0]
-print "database has: "+str(n1)+" rows"
+print("database has: "+str(n1)+" rows")
 
 ##find the oldest configs
 cur1.execute('select max(calcsteps) from '+tab1)
 maxTime =  float(cur1.fetchone()[0])
-print "database has oldest entries at: "+str(maxTime)
+print("database has oldest entries at: "+str(maxTime))
 
 
 
 ##select all nucleated points
 cur1.execute('select * from '+tab1+' where lambda = ?', [max_l])
 lines = cur1.fetchall()
-print "Got "+str(len(lines))+" nucleated configs at time "+str(maxTime)
+print("Got "+str(len(lines))+" nucleated configs at time "+str(maxTime))
 age              = maxTime
 
 posterior_weight=['0']*len(lines)
@@ -83,8 +83,8 @@ for line in lines:
     ##posterior weight is the weight of the traj relative to other trajs 
     ##which reached the bin 
 
-    print "Id: "+line[2]
-    print "weight: "+str(float(line[11]))
+    print("Id: "+line[2])
+    print("weight: "+str(float(line[11])))
 
     originPoint[trajCount]= line[2]
     age                   = line[3]
@@ -93,9 +93,9 @@ for line in lines:
         str(trajCount)+"_w"+\
         str(posterior_weight[trajCount])
 
-    print "\n"
-    print "Writing traj id: "+fileName[trajCount]
-    print "in separate files for each frame"
+    print("\n")
+    print("Writing traj id: "+fileName[trajCount])
+    print("in separate files for each frame")
 
     
     ##write the child config
@@ -109,7 +109,7 @@ for line in lines:
             space_sepped=str(p).translate(None, '[],\'')
             trajFile.write(space_sepped+"\n")
     trajFile.close()
-    print "Wrote file: "+frameFileName
+    print("Wrote file: "+frameFileName)
     trajCount = trajCount + 1
 
 numTraj   = trajCount
@@ -117,8 +117,8 @@ numTraj   = trajCount
 ##loop backwards over the DBS
 for argc in range(3,len(arguments)-1):
     db1_name = arguments[argc]
-    print "#reading db: "
-    print "#"+str(db1_name)
+    print("#reading db: ")
+    print("#"+str(db1_name))
 
 
     ##open the target database
@@ -156,7 +156,7 @@ for argc in range(3,len(arguments)-1):
             space_sepped=str(p).translate(None, '[],\'')
             trajFile.write(space_sepped+"\n")
         trajFile.close()
-        print "Wrote file: "+frameFileName
+        print("Wrote file: "+frameFileName)
 
     age = newAge
 

@@ -53,7 +53,7 @@ def mkhisto(data,bins):
         
 
 if len(sys.argv) < 2:
-    print "Usage:", sys.argv[0], "<../server/DB/configpoint-DB-file>"
+    print("Usage:", sys.argv[0], "<../server/DB/configpoint-DB-file>")
     exit(1)
 
 bins = 20
@@ -117,9 +117,9 @@ rfh.close()
 cfh.close()
 
 for i in range(maxlam+1):
-    print "Different origin_points on interface", i, ":", len(cfph.interface_statistics(i))
+    print("Different origin_points on interface", i, ":", len(cfph.interface_statistics(i)))
 
-print "Wrote to output folder", outdir
+print("Wrote to output folder", outdir)
 
 
 

@@ -37,7 +37,7 @@ def tmkdir(the_dir):
     try:
         os.mkdir(the_dir)
     except Exception as exc:
-        print exc
+        print(exc)
 
 def hq(q,dq,x):
     if x < (q + dq) and x >= q:
@@ -58,13 +58,13 @@ def Nq(q,dq,interf_histo):
     Nq = 0.0
     for el in interf_histo:
         Nq += hq(q,dq,el)
-    #print "Nq =", Nq
+    #print("Nq =", Nq)
     return Nq
 
 # piq per lambda
 def piq(q,dq,interf_histo,Mi):
     piqtmpval = Nq(q,dq,interf_histo) / (dq * float(Mi))
-    #print "piq:", piqtmpval
+    #print("piq:", piqtmpval)
     return piqtmpval
 
 # 1d psi(q)
@@ -86,28 +86,27 @@ def pweight(i,probabs):
 def pi_q_lam(lambdas, M, dbhandle, qs, dq, mult = 1.0):
     global lamvals
     
-    print "Calculating pi(q,lambda)"
+    print("Calculating pi(q,lambda)")
     piqtmp = []
     for ilam in range(len(lambdas)-1):
         the_lambda = ilam + 1
-        print "Lambda", the_lambda
-        print "Retrieving histogram for lambda", the_lambda
+        print("Lambda", the_lambda)
+        print("Retrieving histogram for lambda", the_lambda)
         interf_histo = extract_histo(the_lambda, dbhandle, mult)
         lamvals.append(interf_histo)
         Mi = M[ilam]
         tmpval = []
-        print "Processing histogram"
+        print("Processing histogram")
         for q in qs:
             tmpval.append(piq(q,dq,interf_histo,Mi))
-        print "pi(q,lambda) =", tmpval
+        print("pi(q,lambda) =", tmpval)
         piqtmp.append(tmpval)
     return piqtmp
 
 
 def tau_pm(piqlam,ninterfaces,probabilities):
-    print "Calculating tau."
+    print("Calculating tau.")
     tmpvalq = []
-    #print len(piqlam[0])
     for iq in range(len(piqlam[0])):
         tmpsum = piqlam[0][iq]
         for i in range(1,ninterfaces-1):
@@ -130,7 +129,7 @@ def build_histo(qs, dq, values):
    
 # check usage
 if len(sys.argv) < 2:
-    print "Usage:", sys.argv[0], "<configpoints.sqlite>"
+    print("Usage:", sys.argv[0], "<configpoints.sqlite>")
     exit(1)
 
 dbfwd = sys.argv[1]
@@ -148,15 +147,15 @@ tmkdir(outdir_base)
 tmkdir(outdir)
 
 # get endpoint candidates
-print "Reading forward probabilities"
+print("Reading forward probabilities")
 fprobs, fN, fnonsuccess, fM = fcfph.return_probabilities(1)
-print fprobs
+print(fprobs)
 
 #ninterfaces = cfphfwd.biggest_lambda()
-print "Reading forward lambdas"
+print("Reading forward lambdas")
 flambdas = fcfph.return_lamlist()[:-1]
 fninterfaces = len(flambdas)
-print flambdas, fninterfaces
+print(flambdas, fninterfaces)
 
 lamvals = []
 
@@ -169,7 +168,7 @@ phi_A = float(fnop) / fctime
 
 k_AB = phi_A * np.prod(fprobs)
 
-print "Escape flux:", phi_A, "--- Rate k_AB:", k_AB
+print("Escape flux:", phi_A, "--- Rate k_AB:", k_AB)
 
 # forward
 fallpiqs = pi_q_lam(flambdas, fM, fcfph, qs, dq)
@@ -191,11 +190,10 @@ fout=open(outdir + '/data_dG.dat', 'w')
 fout.write("# q G tau_0 psi_A psi_B roh\n")
 
 for iel in range(len(qs)):
-    #print qs[iel], dG_q[iel]
     fout.write("%f %e %e %e %e %e\n" % (qs[iel], dG_q[iel], ftau_q[iel], fpsis_q[iel], bpsis_q[iel], roh_q[iel]))
 
 fout.close()
-print "Wrote to " + outdir + "/data_dG.dat"
+print("Wrote to " + outdir + "/data_dG.dat")
 
 
 

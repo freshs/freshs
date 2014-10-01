@@ -24,7 +24,7 @@ import os
 import signal
 
 def handle_sigint(signum, frame):
-    print "Please wait while the database is updated."
+    print("Please wait while the database is updated.")
 
 reldir = os.path.dirname(__file__)
 if not reldir:
@@ -35,20 +35,20 @@ sys.path.append(reldir + '/modules/ffs')
 sys.path.append(reldir + '/modules/nsffs')
 sys.path.append(reldir + '/modules/spres')
 
-#print "Python path is:"+str(sys.path)
+#print("Python path is:"+str(sys.path))
 
 # "Testing a few dependencies:"
 
 try:
     import numpy
 except Exception as e:
-    print 'IMPORT ERROR: ' +str(e)
+    print('IMPORT ERROR: ' +str(e))
     exit(8)
 
 try:
     import math
 except Exception as e:
-    print 'IMPORT ERROR: ' +str(e)
+    print('IMPORT ERROR: ' +str(e))
     exit(8)
 
 
@@ -70,13 +70,13 @@ if len(args) > 0:
     if options.config == 'auto':
         options.config = str(args[0])
     else:
-        print "server: Warning! Un-parsed option(s): args:"+str(args)+"\n"
+        print("server: Warning! Un-parsed option(s): args:"+str(args)+"\n")
     if len(args) > 1:
-         print "server: Warning! Un-parsed option(s): args:"+str(args[1:])+"\n"
+         print("server: Warning! Un-parsed option(s): args:"+str(args[1:])+"\n")
 
 ##Minimal argument checking
 if os.path.isfile(options.config):
-    print "Server: reading server config file: "+options.config
+    print("Server: reading server config file: "+options.config)
 else:   # if filename is not given
     print('Server: A valid server config file is required.\n'+\
           '\tCurrent value is: "'+\
@@ -86,7 +86,7 @@ else:   # if filename is not given
 
 
 ##Call the server
-    print "Server: reading server config file: "+options.config
+    print("Server: reading server config file: "+options.config)
 try:
     a = ss.server( timestamp = options.timestamp, configfile_name = options.config, debugmode = options.debug  )
     asyncore.loop()
@@ -94,10 +94,10 @@ except Exception as e:
     signal.signal(signal.SIGINT, handle_sigint)
     a.storepoints.commit()
     a.ghostpoints.commit()
-    print "\nServer caught exception: "+str(e)+" and shut down safely."
+    print("\nServer caught exception: "+str(e)+" and shut down safely.")
     sys.exit(0)
 finally:
-    print "\nQuitting."
+    print("\nQuitting.")
     sys.exit(0)
 
 

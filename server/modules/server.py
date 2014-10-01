@@ -130,8 +130,8 @@ class server(asyncore.dispatcher):
             self.lambdas = [self.A]                             # interface variable
             self.fill_lambdas()
         except Exception as e:
-            print "Failed to read interfaces from the config file, exception: "+str(e)
-            print "Guess of problem: section labels are case sensitive."
+            self.logger_freshs.info(cc.c_red + 'Failed to read interfaces from the config file, exception: '+str(e))
+            self.logger_freshs.info('Guess of problem: section labels are case sensitive.'+cc.reset)
             pass
         
         self.nohs = self.noi - 1
@@ -321,7 +321,7 @@ class server(asyncore.dispatcher):
                 confdbfile = self.timestamp + '_configpoints.sqlite'
                 self.storepoints=configpoints.configpoints(self, self.folder_db + confdbfile)
         except Exception as e:
-            print e
+            self.logger_freshs.debug(cc.c_red + __name__ + 'Error!:' + str(e) + cc.reset) 
             exit(1)
 
 # -------------------------------------------------------------------------------------------------
@@ -350,7 +350,7 @@ class server(asyncore.dispatcher):
                 self.logger_freshs.info(cc.c_green + 'Read sections: ' + str(self.configfile.sections()) + cc.reset)
                 cfgcpflag = 'bycfgname'
         except:
-            print("Failed to read config file:"+configfile_name)
+            self.logger_freshs.info(cc.c_red +"Failed to read config file:"+configfile_name + cc.reset)
             pass
 
 
@@ -540,7 +540,7 @@ class server(asyncore.dispatcher):
     # show message of the day
     def show_motd(self):
         #os.system('clear')
-        print   ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ \n' + \
+        print(  ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ \n' + \
                 '  This is the Flexible Rare Event Sampling Harness System  \n' + \
                 '         ______ _____  ______  _____ _    _  _____         \n' + \
                 '        |  ____|  __ \|  ____|/ ____| |  | |/ ____|        \n' + \
@@ -558,7 +558,7 @@ class server(asyncore.dispatcher):
                 ' MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n' + \
                 ' For more information and licensing see COPYING\n' + \
                 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ \n' + \
-                cc.reset
+                cc.reset )
 
 # -------------------------------------------------------------------------------------------------
 

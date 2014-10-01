@@ -44,12 +44,12 @@ class listenThread( threading.Thread ):
 
          ##blocking read the return config
          while self.fifoHandle == 0: ###BUSY WAIT - FIX THIS!
-                print "Client: (re)opening listen fifo:"+self.fifoPath
+                print("Client: (re)opening listen fifo:"+self.fifoPath)
                 self.fifoHandle = os.open(self.fifoPath, os.O_RDONLY )
          else:
-                print "Client: listen fifo is open:"+self.fifoPath
+                print("Client: listen fifo is open:"+self.fifoPath)
                 
-         print "Client: listener thread waiting for return data"
+         print("Client: listener thread waiting for return data")
 
          line = self.get_line( self.fifoHandle )
          while line :
@@ -61,7 +61,7 @@ class listenThread( threading.Thread ):
 
          os.close( self.fifoHandle )
 
-         print "Client: listener thread on "+self.fifoPath+" finished..."
+         print("Client: listener thread on "+self.fifoPath+" finished...")
          self.finishedNow.set()
 
     ##get a newline-terminated string from the FIFO, using

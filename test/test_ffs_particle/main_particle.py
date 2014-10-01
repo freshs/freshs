@@ -41,7 +41,7 @@ parser.add_option("-t", "--timeout", dest="timeout", help="refuse to accept new 
 
 (options, args) = parser.parse_args()
 
-print 'Launching particle client, port: ', options.port, ' server: ', options.server, ' timeout: ', options.timeout
+print('Launching particle client, port: ', options.port, ' server: ', options.server, ' timeout: ', options.timeout)
 
 # ffs(A,B,n)
 sp = particle(options.server, options.port, options.ebarrier, options.timeout)

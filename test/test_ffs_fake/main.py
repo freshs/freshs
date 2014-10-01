@@ -53,4 +53,4 @@ for client in fake_ffs.clients:
 
 asyncore.loop()
 
-print "The transition rate should be", fake_ffs.get_k_AB()
+print("The transition rate should be", fake_ffs.get_k_AB())

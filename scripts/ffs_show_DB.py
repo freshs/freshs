@@ -28,9 +28,9 @@ import configpoints
 
 
 if len(sys.argv) < 2:
-    print "Usage:", sys.argv[0], "<../server/DB/DB-file>"
+    print("Usage:", sys.argv[0], "<../server/DB/DB-file>")
     exit(1)
 
 cfph = configpoints.configpoints('none', sys.argv[1])
-print cfph.show_table()
+print(cfph.show_table())
 

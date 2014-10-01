@@ -41,7 +41,7 @@ class particle_ffs:
         act_lambda = parameterset['act_lambda']
         seed       = parameterset['seed']
 
-        print 'Calculating escape flux: ' + str(A) + ', ' + str(B)
+        print('Calculating escape flux: ' + str(A) + ', ' + str(B))
         
         rcvals = []
         points = []
@@ -86,7 +86,6 @@ class particle_ffs:
                                                     ", \"points\": "      + str(points[0])     +\
                                                     ", \"act_lambda\": "  + str(act_lambda) +\
                                                     ", \"calcsteps\": "   + str(calcsteps)  + " }"
-        #print str(results)
         return results
 
     
@@ -109,7 +108,7 @@ class particle_ffs:
         i = 0
         
         run_in_progress = True
-        print parameterset['random_points']
+        print(parameterset['random_points'])
         x, v = parameterset['random_points']
         a = self.cli.single_particle_ext_force(x)
         while run_in_progress and not self.cli.abort:
@@ -134,7 +133,7 @@ class particle_ffs:
             
         i += 1
                 
-        print "client returning results packet: "+str(results)[0:128]+"..."
+        print("client returning results packet: "+str(results)[0:128]+"...")
         return results
 
 

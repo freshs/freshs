@@ -36,7 +36,7 @@ def extract_customdata(interface,dbhandle):
     return floatdata
 
 if len(sys.argv) < 2:
-    print "Usage:", sys.argv[0], "<../server/DB/configpoint-DB-file>"
+    print("Usage:", sys.argv[0], "<../server/DB/configpoint-DB-file>")
     exit(1)
 
 cfph = configpoints.configpoints('none', sys.argv[1])
@@ -45,7 +45,7 @@ maxlam = cfph.biggest_lambda()
 
 for i in range(maxlam+1):
 
-    print "Interface", i
-    print extract_customdata(i,cfph)
+    print("Interface", i)
+    print(extract_customdata(i,cfph))
     # TODO: build histograms
 

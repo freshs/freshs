@@ -34,7 +34,6 @@ import ast
 
 #arguments = sys.argv
 
-#print arguments
 #raise SystemExit
 
 #
@@ -57,7 +56,7 @@ class fclient(threading.Thread,asyncore.dispatcher):
     def run(self):
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connect((self.host, self.port))
-        print self.name, "is connecting to server."
+        print(self.name, "is connecting to server.")
 
         # setup timeout stuff
         start_time      = time.time()
@@ -72,10 +71,10 @@ class fclient(threading.Thread,asyncore.dispatcher):
         pass
         
     def handle_connect(self):
-        print 'Trying to connect...'
+        print('Trying to connect...')
     
     def handle_close(self):
-        print 'Closed. Server not running or disconnected.'
+        print('Closed. Server not running or disconnected.')
         self.close()
         return
     
@@ -99,15 +98,15 @@ class fclient(threading.Thread,asyncore.dispatcher):
 
             ##handle jobs sent in order.
             if parameterset["jobtype"] == 1:
-                        print 'Starting job1: Escape flux with parameterset', parameterset
+                        print('Starting job1: Escape flux with parameterset', parameterset)
                         time.sleep(self.report_delay)
                         result = self.fffs.job1_escape_flux(self, parameterset)
             elif parameterset["jobtype"] == 2:
-                        print 'Starting job2: Probabilities with parameterset', parameterset
+                        print('Starting job2: Probabilities with parameterset', parameterset)
                         time.sleep(self.report_delay)
                         result = self.fffs.job2_probabilities(self, parameterset)
             elif parameterset["jobtype"] <= 0:
-                        print 'Waiting for new job.'
+                        print('Waiting for new job.')
                         self.abort = True   
                         return
   
@@ -116,11 +115,11 @@ class fclient(threading.Thread,asyncore.dispatcher):
             if self.timeout != 0:
                 t = time.time()
                 if self.stop_after <= t:
-                    print "TIMEOUT: client attempting to exit gracefully."
+                    print("TIMEOUT: client attempting to exit gracefully.")
                     result = result + 'WARN_TIMEOUT'
                     last_job = True
                 else:
-                    print "Future uptime at least " + str(self.stop_after - t) + " seconds."
+                    print("Future uptime at least " + str(self.stop_after - t) + " seconds.")
 
 
             result = result + 'PKT_SEP\n'
@@ -129,10 +128,10 @@ class fclient(threading.Thread,asyncore.dispatcher):
             while count < packet_len:
                 count += self.send( result[count:packet_len] )
                 
-            print "sent data, size:" + str(len(result))
+            print("sent data, size:" + str(len(result)))
             if len(result) > 256:
-                print "data:" + result[0:64] + "..."
-                print "..." + result[len(result)-64:len(result)]
+                print("data:" + result[0:64] + "...")
+                print("..." + result[len(result)-64:len(result)])
             
             if last_job == True:
                 self.close()
@@ -140,7 +139,7 @@ class fclient(threading.Thread,asyncore.dispatcher):
                 
 
         else:
-            print "received unknown data:" + data + ":end, ignoring"
+            print("received unknown data:" + data + ":end, ignoring")
             
 
     def handle_read(self):
@@ -148,7 +147,7 @@ class fclient(threading.Thread,asyncore.dispatcher):
         data            = self.recv(262144)
         self.abort      = False
         
-        # print "raw read of:"+data+":end raw"
+        # print("raw read of:"+data+":end raw")
 
         self.save_bytes = self.save_bytes + data
         

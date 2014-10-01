@@ -58,7 +58,7 @@ class client_ffs:
         else:
             uuid = ''
 
-        print 'Calculating escape flux: ' + str(A) + ', ' + str(B)
+        print('Calculating escape flux: ' + str(A) + ', ' + str(B))
         
         all_meta = {}
         
@@ -79,7 +79,7 @@ class client_ffs:
             
             # Checking for previous points
             if 'random_points' in parameterset:
-                print "Random points key in paramset"
+                print("Random points key in paramset")
                 if not 'None' in str(parameterset['random_points']):
                     # Use previous point
                     use_existing_point = True
@@ -129,17 +129,17 @@ class client_ffs:
                 calcsteps += steps
                 ctime     += time
 
-                print "Client: collected MD output" + str((steps, time, rc))
+                print("Client: collected MD output" + str((steps, time, rc)))
 
                 flRc = float(rc)
 
                 if 'step_abort' in all_meta:
                     if all_meta['step_abort']:
-                        print "Client: job was aborted because of maximum steps."
+                        print("Client: job was aborted because of maximum steps.")
                         success = False
                 elif 'reached_B_escape' in all_meta:
                     if all_meta['reached_B_escape']:
-                        print "Escape job reached B, asking server for new config"
+                        print("Escape job reached B, asking server for new config")
                         success = False
                     else:
                         success = True
@@ -156,16 +156,16 @@ class client_ffs:
                     # perform the logic themselves
 
                     if flRc >= float(B):
-                        print "Client: reached B, resetting"
+                        print("Client: reached B, resetting")
                         success = False
                         break
                     elif flRc >= float(A) and comefromok:
-                        print "Client: reached interface coming from A, saving point."
+                        print("Client: reached interface coming from A, saving point.")
                         comefromok = False
                         success = True
                         break
                     elif flRc < float(A) and not comefromok:
-                        print "Client: has fallen back to A"
+                        print("Client: has fallen back to A")
                         comefromok = True
                         
                     if parameterset['max_steps'] > 0:
@@ -174,7 +174,7 @@ class client_ffs:
                             break
 
                     ##
-                    print "Client: continuing, with rc: "+str(flRc)+" of "+str(A)+", "+str(B)
+                    print("Client: continuing, with rc: "+str(flRc)+" of "+str(A)+", "+str(B))
 
 
                     # Start a new sender to write out the data that we just recieved.
@@ -202,7 +202,7 @@ class client_ffs:
             exit( e )
         h.clean()
         
-        print "Client: Constructing result string"
+        print("Client: Constructing result string")
 
         if success:
             results_base = "\"jobtype\": 1, \"success\": True, \"points\": " + str(points[-1])
@@ -217,11 +217,11 @@ class client_ffs:
                         ", \"rcval\": "      + str(flRc) + \
                         ", \"uuid\": \""      + uuid + "\""
 
-        #print "Resultstring before appending:", results_base
+        #print("Resultstring before appending:", results_base)
 
         results = self.build_custominfo(results_base, all_meta)
 
-        #print "Resultstring after appending:", results
+        #print("Resultstring after appending:", results)
 
         return "{" + results + "}"
 
@@ -254,7 +254,7 @@ class client_ffs:
         # in a try-catch to clean up on interrupts, ctrl-C etc.
         try:     
             
-            print "sending: "+str(parameterset['random_points'])[0:64]
+            print("sending: "+str(parameterset['random_points'])[0:64])
 
             # start loading the input pipes for the MD process
             h.send( True, True, True, parameterset['random_points'] )
@@ -324,11 +324,11 @@ class client_ffs:
         
              
              
-        #print "Resultstring before appending:", results_base
+        #print("Resultstring before appending:", results_base)
 
         results = self.build_custominfo(results_base, all_meta)
 
-        #print "Resultstring after appending:", results
+        #print("Resultstring after appending:", results)
 
         return "{" + results + "}"
 

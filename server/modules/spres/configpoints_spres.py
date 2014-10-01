@@ -76,7 +76,6 @@ class configpoints:
             self.cur.execute('create table '+name+' (lambda int, configpoint text, origin_point text, calcsteps int, ctime real, runtime real, success int, runcount int, myid text, seed int, lambda_old int, weight real, rcval real)')
             self.con.commit()
         except:
-            #print "Not creating table, already exists."
             pass
 
         return name

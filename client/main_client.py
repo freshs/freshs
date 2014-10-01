@@ -49,7 +49,7 @@ parser.add_option("-S", "--server-host", dest="server", help="network address(:p
 (options, args) = parser.parse_args()
 
 if os.path.isfile(options.config):
-    print "Client: reading client config file: "+options.config
+    print("Client: reading client config file: "+options.config)
 else:   # if filename is not given
     print('Client: A valid client config file is required.\n'+\
           '\tCurrent value is: "'+\

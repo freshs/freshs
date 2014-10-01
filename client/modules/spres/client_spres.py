@@ -56,9 +56,9 @@ class client_spres:
     def job3_fixed_tau(self, parameterset):
         
         if self.prinlevel > 0:
-              print "parameters:"
+              print("parameters:")
 	      sys.stdout.flush()
-              print str(parameterset)[0:128]+"..."
+              print(str(parameterset)[0:128]+"...")
               sys.stdout.flush()
 
         ##expected parameters for this job type
@@ -97,7 +97,7 @@ class client_spres:
         points=parameterset['random_points']
         while num_steps < tau :
                 
-            print "Using temp dir: "+str(h.tmpdir)
+            print("Using temp dir: "+str(h.tmpdir))
             
 
             optionlist = ""
@@ -107,12 +107,12 @@ class client_spres:
                 get_coords   = True
                 send_coords  = False
                 if os.path.isfile(start_config):
-                    print "client: Found file at: "+start_config
-                    print "client: Treating input coords as NULL, loading from file."
+                    print("client: Found file at: "+start_config)
+                    print("client: Treating input coords as NULL, loading from file.")
                 else:
-                    print "client: Treating input coords as NULL:\n"+\
+                    print("client: Treating input coords as NULL:\n"+\
                           "client:    could not find input file: "+str(start_config)+"\n"\
-                          "client:    hoping that the harness will generate one!"
+                          "client:    hoping that the harness will generate one!")
                     start_config = "None"
             else: 
 
@@ -156,7 +156,7 @@ class client_spres:
                 optionlist += " -coords_to_file "+save_configs+"/"+uuid
             
 
-            print "client: optionlist: "+str(optionlist)[0:128]+"..."
+            print("client: optionlist: "+str(optionlist)[0:128]+"...")
 
             ##Wrap the code that uses threading/subprocesses
             ##in a try-catch to clean up on interrupts, ctrl-C etc.
@@ -211,7 +211,7 @@ class client_spres:
 
         results = self.build_custominfo(results, all_meta)
 
-        print "client returning results packet: "+str(results)[0:128]+"..."+str(results[len(results)-64:len(results)])
+        print("client returning results packet: "+str(results)[0:128]+"..."+str(results[len(results)-64:len(results)]))
         return "{" + results + "}"
          
          

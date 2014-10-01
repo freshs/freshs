@@ -58,7 +58,7 @@ def visit(cfp):
     global last_processed
 
     op = cfph.return_origin_point_by_id(cfp[2])
-    print "origin point of", cfp[8], "is", op[8]
+    print("origin point of", cfp[8], "is", op[8])
 
     tr_line.append([ cfp[0],cfp[13],cfp[12],cfp[3],cfp[4],cfp[5],cfp[9] ])
     rc_line.append(cfp[17].strip().split())
@@ -70,7 +70,7 @@ def visit(cfp):
 
 # check usage
 if len(sys.argv) < 2:
-    print "Usage:", sys.argv[0], "<configpoint-DB-file.sqlite>"
+    print("Usage:", sys.argv[0], "<configpoint-DB-file.sqlite>")
     exit(1)
 
 # construct timestamp out of DB filename
@@ -125,7 +125,7 @@ for cfp in cfpcand:
         # step count
         steps_tot = 0
         tname = 'trace' + str(tracecount)
-        print tname
+        print(tname)
         tracefile = tname + '.dat'
         tracepath = tname + '.path'
         repfile = tname + '.rep'
@@ -181,7 +181,7 @@ for cfp in cfpcand:
 fhtp.close()
 
 
-print "Wrote to output folder", outdir
+print("Wrote to output folder", outdir)
 
 
 

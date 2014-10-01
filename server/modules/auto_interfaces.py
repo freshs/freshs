@@ -140,25 +140,20 @@ class auto_interfaces():
         ## idea: get maximum stepwidth of runs from customdata
         #import re
         #import numpy as np
-        ##print "Getting data in customfield on interface", interface
         ## 2d array, 1 element corresponds to one trajectory
         #cudtmp = ss.storepoints.return_customdata(interface)
         ## loop over trajectories
         #for el in cudtmp:
         #    histodata = []
         #    # extract rcs after label 'allrcs'
-        #    #print "Reading rcs."
         #    candi = re.sub('.*allrcs','', el).split()
-        #    #print "Converting to float."
         #    histodata = np.array(candi).astype(np.float)
-        #    #print "Maximum stepwidth.", len(histodata)
         #    if len(histodata) > 1:
         #        curmax = np.max(np.diff(histodata))
         #    else:
         #        # "only 1 val:", histodata
         #        curmax = 0
         #    if curmax > mindist:
-        #        #print "max is", curmax
         #        mindist = curmax
 
         ## maximum rcval - last known interface

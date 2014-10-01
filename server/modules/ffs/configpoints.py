@@ -34,7 +34,7 @@ try:
     # Formatting
     import modules.concolors as cc
 except:
-    print "Not using console colors."
+    print("Not using console colors.")
 
 # Parsing
 import ast
@@ -87,7 +87,7 @@ class configpoints:
     def commit(self):
         try:
             if len(self.usecountqueue) > 0:
-                print "\nUpdating usecounts in DB,",len(self.usecountqueue),"entries. Please wait."
+                print("\nUpdating usecounts in DB,",len(self.usecountqueue),"entries. Please wait.")
                 # construct queries with case statements for better performance
                 count = 0
                 tquery = "UPDATE configpoints SET usecount=usecount+ CASE myid "
@@ -97,7 +97,7 @@ class configpoints:
                     tquery += "WHEN '" + str(key) + "' THEN " + str(self.usecountqueue[key]) + " "
                     count += 1
                     if count % 10000 == 0:
-                        print count
+                        print(count)
                         tquery += "END WHERE myid IN " + str(tuple(processed_keys))
                         self.cur.execute(tquery)
                         processed_keys = []
@@ -106,16 +106,16 @@ class configpoints:
                 if len(processed_keys) > 1:    
                     # add a where clause that only lines with the candidate myids are considered
                     tquery += "END WHERE myid IN " + str(tuple(processed_keys))
-                    print count
+                    print(count)
                     self.cur.execute(tquery)
                 elif len(processed_keys) == 1:
                     tquery += "END WHERE myid = '" + str(processed_keys[0]) + "'"
                     self.cur.execute(tquery)
 
-                print "Ready."
+                print("Ready.")
                 self.usecountqueue = {}
         except Exception as e:
-            print e
+            print(e)
         self.con.commit()
 
     # Create table layout
@@ -129,7 +129,7 @@ class configpoints:
             self.con.commit()
 
         except Exception as exc:
-            print self.dbfile + ":", exc
+            print(self.dbfile + ":", exc)
             
 
     # Add config point to database
@@ -275,7 +275,7 @@ class configpoints:
         
         # return if there are no points
         if npoints == 0:
-            print "DANG! No point in list!"
+            print("DANG! No point in list!")
             return None
         return tarray[random.randint(0, npoints - 1)]
         
@@ -292,7 +292,7 @@ class configpoints:
             return retpoints_ids[selptid], selptid
         # last interface is complete but no cache has been built yet
         elif mode == 'last_interface_complete' and self.realcachelambda != the_lambda:
-            #print "refresh cache"
+            #print("refresh cache")
             self.realcache = {}
             self.cur.execute('select myid,configpoint from configpoints where deactivated = 0 and success = 1 and lambda = ?',[the_lambda])
             for row in self.cur:
@@ -302,12 +302,12 @@ class configpoints:
             return self.realcache[selptid], selptid
         # fastest: use point from cache dict
         elif mode == 'last_interface_complete' and self.realcachelambda == the_lambda:
-            #print "using cache"
+            #print("using cache")
             selptid = random.choice(self.realcache.keys())
             return self.realcache[selptid], selptid
 
         else:
-            print "Something went wrong while choosing point."
+            print("Something went wrong while choosing point.")
             return "",""
 
     # Return a config point based on its unique id.
@@ -315,16 +315,16 @@ class configpoints:
         #print rp_id
         if isinstance(rp_id,tuple):
             try:
-                print "Warn in configpoints: received tuple instead of plain id, converting..."
+                print("Warn in configpoints: received tuple instead of plain id, converting...")
                 rp_id = str(rp_id[0])
             except Exception as e:
-                print e
+                print(e)
         try:
             self.cur.execute('select configpoint from configpoints where myid = ?', [rp_id])
             r = self.cur.fetchone()
         except Exception as e:
-            print e
-            print "rp_id was", rp_id
+            print(e)
+            print("rp_id was", rp_id)
 
         return str(r[0])
 
@@ -339,18 +339,18 @@ class configpoints:
             retid = str(row[1])
             retrc = float(row[2])
         if retid == '':
-            print "No point found for pt_id", pt_id
+            print("No point found for pt_id", pt_id)
         return retconfig, retid, retrc
 
 
     # Check if origin point is in database
     def origin_point_in_database(self, the_point):
-        # print "Checking for ghostpoint on", the_point
+        # print("Checking for ghostpoint on", the_point)
         self.cur.execute('select count(origin_point) from configpoints where origin_point = ?', [str(the_point)])
         for row in self.cur:
-            # print "Found", row
+            # print("Found", row)
             occurrence = int(row[0])
-        # print "Checking", occurrence
+        # print("Checking", occurrence)
         if occurrence >= 1:
             return 1
         else:
@@ -362,7 +362,7 @@ class configpoints:
             return False
         if len(self.usecountqueue) > 0:
             self.commit()
-        #print "ghost database lookup"
+        #print("ghost database lookup")
         self.cur.execute('select count(origin_point) from configpoints where deactivated = 0 and usecount = 0 and origin_point = ?', [str(the_point)])
         for row in self.cur:
             occurrence = int(row[0])
@@ -373,14 +373,14 @@ class configpoints:
             # "No active origin point in database"
             # append the point only, if no ghosts are running and collecting ghost points!
             if no_ghosts_running and (the_point not in self.noghostonpoint):
-                #print "no ghost on point", the_point, "adding to cache. Cache entries:", len(self.noghostonpoint)
+                #print("no ghost on point", the_point, "adding to cache. Cache entries:", len(self.noghostonpoint))
                 self.noghostonpoint.append(the_point)
             return False
 
     def build_ghost_exclude_cache(self,lam,pts):
         if len(self.usecountqueue) > 0:
             self.commit()
-        #print "Building ghost exclude cache."
+        #print("Building ghost exclude cache.")
         # get all points where unused ghosts exist
         self.cur.execute('select origin_point from configpoints where deactivated = 0 and usecount = 0 and lambda = ?', [lam])
         # remove them from list of all points
@@ -389,7 +389,7 @@ class configpoints:
             if pt in pts:
                 pts.remove(pt)
         self.noghostonpoint = pts[:]
-        #print "'No ghost' - cache entries:", len(self.noghostonpoint)
+        #print("'No ghost' - cache entries:", len(self.noghostonpoint))
 
     def return_usecount(self, the_point):
         # Commit all changes because usecount can be in queue
@@ -398,7 +398,7 @@ class configpoints:
         self.cur.execute('select usecount from configpoints where origin_point = ?', [str(the_point)])
         for row in self.cur:
             usecount = int(row[0])
-        #print "Point was used", usecount, "times."
+        #print("Point was used", usecount, "times.")
         return usecount
 
     # return mean of field "calcsteps" on interface
@@ -428,7 +428,6 @@ class configpoints:
             retval = int(r[0])
             return retval
         except Exception as e:
-            #print e
             return 0
         if retval == None:
             return 0
@@ -550,7 +549,7 @@ class configpoints:
         self.cur.execute('select count(*) from configpoints where origin_point = ?', [str(pt)])
         for row in self.cur:
             occurrence = int(row[0])
-        #print "Found ", pt, occurrence, "times as origin point."
+        #print("Found ", pt, occurrence, "times as origin point.")
         if occurrence > 0:
             return True
         else:
@@ -565,8 +564,8 @@ class configpoints:
             warncnt += 1
             origin_point_id = str(row[0])
         if warncnt > 1:
-            print "configpoints warning: More than one point found! Returning last one!"
-        #print "Origin point from", the_point_id, "is", origin_point_id
+            print("configpoints warning: More than one point found! Returning last one!")
+        #print("Origin point from", the_point_id, "is", origin_point_id)
         return origin_point_id
 
     def return_calcsteps_by_id(self, pt_id):
@@ -574,7 +573,7 @@ class configpoints:
         self.cur.execute('select calcsteps from configpoints where myid = ?', [str(pt_id)])
         for row in self.cur:
             calcsteps = int(row[0])
-        #print "Returning calcsteps from", pt_id, ":", calcsteps
+        #print("Returning calcsteps from", pt_id, ":", calcsteps)
         return calcsteps
 
     # traceback the points and add up calcsteps.
@@ -585,7 +584,7 @@ class configpoints:
         # add calcsteps from point
         tracesteps += self.return_calcsteps_by_id(pt_id)
         while pt_id != 'escape':
-            #print "Visiting", pt_id
+            #print("Visiting", pt_id)
             try:
                 # find origin point
                 pt_id = self.get_escapetrace_origin_id_by_id(pt_id)
@@ -661,12 +660,12 @@ class configpoints:
         # get origin points from current interface
         newids = self.return_origin_ids(lam)
         # remove dupliactes
-        #print "Processing lambda", lam, ", different ids left:", len(newids)
+        #print("Processing lambda", lam, ", different ids left:", len(newids))
         newids = list(set(newids))
 
         if lam > 1:
             for i in range(lam-1):
-                #print "Processing lambda", lam-1-i, ", different ids left:", len(newids)
+                #print("Processing lambda", lam-1-i, ", different ids left:", len(newids))
                 newids = list(set(self.return_origin_ids_by_ids(newids)))
                 
 
@@ -738,7 +737,7 @@ class configpoints:
         # last resort, if every point was sorted out before
         if len(candidates) == 0:
             gimmepoint = allpoints[random.randint(0,len(allpoints)-1)]
-            #print "No candidates left, using", gimmepoint
+            #print("No candidates left, using", gimmepoint)
             gimmepoint_data = self.return_point_by_id(gimmepoint)
             return gimmepoint_data, gimmepoint
 
@@ -921,7 +920,7 @@ class configpoints:
             if nall > 0:
                 probabs.append(float(success) / float(nall))
             else:
-                print "Warning: number of points is 0 despite of having a point on the interface. Something is wrong."
+                print("Warning: number of points is 0 despite of having a point on the interface. Something is wrong.")
         return probabs, asuccess, anonsuccess, nnall
 
     def return_customdata(self,interface):
@@ -954,7 +953,7 @@ class configpoints:
     def show_table(self):
         self.cur.execute('select * from configpoints')
         for row in self.cur:
-            print row
+            print(row)
     
     def show_summary(self):
         self.cur.execute('select * from configpoints')
@@ -963,14 +962,14 @@ class configpoints:
         for row in self.cur:
             if row[0] != tmp:
                 if tmp != -1:
-                    print "Configpoints on lambda" + str(tmp) + ": " + str(countdict[tmp])
+                    print("Configpoints on lambda" + str(tmp) + ": " + str(countdict[tmp]))
                 # new entry in dict
                 countdict[row[0]] = 0
                 tmp = row[0]
                 
             countdict[row[0]] += 1
         if tmp != -1:     
-            print "Configpoints on lambda" + str(tmp) + ": " + str(countdict[tmp])
+            print("Configpoints on lambda" + str(tmp) + ": " + str(countdict[tmp]))
     
     
     

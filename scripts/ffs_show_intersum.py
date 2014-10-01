@@ -29,11 +29,11 @@ import configpoints
 
 
 if len(sys.argv) < 2:
-    print "Usage:", sys.argv[0], "<../server/DB/DB-file>"
+    print("Usage:", sys.argv[0], "<../server/DB/DB-file>")
     exit(1)
 
 cfph = configpoints.configpoints('none', sys.argv[1])
-print "Lambdas from lpos column in DB are:", cfph.return_lamlist()
-print "Summary:"
-print cfph.show_summary()
+print("Lambdas from lpos column in DB are:", cfph.return_lamlist())
+print("Summary:")
+print(cfph.show_summary())
 

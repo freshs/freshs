@@ -55,7 +55,7 @@ class harness:
         try:
             self.tmpdir             = tempfile.mkdtemp(prefix='freshs')
         except e:
-            print "client: Failed to create tmp dir %s" % e
+            print("client: Failed to create tmp dir %s" % e)
             
         self.crds_in_fifoname   = os.path.join(self.tmpdir, 'crds_in')
         self.control_fifoname   = os.path.join(self.tmpdir, 'cont_in')
@@ -68,7 +68,7 @@ class harness:
             os.mkfifo(self.metadata_fifoname)
                 
         except OSError, e:
-            print "client: Failed to create FIFO: %s" % e
+            print("client: Failed to create FIFO: %s" % e)
         
         self.save_bytes=''
 
@@ -92,9 +92,9 @@ class harness:
         self.childproc = os.fork()        
         if  self.childproc == 0: ##in child process
             argList = self.build_argList(parameterset)
-            print "calling the following: "+str(argList) 
+            print("calling the following: "+str(argList) )
             outstatus=subprocess.call(argList)
-            print "simulation program returned, status: " + str(outstatus) + " . Closing fork." 
+            print("simulation program returned, status: " + str(outstatus) + " . Closing fork." )
             exit(0)
         else:
             return
@@ -103,7 +103,7 @@ class harness:
         
         ##start a child process    
         argList = self.build_argList(parameterset)
-        print "calling the following: " + str(argList) 
+        print("calling the following: " + str(argList) )
         
         self.sT = scriptThread(argList)
         self.sT.daemon = True
@@ -128,15 +128,15 @@ class harness:
 
             ##send the config to the MD process
             if send_coords == True :
-                print "Client: Starting coords writer subthread"
+                print("Client: Starting coords writer subthread")
                 self.ocFeeder = feeder(self.crds_in_fifoname, act_point, self.client)
 
             if get_coords == True :
-                print "Client: Starting coords listener subthread"
+                print("Client: Starting coords listener subthread")
                 self.ocListener = listener(self.crds_back_fifoname, self.pp)
 
             if get_meta == True :
-                print "Client: Starting metadata listener subthread"
+                print("Client: Starting metadata listener subthread")
                 self.omListener = listener(self.metadata_fifoname, self.mp)
                
             
@@ -147,7 +147,7 @@ class harness:
             if self.get_coords == True:
                 # Tricking: setting timeout to a week, otherwise CTRL-C does not work
                 self.ocListener.lT.join(604800)
-                print "Client: coords read thread closed"
+                print("Client: coords read thread closed")
                 
                 ##collect the return data from the coords thread
                 points.append(self.pp)
@@ -155,7 +155,7 @@ class harness:
             ##parse the return data from the metadata thread
             if self.get_meta == True :
                 self.omListener.lT.join()
-                print "Client: metadata read thread closed"
+                print("Client: metadata read thread closed")
 
                 line      = self.mp[0]
                 metadata  = ast.literal_eval(line[0])
@@ -165,7 +165,7 @@ class harness:
                 calcsteps = metadata['steps']
                 ctime     = metadata['time']
             
-                #print "Client: set metadata: "+str(metadata)
+                #print("Client: set metadata: "+str(metadata)
 
             return( calcsteps, ctime, this_rc, metadata )
             
@@ -173,16 +173,16 @@ class harness:
               
     def clean(self):
         
-        print "Cleaning"
+        print("Cleaning")
 
         ##try and kill any threads that are waiting
         try:
             for t in threading.enumerate():
                     if t.daemon:
-                        print "Stopping thread: _"+str(t)
+                        print("Stopping thread: _"+str(t))
                         t.stop_event.set() 
         except e:
-            print "Client Warning: Could not set stop flags for harness threads: %s", e
+            print("Client Warning: Could not set stop flags for harness threads: %s", e)
             
 
         ##wait with a timeout of 1 second for each thread to 
@@ -190,15 +190,15 @@ class harness:
         try:
             for t in threading.enumerate():
                     if t.daemon:
-                        print "Cleaning thread: _"+str(t)
+                        print("Cleaning thread: _"+str(t))
                         t.join(1.0)
         except e:
-            print "Client Warning: harness threads may not have died cleanly: %s", e
+            print("Client Warning: harness threads may not have died cleanly: %s", e)
         
         ##make sure that the childproc exits cleanly
         ##os.kill(self.childproc, os.SIGKILL)
         if self.childproc != 0 :
-            print "Cleaning process: "+str(self.childproc)
+            print("Cleaning process: "+str(self.childproc))
             #os.kill(self.childproc, os.SIGKILL)
             os.waitpid(0, 0) ##this call has the effect to clear up any "defunct" processes.
    
@@ -207,15 +207,15 @@ class harness:
             try:
                 os.remove(fname)
             except:
-                print "Warning! Could not delete named fifo in tmpdir: " + fname
+                print("Warning! Could not delete named fifo in tmpdir: " + fname)
                     
         try:
             os.rmdir(self.tmpdir)
         except:
-            print "Warning! Could not delete tmpdir: " + self.tmpdir
+            print("Warning! Could not delete tmpdir: " + self.tmpdir)
                 
         
-        print "Cleaned"
+        print("Cleaned")
    
    
 

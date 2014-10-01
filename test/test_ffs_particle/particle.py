@@ -77,10 +77,10 @@ class particle(asyncore.dispatcher):
         pass
         
     def handle_connect(self):
-        print 'Trying to connect...'
+        print('Trying to connect...')
     
     def handle_close(self):
-        print 'Closed. Server not running or disconnected.'
+        print('Closed. Server not running or disconnected.')
         self.close()
         return
     
@@ -98,26 +98,26 @@ class particle(asyncore.dispatcher):
             try:
                 parameterset=eval(data+"\n")
             except:
-                print('Warning! Could not parse data packet: ' + data[0:49] + '...') 
+                print('Warning! Could not parse data packet: ' + data[0:49] + '...')
                 print('Warning! Dropping packet.') 
                 return
 
             ##handle jobs sent in order.
             if parameterset["jobtype"]==1:
-                        print 'Starting job1: Escape flux.'
+                        print('Starting job1: Escape flux.')
                         result = self.ffs.job1_escape_flux(parameterset)
             elif parameterset["jobtype"]==2:
-                        print 'Starting job2: Probabilities.'
+                        print('Starting job2: Probabilities.')
                         result = self.ffs.job2_probabilities(parameterset)
             elif parameterset["jobtype"]==3:
-                        print 'Starting job3: Fixed tau.'
+                        print('Starting job3: Fixed tau.')
                         result = self.spres.job3_fixed_tau(parameterset)
             elif parameterset["jobtype"] >  3:
-                        print 'Job type not recognised: ' + str(parameterset["jobtype"])
-                        print 'Ignoring.'
+                        print('Job type not recognised: ' + str(parameterset["jobtype"]))
+                        print('Ignoring.')
                         result = ""
             elif parameterset["jobtype"] <= 0:
-                        print 'Waiting for new job.'
+                        print('Waiting for new job.')
                         self.abort = True   
                         return
   
@@ -126,11 +126,11 @@ class particle(asyncore.dispatcher):
             if self.timeout != 0:
                 t = time.time()
                 if self.stop_after <= t:
-                    print "TIMEOUT: client attempting to exit gracefully."
+                    print("TIMEOUT: client attempting to exit gracefully.")
                     result = result + 'WARN_TIMEOUT'
                     last_job = True
                 else:
-                    print "Future uptime at least "+str(self.stop_after - t)+" seconds."
+                    print("Future uptime at least "+str(self.stop_after - t)+" seconds.")
 
 
             result = result + 'PKT_SEP\n'
@@ -139,10 +139,10 @@ class particle(asyncore.dispatcher):
             while count < packet_len:
                 count += self.send( result[count:packet_len] )
                 
-            print "sent data, size:"+str(len(result))
+            print("sent data, size:"+str(len(result)))
             if len(result) > 256:
-                print "data:"+result[0:64]+"..."
-                print "..."+result[len(result)-64:len(result)]
+                print("data:"+result[0:64]+"...")
+                print("..."+result[len(result)-64:len(result)])
             
             if last_job == True:
                 self.close()
@@ -150,7 +150,7 @@ class particle(asyncore.dispatcher):
                 
 
         else:
-            print "received unknown data:"+data+":end, ignoring"
+            print("received unknown data:"+data+":end, ignoring")
             
 
 
@@ -160,7 +160,7 @@ class particle(asyncore.dispatcher):
         data            = self.recv(262144)
         self.abort      = False
         
-        #print "raw read of:"+data+":end raw"
+        #print("raw read of:"+data+":end raw")
 
         self.save_bytes = self.save_bytes + data
         

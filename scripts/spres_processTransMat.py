@@ -39,8 +39,6 @@ def printTmsEvs( evFiles, evFileNameStem, tm_outFile, meanTm, L ):
     
     evals, evecs = np.linalg.eig( np.transpose(meanTm) )
     #evals, evecs = np.linalg.eig( meanTm )
-    #print "Unsorted:"
-    #print (evals,evecs)
 
     ###sort by eigenvalue
     ssorted=sorted(zip(evals,np.transpose(evecs)),key=lambda x: abs(x[0]), reverse=True)
@@ -50,7 +48,7 @@ def printTmsEvs( evFiles, evFileNameStem, tm_outFile, meanTm, L ):
     ##i^th eigenvector is in "column" i.
 
         EVAL=ssorted[j][0]
-        print EVAL
+        print(EVAL)
         if abs(EVAL) > 0.99:
 
             EVEC=ssorted[j][1]
@@ -60,7 +58,7 @@ def printTmsEvs( evFiles, evFileNameStem, tm_outFile, meanTm, L ):
                 sign=-1.0
             EVEC = EVEC * sign
 
-            print EVEC
+            print(EVEC)
 
            ##open evec output file
             while len(evFiles) < j+1:
@@ -102,10 +100,10 @@ bBlockAverage=options.bBlockAverage
 if len(args) > 0:
     tmNames=args
 else:
-    print "processTransmat.py: takes the mean and diagonalises a transition matrix"
-    print "require minimum 1 arguments,  SPRES output files with transition matrix time series."
-    print "Optional argument: --tblock tBlockAverage, blocksize for time-average. default="+str(tBlockAverage)
-    print "Optional argument: --bblock bBlockAverage, for bin-average. default="+str(bBlockAverage)
+    print("processTransmat.py: takes the mean and diagonalises a transition matrix")
+    print("require minimum 1 arguments,  SPRES output files with transition matrix time series.")
+    print("Optional argument: --tblock tBlockAverage, blocksize for time-average. default="+str(tBlockAverage))
+    print("Optional argument: --bblock bBlockAverage, for bin-average. default="+str(bBlockAverage))
     exit(8)
 
 ##open all input files
@@ -120,7 +118,7 @@ for tmName in tmNames:
     if not tmFile:
         exit( "Error, could not open file: "+tmName)
     else:
-        print "Reading file: "+str(tmName)
+        print("Reading file: "+str(tmName))
 
     ##load the matrix files 
     tCount  = 0
@@ -177,7 +175,7 @@ for tmName in tmNames:
                         allMats[t_index][i][j] = 0.0
 
             if tCount % 100 == 0:
-                print "   Read "+str(tCount)+" matrices, size: "+str(L)+" by "+str(L) 
+                print("   Read "+str(tCount)+" matrices, size: "+str(L)+" by "+str(L) )
             
      
 
@@ -207,7 +205,7 @@ for t in range(t_index+1):
            for j in range(L):
                meanTm[i,j] = allMats[t][i][j] * invWeight
 
-       print "Diagonalising at t = "+str(t * tBlockAverage)
+       print("Diagonalising at t = "+str(t * tBlockAverage))
        printTmsEvs( evFiles, "evecs", tm_outFile, meanTm, L )
     
 tm_outFile.close()

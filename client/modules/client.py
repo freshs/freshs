@@ -57,7 +57,7 @@ class client(asyncore.dispatcher):
         if configfile == 'auto':
             configfile = 'client-sample.conf'
 
-        print 'Client initialising'
+        print('Client initialising')
         sys.stdout.flush()
 
         self.read_configfile(configfile)
@@ -106,8 +106,8 @@ class client(asyncore.dispatcher):
         self.ffs       = client_ffs(self)
         self.spres     = client_spres(self)
         
-        print 'client initted to run scripts in: ' +  self.harness_path +\
-              ' using executable: ' + self.exec_name    
+        print('client initted to run scripts in: ' +  self.harness_path +\
+              ' using executable: ' + self.exec_name    )
         sys.stdout.flush()
 
     # read the config file
@@ -184,10 +184,10 @@ class client(asyncore.dispatcher):
     def create_ssh_tunnel(self):
         ntunnels = int(re.sub('\n','',subprocess.check_output('ps -ef | grep "' + self.ssh_tunnelcommand + '" | grep -v grep | wc -l',shell=True)))
         if ntunnels > 0:
-            print "At least 1 ssh tunnel command is already running, not creating a new one."
+            print("At least 1 ssh tunnel command is already running, not creating a new one.")
         else:
             tcmd = self.ssh_tunnelcommand.split(' ')
-            print "Opening tunnel with", self.ssh_tunnelcommand
+            print("Opening tunnel with"+str(self.ssh_tunnelcommand))
             subprocess.Popen(tcmd)
             time.sleep(2)
             
@@ -197,10 +197,10 @@ class client(asyncore.dispatcher):
         pass
         
     def handle_connect(self):
-        print 'Trying to connect...'
+        print('Trying to connect...')
     
     def handle_close(self):
-        print 'CLIENT: Closing down. Server not running, or disconnected?'
+        print('CLIENT: Closing down. Server not running, or disconnected?')
         self.close()
         exit(0)
         return
@@ -225,23 +225,23 @@ class client(asyncore.dispatcher):
 
             ##handle jobs sent in order.
             if parameterset["jobtype"] == 1:
-                        print 'Starting job1: Escape flux.'
+                        print('Starting job1: Escape flux.')
                         result = self.ffs.job1_escape_flux(parameterset)
             elif parameterset["jobtype"] == 2:
                         if "only_escape" in parameterset:
-                            print "Exiting because only escape run was desired!"
+                            print("Exiting because only escape run was desired!")
                             raise SystemExit
-                        print 'Starting job2: Probabilities.'
+                        print('Starting job2: Probabilities.')
                         result = self.ffs.job2_probabilities(parameterset)
             elif parameterset["jobtype"] == 3:
-                        print 'Starting job3: Fixed tau.'
+                        print('Starting job3: Fixed tau.')
                         result = self.spres.job3_fixed_tau(parameterset)
             elif parameterset["jobtype"] >  3:
-                        print 'Job type not recognised: ' + str(parameterset["jobtype"])
-                        print 'Ignoring.'
+                        print('Job type not recognised: ' + str(parameterset["jobtype"]))
+                        print('Ignoring.')
                         result = ""
             elif parameterset["jobtype"] <= 0:
-                        print 'Waiting for new job.'
+                        print('Waiting for new job.')
                         self.abort = True   
                         return
   
@@ -250,11 +250,11 @@ class client(asyncore.dispatcher):
             if self.timeout != 0:
                 t = time.time()
                 if self.stop_after <= t:
-                    print "TIMEOUT: client attempting to exit gracefully."
+                    print("TIMEOUT: client attempting to exit gracefully.")
                     result = result + 'WARN_TIMEOUT'
                     last_job = True
                 else:
-                    print "Future uptime at least " + str(self.stop_after - t) + " seconds."
+                    print("Future uptime at least " + str(self.stop_after - t) + " seconds.")
 
 
             result = result + 'PKT_SEP\n'
@@ -263,19 +263,19 @@ class client(asyncore.dispatcher):
             while count < packet_len:
                 count += self.send( result[count:packet_len] )
                 
-            print "sent data, size:" + str(len(result))
+            print("sent data, size:" + str(len(result)))
             if len(result) > 256:
-                print "data:" + result[0:64] + "..."
-                print "..." + result[len(result)-64:len(result)]
+                print("data:" + result[0:64] + "...")
+                print("..." + result[len(result)-64:len(result)])
             
             if last_job == True:
-                print "CLIENT CLOSING ON TIMEOUT: " + data
+                print("CLIENT CLOSING ON TIMEOUT: " + data)
                 self.close()
                 exit('TIMEOUT')
                 
 
         else:
-            print "received additional data: " + data
+            print("received additional data: " + data)
             
 
     def handle_read(self):
@@ -283,8 +283,6 @@ class client(asyncore.dispatcher):
         data            = self.recv(262144)
         self.abort      = False
         
-        # print "raw read of:"+data+":end raw"
-
         self.save_bytes = self.save_bytes + data
         
         while len(self.save_bytes) != 0 :

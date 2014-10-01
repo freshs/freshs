@@ -33,9 +33,9 @@ file_suff=".dat" ##default output file suffix
 ##start execution.
 arguments = sys.argv
 if len(arguments) < 4:
-    print "extractTraj.py: require as arguments one SQLite database file,\n"+\
+    print("extractTraj.py: require as arguments one SQLite database file,\n"+\
           "the index of a bin after which nucleation has occured.\n"+\
-          "and the the time interval tau."
+          "and the the time interval tau.")
     exit( str(arguments) )
 
 db1_name = arguments[1]
@@ -58,23 +58,23 @@ else:
 ##get the size
 cur1.execute('select count(*) from '+tab1)
 n1 = cur1.fetchone()[0]
-print "database has: "+str(n1)+" rows"
+print("database has: "+str(n1)+" rows")
 
 ##index the database by calcsteps for faster searching on this value
-print "creating an index for database by field: calcsteps."
+print("creating an index for database by field: calcsteps.")
 cur1.execute('create index if not exists cs_index on '+tab1+' (calcsteps)')
 
 ##find the oldest configs
 cur1.execute('select max(calcsteps) from '+tab1)
 maxTime =  float(cur1.fetchone()[0])
-print "database has oldest entries at: "+str(maxTime)
+print("database has oldest entries at: "+str(maxTime))
 
 ##loop over nucleated points
 cur1.execute('select * from '+tab1+' where calcsteps = ? and lambda = ?', [float(maxTime), max_l])
 
 
 lines = cur1.fetchall()
-print "Got "+str(len(lines))+" nucleated configs at time "+str(maxTime)
+print("Got "+str(len(lines))+" nucleated configs at time "+str(maxTime))
 traj_count=0
 for line in lines:
     configPoint=line[1]
@@ -86,11 +86,11 @@ for line in lines:
     ##which reached the bin 
     posterior_weight = line[11] 
 
-    print "\n"
-    print "Writing traj id: "+file_stem+"_"+\
+    print("\n")
+    print("Writing traj id: "+file_stem+"_"+\
                         str(traj_count)+"_"+\
-                  str(posterior_weight)
-    print "in separate files for each frame"
+                  str(posterior_weight))
+    print("in separate files for each frame")
 
     while configPoint :        
 
@@ -108,7 +108,7 @@ for line in lines:
             trajFile.write(space_sepped+"\n")
         trajFile.close()
 
-        print "Wrote file: "+fileName
+        print("Wrote file: "+fileName)
 
 
         ##find the parent point

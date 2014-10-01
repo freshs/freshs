@@ -27,9 +27,9 @@ import sys
 ########################  Helper function.
 def status_exit( status, f1, f2 ):
     if status != 0:
-        print "FAIL, files '"+str(f1)+"' and '"+str(f2)+"' differ."
+        print("FAIL, files '"+str(f1)+"' and '"+str(f2)+"' differ.")
     else:
-        print "SUCCESS, files '"+str(f1)+"' and '"+str(f2)+"' match."
+        print("SUCCESS, files '"+str(f1)+"' and '"+str(f2)+"' match.")
     
     quit()
 ####################################################
@@ -39,7 +39,7 @@ status=0
 ##start execution.
 arguments = sys.argv
 if len(arguments) < 3:
-    print "compare_DB.py: require as arguments two SQLite database files."
+    print("compare_DB.py: require as arguments two SQLite database files.")
     status_exit( 1, arguments[1], "")
 
 db1_name = arguments[1]
@@ -77,8 +77,8 @@ n2 = cur2.fetchone()[0]
 
 ##check that sizes match
 if n1 != n2 :
-    print db1_name+" has: "+str(n1)+" rows"    
-    print db2_name+" has: "+str(n2)+" rows"   
+    print(db1_name+" has: "+str(n1)+" rows")
+    print(db2_name+" has: "+str(n2)+" rows")
     status_exit( 1, db1_name, db2_name )
 
 ##loop over rows
@@ -100,7 +100,7 @@ for i in range(n1) :
     if  result != 1:
         lineid  = line1[8]
         seed    = line1[9]
-        print "FAIL: line with seed: "+str(seed)+" was matched "+str(result)+" times."
+        print("FAIL: line with seed: "+str(seed)+" was matched "+str(result)+" times.")
         status += 1
 
         ##look for closest match:
@@ -108,17 +108,17 @@ for i in range(n1) :
         line2 = cur2.fetchone()
         if line2 :
             if len(line2) == len(line1) :
-                print "In closest match, differing entries were:"
+                print("In closest match, differing entries were:")
                 for i in range(len(line1)): 
                     if str(line1[i]) != str(line2[i]):
                         s1 = str(line1[i])
                         s2 = str(line2[i])
-                        print "'"+s1[0:min(50,len(s1))]+"' .vs. '"+s2[0:min(50,len(s2))]+"'"
+                        print("'"+s1[0:min(50,len(s1))]+"' .vs. '"+s2[0:min(50,len(s2))]+"'")
             else :
-                print "Lines lengths differ.  Target line was:"
+                print("Lines lengths differ.  Target line was:")
                 for i in range(len(line1)): 
                     s1 = str(line1[i])
-                    print s1[0:min(50,len(s1))]+" ... "
+                    print(s1[0:min(50,len(s1))]+" ... ")
         
 
 ##finished. Report number of mismatches and quit.            

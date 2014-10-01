@@ -29,9 +29,9 @@ import sys
 ##start execution.
 arguments = sys.argv
 if len(arguments) < 3:
-    print "buildTree.py: require as arguments one SQLite database file, and the time interval tau\n"
-    print "Prints out a tree diagram with IDs relative weights of configs within bins,"
-    print ".. combine this view with the bin probability data (by default writted to the directory OUTPUT) for best results.\n"
+    print("buildTree.py: require as arguments one SQLite database file, and the time interval tau\n")
+    print("Prints out a tree diagram with IDs relative weights of configs within bins,")
+    print(".. combine this view with the bin probability data (by default writted to the directory OUTPUT) for best results.\n")
     exit( str(arguments) )
 
 db1_name = arguments[1]
@@ -51,13 +51,13 @@ else:
 
 
 ##index the database by calcsteps for faster searching on this value
-#print "#creating an index for database by field: calcsteps."
+#print("#creating an index for database by field: calcsteps.")
 #cur1.execute('create index if not exists cs_index on '+tab1+' (calcsteps)')
 
 ##find the root point
 cur1.execute('select * from '+tab1+' where calcsteps = 0')
 lines = cur1.fetchall()
-print "#Got "+str(len(lines))+" at time 0"
+print("#Got "+str(len(lines))+" at time 0")
 bin={}
 posterior_weight={}
 calcSteps={}
@@ -79,13 +79,13 @@ while len(lines) > 0:
         rc[configId]          = line[12]
         
         ##write the path segment
-        print str(calcSteps[originId])+" "+str(rc[originId])+\
+        print(str(calcSteps[originId])+" "+str(rc[originId])+\
                         " "+str(bin[originId])+\
-                        " "+str(posterior_weight[originId])+" "+str(originId)
-        print str(calcSteps[configId])+" "+str(rc[configId])+\
+                        " "+str(posterior_weight[originId])+" "+str(originId))
+        print(str(calcSteps[configId])+" "+str(rc[configId])+\
                         " "+str(bin[configId])+\
-                        " "+str(posterior_weight[configId])+" "+str(configId)
-        print ""
+                        " "+str(posterior_weight[configId])+" "+str(configId))
+        print("")
         
     if tab:
         tab1 = tab.pop(0)[0]

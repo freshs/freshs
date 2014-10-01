@@ -525,7 +525,7 @@ class ClientHandler(asyncore.dispatcher):
             next_lambda = ss.act_lambda + 1
             next_interface = ss.lambdas[next_lambda]
         else:
-            print "Ghostpoint required! Not implemented yet. Implementation of exploring ghosts is braindeath."
+            print("Ghostpoint required! Not implemented yet. Implementation of exploring ghosts is braindeath.")
             raise SystemExit
             ai = self.server.ai
             next_lambda = ai.ex_lambdas[ex_ind]
