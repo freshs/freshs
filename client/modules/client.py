@@ -200,7 +200,7 @@ class client(asyncore.dispatcher):
         print 'Trying to connect...'
     
     def handle_close(self):
-        print 'Closed. Server not running or disconnected.'
+        print 'CLIENT: Closing down. Server not running, or disconnected?'
         self.close()
         exit(0)
         return
@@ -269,6 +269,7 @@ class client(asyncore.dispatcher):
                 print "..." + result[len(result)-64:len(result)]
             
             if last_job == True:
+                print "CLIENT CLOSING ON TIMEOUT: " + data
                 self.close()
                 exit('TIMEOUT')
                 

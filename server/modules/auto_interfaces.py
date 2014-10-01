@@ -280,6 +280,7 @@ class auto_interfaces():
             return False
 
         if self.arrived_in_B:
+            ss.logger_freshs.debug(cc.c_magenta + __name__ + ': No need for an explorer job.' + cc.reset)
             return False
         
         if self.auto_histo:
@@ -287,6 +288,7 @@ class auto_interfaces():
                 for i in range(len(self.ex_launched)):
                     if self.ex_launched[i] < self.auto_trials:
                         self.ex_launched[i] += 1
+                        ss.logger_freshs.debug(cc.c_magenta + str(client) + ': starting job1' + cc.reset)
                         client.start_job1(0)
                         return True
             else:
@@ -302,6 +304,7 @@ class auto_interfaces():
                     for i in range(len(self.ex_launched)):
                         if self.ex_launched[i] < self.auto_trials:
                             self.ex_launched[i] += 1
+                            ss.logger_freshs.debug(cc.c_magenta + str(client) + ': starting job2' + cc.reset)
                             client.start_job2(0)
                             ss.start_idle_clients()
                             return True
@@ -314,6 +317,7 @@ class auto_interfaces():
             # check for priority run
             for i in self.ex_priority:
                 if self.explorer_possible(i):
+                    ss.logger_freshs.debug(cc.c_magenta + 'Starting high-priority explorer' + cc.reset)
                     self.ex_launched[i] += 1
                     if len(ss.lambdas) == 0:
                         client.start_job1(i)
@@ -324,6 +328,7 @@ class auto_interfaces():
             # check for normal run
             for i in range(len(self.ex_launched)):
                 if self.explorer_possible(i):
+                    ss.logger_freshs.debug(cc.c_magenta + 'Starting low-priority explorer' + cc.reset)
                     self.ex_launched[i] += 1
                     if len(ss.lambdas) == 0:
                         client.start_job1(i)
@@ -331,6 +336,7 @@ class auto_interfaces():
                         client.start_job2(i)
                     return True
 
+        ss.logger_freshs.debug(cc.c_magenta + 'Failed to start explorer' + cc.reset)
         return False
 
 
@@ -940,7 +946,8 @@ class auto_interfaces():
             try:
                 self.append_histo_lambda(ddata['max_lam'],self.cemlti(the_jobs_lambda))
             except:
-                ss.logger_freshs.warn(cc.c_red + client.name + ' maximum lambda information could not be added.' + cc.reset)
+                ss.logger_freshs.warn(cc.c_red + client.name + ' maximum lambda information could not be added!' + cc.reset)
+                ss.logger_freshs.warn(cc.c_red + client.name + ' Sending QUIT to client!' + cc.reset)
                 ss.logger_freshs.debug(cc.c_magenta + 'Data was: ' + str(ddata) + ', job_lambda ' + str(the_jobs_lambda) + cc.reset)
                 client.send_quit()
 
