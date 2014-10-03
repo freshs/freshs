@@ -97,12 +97,12 @@ class auto_interfaces():
             self.auto_lambda_is_int = ss.configfile.getint('auto_interfaces', 'auto_lambda_is_int')
             # set max steps for exploring client. Client must support this.
             self.auto_max_steps = ss.configfile.getint('auto_interfaces', 'auto_max_steps')
-            self.auto_histo = ss.configfile.getint('auto_interfaces', 'auto_histo')
+            self.auto_histo     = ss.configfile.getint('auto_interfaces', 'auto_histo')
             #self.auto_histo_thresh = ss.configfile.getfloat('auto_interfaces', 'auto_histo_thresh')
             self.auto_min_points = ss.configfile.getfloat('auto_interfaces', 'auto_min_points')
         except Exception as e:
-            print("Problem while reading auto_interfaces config, exception: "+str(e))
-            pass
+            ss.logger_freshs.error(cc.c_red + "Auto_interfaces is turned on, but problem while reading auto_interfaces config, exception: "+str(e)+cc.reset)
+            exit(1)
             
         
         if self.option_in_configile('auto_min_explorer_steps'):
