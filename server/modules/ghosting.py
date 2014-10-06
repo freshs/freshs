@@ -32,7 +32,7 @@ class ghosting():
     def ghost_possible(self):
         ss = self.server
         
-        ss.logger_freshs.debug(cc.c_magenta + __name__ + ': ghost_possible' + cc.reset)
+        ss.logger_freshs.debug(cc.c_magenta + __name__ + ': testing ghost_possible' + cc.reset)
         
         # Check if next lambda exists.
         if len(ss.lambdas) >= ss.act_lambda + 2:

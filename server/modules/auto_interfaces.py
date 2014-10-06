@@ -100,10 +100,10 @@ class auto_interfaces():
             self.auto_histo     = ss.configfile.getint('auto_interfaces', 'auto_histo')
             #self.auto_histo_thresh = ss.configfile.getfloat('auto_interfaces', 'auto_histo_thresh')
             self.auto_min_points = ss.configfile.getfloat('auto_interfaces', 'auto_min_points')
+             
         except Exception as e:
             ss.logger_freshs.error(cc.c_red + "Auto_interfaces is turned on, but problem while reading auto_interfaces config, exception: "+str(e)+cc.reset)
             exit(1)
-            
         
         if self.option_in_configile('auto_min_explorer_steps'):
             self.auto_min_explorer_steps = ss.configfile.getint('auto_interfaces', 'auto_min_explorer_steps')
@@ -992,8 +992,13 @@ class auto_interfaces():
         if self.auto_histo:
             try:
                 self.append_histo_lambda(ddata['max_lam'],self.cemlti(the_jobs_lambda))
-            except:
+            except Exception as e:
                 ss.logger_freshs.warn(cc.c_red + client.name + ' maximum lambda information could not be added.' + cc.reset)
+                ss.logger_freshs.debug(cc.c_magenta + 'Data was: ' + str(ddata) + ', job_lambda ' + str(the_jobs_lambda) + cc.reset)
+                ss.logger_freshs.warn(cc.c_red + 'max_lam: '+str(ddata['max_lam']) + cc.reset)
+                ss.logger_freshs.warn(cc.c_red + 'histo index: '+str(self.cemlti(the_jobs_lambda)) + cc.reset)
+                ss.logger_freshs.warn(cc.c_red + 'histo state: '+str(self.max_lams) + cc.reset)
+                ss.logger_freshs.warn(cc.c_red + 'Exception was: ' + str(e) + cc.reset)
                 ss.logger_freshs.debug(cc.c_magenta + 'Data was: ' + str(ddata) + ', job_lambda ' + str(the_jobs_lambda) + cc.reset)
                 client.send_quit()
                 

@@ -87,7 +87,7 @@ class configpoints:
     def commit(self):
         try:
             if len(self.usecountqueue) > 0:
-                print("\nUpdating usecounts in DB,",len(self.usecountqueue),"entries. Please wait.")
+                print("Updating usecounts in DB, "+str(len(self.usecountqueue))+" entries. Please wait.")
                 # construct queries with case statements for better performance
                 count = 0
                 tquery = "UPDATE configpoints SET usecount=usecount+ CASE myid "
