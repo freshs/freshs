@@ -611,6 +611,7 @@ class auto_interfaces():
     def cemlti(self,lam):
         cand = lam - self.loffset
         if cand < 0:
+            ss=self.server
             ss.logger_freshs.warn(cc.c_red + 'Client returned wrong exploring mode index, cannot convert.' + cc.reset)
             return lam
         return cand
@@ -942,8 +943,12 @@ class auto_interfaces():
                 self.append_histo_lambda(ddata['max_lam'],self.cemlti(the_jobs_lambda))
             except:
                 ss.logger_freshs.warn(cc.c_red + client.name + ' maximum lambda information could not be added!' + cc.reset)
+                ss.logger_freshs.warn(cc.c_magenta + 'Data was: ' + str(ddata) + ', job_lambda ' + str(the_jobs_lambda) + cc.reset)
+                ss.logger_freshs.warn(cc.c_red + 'max_lam: '+str(ddata['max_lam']) + cc.reset)
+                ss.logger_freshs.warn(cc.c_red + 'histo state: '+str(self.max_lams) + cc.reset)
+                ss.logger_freshs.warn(cc.c_red + 'histo index: '+str(self.cemlti(the_jobs_lambda)) + cc.reset)
+                ss.logger_freshs.warn(cc.c_red + 'Exception was: ' + str(e) + cc.reset)
                 ss.logger_freshs.warn(cc.c_red + client.name + ' Sending QUIT to client!' + cc.reset)
-                ss.logger_freshs.debug(cc.c_magenta + 'Data was: ' + str(ddata) + ', job_lambda ' + str(the_jobs_lambda) + cc.reset)
                 client.send_quit()
 
         if the_jobs_lambda >= self.loffset:
@@ -994,12 +999,11 @@ class auto_interfaces():
                 self.append_histo_lambda(ddata['max_lam'],self.cemlti(the_jobs_lambda))
             except Exception as e:
                 ss.logger_freshs.warn(cc.c_red + client.name + ' maximum lambda information could not be added.' + cc.reset)
-                ss.logger_freshs.debug(cc.c_magenta + 'Data was: ' + str(ddata) + ', job_lambda ' + str(the_jobs_lambda) + cc.reset)
+                ss.logger_freshs.warn(cc.c_magenta + 'Data was: ' + str(ddata) + ', job_lambda ' + str(the_jobs_lambda) + cc.reset)
                 ss.logger_freshs.warn(cc.c_red + 'max_lam: '+str(ddata['max_lam']) + cc.reset)
                 ss.logger_freshs.warn(cc.c_red + 'histo index: '+str(self.cemlti(the_jobs_lambda)) + cc.reset)
                 ss.logger_freshs.warn(cc.c_red + 'histo state: '+str(self.max_lams) + cc.reset)
                 ss.logger_freshs.warn(cc.c_red + 'Exception was: ' + str(e) + cc.reset)
-                ss.logger_freshs.debug(cc.c_magenta + 'Data was: ' + str(ddata) + ', job_lambda ' + str(the_jobs_lambda) + cc.reset)
                 client.send_quit()
                 
         if the_jobs_lambda >= self.loffset:
