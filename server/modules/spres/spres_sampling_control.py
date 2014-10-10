@@ -121,7 +121,7 @@ class spres_sampling_control():
            for bin in range( 0, self.nBins ):
                self.flag_bin_complete[bin] = False
            self.reset_bin_index()
-           if ss.configfile.getint('spres_control','use_multDB') > 0:
+           if ss.storepoints.use_multDB:
                ss.storepoints.increment_active_db(ss.epoch + ss.tau)
            else:
                ss.storepoints.increment_active_table( ss.epoch+ss.tau )
@@ -379,7 +379,7 @@ class spres_sampling_control():
 
         ##move the active DB table forward 1,
         ## (tables are indexed by time at end of run)
-        if ss.configfile.getint('spres_control','use_multDB') > 0:
+        if ss.storepoints.use_multDB:
             ss.storepoints.increment_active_db( ss.epoch+ss.tau )
         else:
             ss.storepoints.increment_active_table( ss.epoch+ss.tau )

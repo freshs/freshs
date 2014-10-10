@@ -180,7 +180,7 @@ class server(asyncore.dispatcher):
                                                  0, 0, 0, 0, 0, 0, 0, 0)
 
                 self.storepoints.commit()
-                if self.configfile.getint('spres_control','use_multDB') > 0:
+                if self.storepoints.use_multDB == True:
                     self.storepoints.increment_active_db(self.epoch + self.tau)
                 else:
                     self.storepoints.increment_active_table(self.epoch + self.tau)
@@ -304,14 +304,21 @@ class server(asyncore.dispatcher):
                 ##open or create a DB with the correct timepoint
                 confdbfile = self.timestamp + '_configpoints.sqlite'
 
-                if self.configfile.getint('spres_control','use_multDB') > 0:
+                if self.configfile.has_option('spres_control','use_multDB'):
+                    if self.configfile.getint('spres_control','use_multDB') > 0:
+                        import configpoints_spres_multDB
+                        self.storepoints=configpoints_spres_multDB.configpoints(self,  self.folder_db + confdbfile, self.epoch)
+
+                    else:
+                        import configpoints_spres
+                        self.storepoints=configpoints_spres.configpoints(self,  self.folder_db + confdbfile)
+                       
+                else:
+                    self.logger_freshs.warn(cc.c_red + 'No option use_multDB in spres_control!' + cc.reset)
+                    self.logger_freshs.warn(cc.c_red + 'Defaulting to use multiple DBs anyway.' + cc.reset)
                     import configpoints_spres_multDB
                     self.storepoints=configpoints_spres_multDB.configpoints(self,  self.folder_db + confdbfile, self.epoch)
-
-                else:
-                    import configpoints_spres
-                    self.storepoints=configpoints_spres.configpoints(self,  self.folder_db + confdbfile)
-
+                        
 
             elif self.algo_name == 'nsffs':
             
@@ -475,6 +482,8 @@ class server(asyncore.dispatcher):
         ##Algo-specific setup
         if self.algo_name == "spres":
 
+          try:
+            
             ##allow non-integer timesteps for event-driven MD
             self.tau               = self.configfile.getfloat('spres_control', 'tau')
             if self.tau - int(self.tau) == 0.0: 
@@ -490,8 +499,13 @@ class server(asyncore.dispatcher):
             if self.configfile.has_option('spres_control', 'replace_flux_at_A'):
                 self.replace_flux_at_A =\
                    self.configfile.getboolean('spres_control', 'replace_flux_at_A')
-
-
+         
+          except Exception as e:
+            self.logger_freshs.warn(cc.c_red + 'Failed reading spres config, exception was:' +\
+                     str(e) + cc.reset)
+            pass
+                     
+         
 # -------------------------------------------------------------------------------------------------
 
     # create folders if they do not exist.

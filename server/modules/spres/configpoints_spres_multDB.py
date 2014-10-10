@@ -41,23 +41,24 @@ class configpoints:
     def __init__(self, server, dbfile, time):
     
         self.server = server
-        
+
+        self.use_multDB   = True
         self.base_db_name = dbfile
         self.leftPad      = 10
         self.dbfile       = dbfile+"."+(str(time).zfill(self.leftPad))
 
         dirName=os.path.dirname(dbfile)
-	dirList=os.listdir(dirName)
-	self.server.logger_freshs.info(cc.c_green + 'listing dir of DB file: ' +\
-	                    dirName + ' , just before connect, gives: '+ str(dirList)+cc.reset)
+        dirList=os.listdir(dirName)
+        self.server.logger_freshs.info(cc.c_green + 'listing dir of DB file: ' +\
+                dirName + ' , just before connect, gives: '+ str(dirList)+cc.reset)
 
-	try:
-	    db_size = os.path.getsize(self.dbfile)
-	    self.server.logger_freshs.info(cc.c_green + 'byte size of db file: ' +\
-		self.dbfile + ' was: '+ str(db_size)+cc.reset)
-	except:
-	    self.server.logger_freshs.debug(cc.c_magenta + 'could not test size of db file: ' +\
-	         self.dbfile + cc.reset)
+        try:
+            db_size = os.path.getsize(self.dbfile)
+            self.server.logger_freshs.info(cc.c_green + 'byte size of db file: ' +\
+               self.dbfile + ' was: '+ str(db_size)+cc.reset)
+        except:
+            self.server.logger_freshs.debug(cc.c_magenta + 'could not test size of db file: ' +\
+               self.dbfile + cc.reset)
 
 
 

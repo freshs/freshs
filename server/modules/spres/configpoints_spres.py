@@ -38,6 +38,8 @@ class configpoints:
     def __init__(self, server, dbfile):
     
         self.server = server
+
+        self.use_multDB    = False
         
         # create sqlite database
         self.dbfile = dbfile
