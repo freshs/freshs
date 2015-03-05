@@ -510,8 +510,8 @@ class auto_interfaces():
                         if lambda_cand < ss.lambdas[-1] + self.auto_mindist:
                             lambda_cand = self.int_float(ss.lambdas[-1] + self.auto_mindist)
 
-                        # if we are 99 % in B...
-                        if lambda_cand >= ss.B * 0.99:
+                        # if we are 99 % in B, use B as the next (and thus, last) interface
+                        if lambda_cand >= ss.A + 0.99 * (ss.B - ss.A):
                             self.ex_lambda = ss.B
                             self.exmode_off()
                             return
@@ -523,7 +523,8 @@ class auto_interfaces():
                             ss.logger_freshs.warn(cc.c_red + 'Lambda is not in range. Waiting for more explorers.' + \
                                                   cc.reset)
                             # restart
-                            self.init_variables()
+                            self.exmode = False
+                            self.exmode_on()
                             return
                         
                     else:
