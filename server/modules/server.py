@@ -130,10 +130,11 @@ class server(asyncore.dispatcher):
             self.lambdas = [self.A]                             # interface variable
             self.fill_lambdas()
         except Exception as e:
-            self.logger_freshs.info(cc.c_red + 'Failed to read interfaces from the config file, exception: '+str(e))
-            self.logger_freshs.info('Guess of problem: section labels are case sensitive.'+cc.reset)
-            pass
-        
+            self.logger_freshs.error(cc.c_red + 'Failed to read interfaces from the config file, exception: ' + str(e))
+            self.logger_freshs.error('Guess of problem: section labels are case sensitive.' + cc.reset)
+            exit(1)
+        if self.A >= self.B:
+            self.logger_freshs.error(cc.c_red + 'Border of B is greater than or equal to border A.\nDecreasing order parameters are currently *not* supported!' + cc.reset)
         self.nohs = self.noi - 1
 
 # ----------------------------------------------------------------------------------------------------------------

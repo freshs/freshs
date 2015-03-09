@@ -29,6 +29,7 @@ class auto_interfaces():
         # switch between real runs and exploring clients
         self.exmode       = False      # exploring mode for interface placement
         self.arrived_in_B = False
+        self.restarts = 0
 
         if not self.read_config():
             return
@@ -100,7 +101,7 @@ class auto_interfaces():
             self.auto_histo     = ss.configfile.getint('auto_interfaces', 'auto_histo')
             #self.auto_histo_thresh = ss.configfile.getfloat('auto_interfaces', 'auto_histo_thresh')
             self.auto_min_points = ss.configfile.getfloat('auto_interfaces', 'auto_min_points')
-             
+            self.max_explorer_restarts = ss.configfile.getint('auto_interfaces', 'max_explorer_restarts')
         except Exception as e:
             ss.logger_freshs.error(cc.c_red + "Auto_interfaces is turned on, but problem while reading auto_interfaces config, exception: "+str(e)+cc.reset)
             exit(1)
@@ -455,7 +456,7 @@ class auto_interfaces():
             
                 # histogram method
                 if self.auto_histo:
-                    # if all clients arrive in B, they have success and therefore we return B
+                    # if all clients arrive in B, they are successful and therefore we return B
                     if self.ex_success[lam] < self.ex_returned[lam]:
                         lhp = len(self.max_lams[lam])
                         
@@ -463,7 +464,7 @@ class auto_interfaces():
                         self.max_lams[lam].sort()
                         ss.logger_freshs.debug(cc.c_cyan + 'Array of maximum lambdas is ' + str(self.max_lams[lam]) + cc.reset)
                         
-                        # we do not know exactly, if our estimated flux will be reached by the clients
+                        # we do not know exactly if our estimated flux will be reached by the clients
                         #target_flux = self.auto_flux_min
                         target_flux = self.auto_flux_max
                         #target_flux = 0.5 * (self.auto_flux_max + self.auto_flux_min)
@@ -511,7 +512,7 @@ class auto_interfaces():
                             lambda_cand = self.int_float(ss.lambdas[-1] + self.auto_mindist)
 
                         # if we are 99 % in B, use B as the next (and thus, last) interface
-                        if lambda_cand >= ss.A + 0.99 * (ss.B - ss.A):
+                        if lambda_cand >= (ss.A + 0.99 * (ss.B - ss.A)):
                             self.ex_lambda = ss.B
                             self.exmode_off()
                             return
@@ -520,11 +521,21 @@ class auto_interfaces():
                             self.ex_lambda = lambda_cand
                             self.exmode_off()
                         else:
-                            ss.logger_freshs.warn(cc.c_red + 'Lambda is not in range. Waiting for more explorers.' + \
-                                                  cc.reset)
-                            # restart
-                            self.exmode = False
-                            self.exmode_on()
+                            # if none of the explorers returned useful data, restart the explorer routine:
+                            if self.restarts < self.max_explorer_restarts:
+                                ss.logger_freshs.warn(cc.c_red + 'Lambda is not in range. Restarting explorer routine.' + cc.reset)
+                                self.restarts += 1
+                                self.exmode = False
+                                self.exmode_on()
+                            # if the explorer routine was restarted too often without success, give up and return act_lambda + min_dist:
+                            else:
+                                ss.logger_freshs.warn(cc.c_red + 'Lambda is still not in range. Refusing to restart explorer routine after %d attempts.\nPlacing next interface at minimum distance.' % (self.restarts + 1) + cc.reset)
+                                self.restarts = 0
+                                if (max(ss.lambdas) + self.auto_mindist) < (ss.A + 0.99 * (ss.B - ss.A)):
+                                    self.ex_lambda = self.int_float(ss.lambdas[-1] + self.auto_mindist)
+                                else:
+                                    self.ex_lambda = ss.B
+                                self.exmode_off()
                             return
                         
                     else:
