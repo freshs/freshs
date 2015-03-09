@@ -176,7 +176,7 @@ class configpoints:
             if attempt >= maxretry:
                 self.server.logger_freshs.warn(cc.c_red +\
                       'ERROR! Could not write data to DB:'+ self.dbfile+ cc.reset)
-                exit( "Could not write" )
+                raise SystemExit("Could not write")
 
         del entries
 

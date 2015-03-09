@@ -132,9 +132,10 @@ class server(asyncore.dispatcher):
         except Exception as e:
             self.logger_freshs.error(cc.c_red + 'Failed to read interfaces from the config file, exception: ' + str(e))
             self.logger_freshs.error('Guess of problem: section labels are case sensitive.' + cc.reset)
-            exit(1)
+            raise SystemExit(1)
         if self.A >= self.B:
-            self.logger_freshs.error(cc.c_red + 'Border of B is greater than or equal to border A.\nDecreasing order parameters are currently *not* supported!' + cc.reset)
+            self.logger_freshs.error(cc.c_red + 'Border of B is greater than or equal to border A.\n\tDecreasing order parameters are currently *not* supported!' + cc.reset)
+            raise SystemExit(1)
         self.nohs = self.noi - 1
 
 # ----------------------------------------------------------------------------------------------------------------
@@ -225,7 +226,7 @@ class server(asyncore.dispatcher):
         except:
             self.logger_freshs.info(cc.c_red + 'Error! Could not open/bind to socket on port: ' + str(self.port) + cc.reset)
             self.logger_freshs.info(cc.c_red + 'Error! Port in use? ' + str(self.port) + cc.reset)
-            quit()
+            raise SystemExit(1)
             
         self.listen(1)
 
@@ -330,7 +331,7 @@ class server(asyncore.dispatcher):
                 self.storepoints=configpoints.configpoints(self, self.folder_db + confdbfile)
         except Exception as e:
             self.logger_freshs.debug(cc.c_red + __name__ + 'Error!:' + str(e) + cc.reset) 
-            exit(1)
+            raise SystemExit(1)
 
 # -------------------------------------------------------------------------------------------------
 
@@ -415,7 +416,7 @@ class server(asyncore.dispatcher):
                      'Config file sections present are:' + str(self.configfile.sections()) +\
                    cc.reset)
             self.logger_freshs.info(cc.c_red +'Case sensitivity issue maybe?'+cc.reset)
-            exit( 8 )
+            raise SystemExit(8)
             
 
         self.allow_race = True
@@ -1085,7 +1086,7 @@ class server(asyncore.dispatcher):
         self.handle_close()
         asyncore.dispatcher.close(self)
         self.print_status()
-        exit(0)
+        raise SystemExit(0)
 
 # -------------------------------------------------------------------------------------------------
 

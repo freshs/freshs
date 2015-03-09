@@ -29,6 +29,8 @@ import ConfigParser
 import math
 
 import modules.server
+
+
 # -------------------------------------------------------------------------------------------------
 
 #### NSFFS-SPECIFIC SERVER CLASS ####
@@ -126,13 +128,13 @@ class nsffs_sampling_control():
                 config=[]
                 tau, rc_index = ss.storepoints.return_point_by_id( config_id, config )
                 if len(config) == 0:
-                    self.server.logger_freshs.info(concolors.c_red + 'ERROR! Could not start job from config ' +\
+                    self.server.logger_freshs.error(concolors.c_red + 'ERROR! Could not start job from config ' +\
                                                 str(configId) + concolors.reset)
-                    exit( "Error finding configs." )
+                    raise SystemExit('Error finding configs.')
                 if config[0] == None:
-                    self.server.logger_freshs.info(concolors.c_red + 'ERROR! Could not start job from config ' +\
+                    self.server.logger_freshs.error(concolors.c_red + 'ERROR! Could not start job from config ' +\
                                                 str(configId) + concolors.reset)
-                    exit( "Error finding configs." )
+                    raise SystemExit('Error finding configs.')
             else:
                 tau      = 0
                 rc_index = 0
@@ -144,7 +146,7 @@ class nsffs_sampling_control():
                 if nextTau != False:
                     deltaTau  = nextTau - taupoint
                 else:
-                    exit( "Error finding tau." )
+                    raise SystemExit('Error finding tau.')
             else:
                 deltaTau = 0
 

@@ -123,7 +123,7 @@ class configpoints:
                     self.server.logger_freshs.warn(concolors.c_red + 'Could not write data to DB, retrying ' + str(maxretry) + ' times: ' + str(attempt) + '/' + str(maxretry) + concolors.reset)
             if attempt >= maxretry:
                 self.server.logger_freshs.warn(concolors.c_red + 'ERROR! Could not write data to DB.' + concolors.reset)
-                exit( "Could not write" )
+                raise SystemExit('Could not write.')
 
 
     # Return number of points  on interface at time csteps

@@ -134,7 +134,7 @@ class spres_sampling_control():
                           'Error! DB loaded was corrupted or incomplete'+ cc.reset)
            ss.logger_freshs.warn(cc.c_red +\
                           'Error! Advise restart from earlier time point'+ cc.reset)
-           exit()
+           raise SystemExit(1)
              
 # -------------------------------------------------------------------------------------------------
     def test_db_complete( self ):
@@ -373,7 +373,7 @@ class spres_sampling_control():
 
         if ss.epoch - self.start_epoch >= ss.configfile.getint('spres_control','max_epoch'):
             ss.logger_freshs.info(cc.c_red + "Quitting: reached max epoch" + str(self.stateVector) + cc.reset )
-            exit()
+            raise SystemExit()
         else:
             ss.logger_freshs.info(cc.c_red + "Epoch moved forward."+ cc.reset )
 

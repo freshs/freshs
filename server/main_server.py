@@ -42,14 +42,14 @@ sys.path.append(reldir + '/modules/spres')
 try:
     import numpy
 except Exception as e:
-    print('IMPORT ERROR: ' +str(e))
-    exit(8)
+    sys.stderr.write('IMPORT ERROR: ' +str(e))
+    raise SystemExit(8)
 
 try:
     import math
 except Exception as e:
-    print('IMPORT ERROR: ' +str(e))
-    exit(8)
+    sys.stderr.write('IMPORT ERROR: ' +str(e))
+    raise SystemExit(8)
 
 
 
@@ -78,11 +78,10 @@ if len(args) > 0:
 if os.path.isfile(options.config):
     print("Server: reading server config file: "+options.config)
 else:   # if filename is not given
-    print('Server: A valid server config file is required.\n'+\
-          '\tCurrent value is: "'+\
-      options.config +'", which is not a valid file.\n'+\
-                       '\tLook at examples in the test directory.')
-    exit(8)
+    sys.stderr.write('Server: A valid server config file is required.\n' +\
+                     '\tCurrent value is: "' + options.config + '", which is not a valid file.\n' +\
+                     '\tLook at examples in the test directory.')
+    raise SystemExit(8)
 
 
 ##Call the server
@@ -98,6 +97,6 @@ except Exception as e:
     sys.exit(0)
 finally:
     print("\nQuitting.")
-    sys.exit(0)
+
 
 

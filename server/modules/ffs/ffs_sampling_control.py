@@ -32,6 +32,7 @@ import random
 
 import configpoints
 
+
 # -------------------------------------------------------------------------------------------------
 
 #### FFS-SPECIFIC SERVER CLASS ####
@@ -189,7 +190,7 @@ class ffs_sampling_control():
             ss.act_lambda = ss.storepoints.biggest_lambda()
         except Exception as e:
             ss.logger_freshs.error(cc.c_red + __name__ + 'Error!: '+str(e) + cc.reset) 
-            exit(1)
+            raise SystemExit(1)
 
         if ss.auto_interfaces:
             try:
@@ -209,7 +210,7 @@ class ffs_sampling_control():
                                 ss.logger_freshs.info(cc.c_magenta + 'Adding lambda from ghost database: ' + str(lam) + cc.reset)
                             else:
                                 ss.logger_freshs.warn(cc.c_red + 'Can not add interface position from ghost database. Please clean/remove ghost database.' + cc.reset)
-                                raise SystemExit
+                                raise SystemExit(1)
 
                     ilam = len(tmp_lamlist)
                     ss.lambdas = tmp_lamlist[:]

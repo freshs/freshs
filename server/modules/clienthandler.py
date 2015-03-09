@@ -33,6 +33,7 @@ import random
 # UUID
 import uuid
 
+
 #### CLASS FOR HANDLING THE CLIENTS ####
 class ClientHandler(asyncore.dispatcher):
   
@@ -636,11 +637,11 @@ class ClientHandler(asyncore.dispatcher):
 
             return True
         else:
-            self.server.logger_freshs.info(cc.c_red + 'ERROR! Could not start job between ' +\
+            self.server.logger_freshs.error(cc.c_red + 'Could not start job between ' +\
                                             str(fromRow) + " and "+\
                                             str(row)     + " at " + str(ss.epoch) + cc.reset)
-            exit( "Error finding configs." )
-            return False
+            raise SystemExit("Error finding configs.")
+            return False # ?
 
 
 # --------------------------------------------------------------------------                    

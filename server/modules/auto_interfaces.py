@@ -104,7 +104,7 @@ class auto_interfaces():
             self.max_explorer_restarts = ss.configfile.getint('auto_interfaces', 'max_explorer_restarts')
         except Exception as e:
             ss.logger_freshs.error(cc.c_red + "Auto_interfaces is turned on, but problem while reading auto_interfaces config, exception: "+str(e)+cc.reset)
-            exit(1)
+            raise SystemExit(1)
         
         if self.option_in_configile('auto_min_explorer_steps'):
             self.auto_min_explorer_steps = ss.configfile.getint('auto_interfaces', 'auto_min_explorer_steps')

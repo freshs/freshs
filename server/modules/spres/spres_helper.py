@@ -22,6 +22,7 @@
 # Formatting
 import modules.concolors as cc
 
+
 class spres_helper():
     
     def __init__(self, server, control ):
@@ -39,7 +40,7 @@ class spres_helper():
 	     ss.logger_freshs.error(cc.c_red +\
 		 'Restart Error! Transmat and statevec files have different timepoints, transmat:'+ str(epoch)\
 		+ ' and statevec: '+str(epoch_sv)  +cc.reset)
-	     exit('Restart error: transmat and statevec files have different timepoints.')
+	     raise SystemExit('Restart error: transmat and statevec files have different timepoints.')
 
 
         return epoch
