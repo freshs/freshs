@@ -583,7 +583,7 @@ class ffs_sampling_control():
             nescape_candidates = len(self.escape_point_candidates()[0])
             nesc_left = nescape_candidates - nescape
             if nesc_left > 0:
-                ss.logger_freshs.info(cc.c_green + str(nesc_left) + ' non-running escape trace(s) to be restarted.' + cc.reset)
+                ss.logger_freshs.info(cc.c_green + str(nesc_left) + ' non-running escape trace(s) to be finished.' + cc.reset)
                 self.print_lambar('inter',ncheck,ss.M_0_runs[ilam])
                 return True
             # no escape trace must be continued at the moment, do something else.

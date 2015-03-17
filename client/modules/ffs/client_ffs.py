@@ -126,6 +126,9 @@ class client_ffs:
 
                 # read output from the MD subthread
                 steps, time, rc, all_meta  = h.collect( points, rcvals ) 
+                
+                if 'quit' in all_meta:
+                    raise SystemExit(all_meta['quit'])
                 calcsteps += steps
                 ctime     += time
 
@@ -196,10 +199,10 @@ class client_ffs:
                     # fork a subthread to run the MD, starting from the crds_in fifo.            
                     h.subthread_run_script(optionlist)
 
-        except e:
+        except Exception as e:
             print( "Client: exception while running harness, %s" % e ) 
             h.clean()
-            exit( e )
+            raise SystemExit(e)
         h.clean()
         
         print("Client: Constructing result string")
