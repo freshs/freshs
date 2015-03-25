@@ -76,8 +76,12 @@ class configpoints:
             self.server.logger_freshs.info(cc.c_green + 'Connecting to DB: ' + self.dbfile + cc.reset)
         except:
             pass
-        con = sqlite3.connect(self.dbfile)
-        cur = con.cursor()
+        try:
+            con = sqlite3.connect(self.dbfile)
+            cur = con.cursor()
+        except sqlite3.Error as e:
+            self.server.logger_freshs.error(cc.c_red + "Error connecting to database." + cc.reset)
+            raise SystemExit(str(e))
         return con, cur
 
     # Close database connection
@@ -129,7 +133,12 @@ class configpoints:
             self.con.commit()
 
         except Exception as exc:
-            print(self.dbfile + ":", exc)
+            if str(exc).lower().find("locked") < 0:
+                self.server.logger_freshs.info(cc.c_blue + "%s: %s" % (self.dbfile, str(exc)) + cc.reset)
+            else:
+                self.server.logger_freshs.error(cc.c_red + "Error accessing database %s." % self.dbfile + cc.reset)
+                raise SystemExit(str(exc))
+            
             
 
     # Add config point to database
