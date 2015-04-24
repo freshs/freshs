@@ -72,8 +72,9 @@ class configpoints:
         
     # Connect to database
     def connect(self):
-
-        haveLog = False ##may be called by postprocessing scripts, not server.
+        ##may be called by postprocessing scripts, not server.
+        ##in this case the logger may be absent.
+        self.haveLog = False 
         try:
             self.server.logger_freshs.info(cc.c_green + 'Connecting to DB: ' + self.dbfile + cc.reset)
             haveLog = True
@@ -141,9 +142,15 @@ class configpoints:
 
         except Exception as exc:
             if str(exc).lower().find("locked") < 0:
-                self.server.logger_freshs.info(cc.c_blue + "%s: %s" % (self.dbfile, str(exc)) + cc.reset)
+                if self.haveLog:
+                    self.server.logger_freshs.info(cc.c_blue + "%s: %s" % (self.dbfile, str(exc)) + cc.reset)
+                else:
+                    print("%s: %s" % (self.dbfile, str(exc)))
             else:
-                self.server.logger_freshs.error(cc.c_red + "Error accessing database %s." % self.dbfile + cc.reset)
+                if self.haveLog:
+                    self.server.logger_freshs.error(cc.c_red + "Error accessing database %s." % self.dbfile + cc.reset)
+                else:
+                    print("Error accessing database %s." % self.dbfile )
                 raise SystemExit(str(exc))
             
             
