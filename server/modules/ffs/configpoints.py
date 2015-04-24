@@ -72,15 +72,22 @@ class configpoints:
         
     # Connect to database
     def connect(self):
+
+        haveLog = False ##may be called by postprocessing scripts, not server.
         try:
             self.server.logger_freshs.info(cc.c_green + 'Connecting to DB: ' + self.dbfile + cc.reset)
+            haveLog = True
         except:
+            print('Connecting to DB: ' + self.dbfile)
             pass
         try:
             con = sqlite3.connect(self.dbfile)
             cur = con.cursor()
         except sqlite3.Error as e:
-            self.server.logger_freshs.error(cc.c_red + "Error connecting to database." + cc.reset)
+            if not haveLog:
+                print("Error connecting to DB")
+            else:
+                self.server.logger_freshs.error(cc.c_red + "Error connecting to database." + cc.reset)
             raise SystemExit(str(e))
         return con, cur
 
