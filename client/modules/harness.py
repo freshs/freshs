@@ -19,6 +19,7 @@
 # MA 02111-1307 USA
 
 import os, tempfile
+import shutil
 import subprocess
 import threading
 import ast
@@ -205,7 +206,8 @@ class harness:
         ##clean up the filesystem
         for fname in [self.crds_in_fifoname, self.crds_back_fifoname, self.control_fifoname, self.metadata_fifoname]:
             try:
-                os.remove(fname)
+                #os.remove(fname)
+		shutil.rmtree(fname)
             except:
                 print("Client Warning: Could not delete named fifo in tmpdir: " + fname)
                     
