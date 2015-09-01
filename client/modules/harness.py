@@ -204,15 +204,8 @@ class harness:
             os.waitpid(0, 0) ##this call has the effect to clear up any "defunct" processes.
    
         ##clean up the filesystem
-        for fname in [self.crds_in_fifoname, self.crds_back_fifoname, self.control_fifoname, self.metadata_fifoname]:
-            try:
-                #os.remove(fname)
-		shutil.rmtree(fname)
-            except:
-                print("Client Warning: Could not delete named fifo in tmpdir: " + fname)
-                    
         try:
-            os.rmdir(self.tmpdir)
+            shutil.rmtree(self.tmpdir)
         except:
             print("Client Warning: Could not delete tmpdir: " + self.tmpdir)
                 
