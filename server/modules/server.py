@@ -2,17 +2,17 @@
 # Copyright (c) 2013 Kai Kratzer, Universität Stuttgart, ICP,
 # Allmandring 3, 70569 Stuttgart, Germany; all rights
 # reserved unless otherwise stated.
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston,
@@ -65,8 +65,9 @@ import ghosting
 class sampling_algorithm:
     FFS      = 0
     SPRES    = 1
-    NSFFS    = 2
-    NUM_ALGS = 3
+    NSFFS    = 2  ##NSFFS not implemented yet.
+    PERM_FFS = 3
+    NUM_ALGS = 4
 
 
 #### MAIN SERVER CLASS ####
@@ -83,11 +84,11 @@ class server(asyncore.dispatcher):
         # Set global timestamp / set dbload if timestamp is given
         self.timestamp = self.get_timestamp(timestamp)
 
-        
+
         # Read the configfile
         self.read_config(configfile_name)
 
-        
+
         self.logger_freshs.addHandler(logging.FileHandler(self.folder_log + self.timestamp +\
                         '_freshs.log', mode='a', encoding=None, delay=False))
 
@@ -157,7 +158,7 @@ class server(asyncore.dispatcher):
             self.algorithm         = sampling_algorithm.SPRES
             self.absorb_at_B                = 0
             self.test_absorb_at_B_after_bin = 0
-            self.spres_control = spres_sampling_control( self )  
+            self.spres_control = spres_sampling_control( self )
             self.create_dbs()
 
 
@@ -173,7 +174,7 @@ class server(asyncore.dispatcher):
 
 # end
 # ----------------------------------------------------------------------------------------------------------------
-        
+
         ## some initial setup
         if self.algorithm == sampling_algorithm.SPRES:
             if not self.dbload:
@@ -188,7 +189,7 @@ class server(asyncore.dispatcher):
                     self.storepoints.increment_active_table(self.epoch + self.tau)
             else:
                 self.spres_control.load_points(self.epoch)
-                
+
 
         # Communication: create socket and listen on specific port
         self.open_socket()
@@ -227,7 +228,7 @@ class server(asyncore.dispatcher):
             self.logger_freshs.info(cc.c_red + 'Error! Could not open/bind to socket on port: ' + str(self.port) + cc.reset)
             self.logger_freshs.info(cc.c_red + 'Error! Port in use? ' + str(self.port) + cc.reset)
             raise SystemExit(1)
-            
+
         self.listen(1)
 
 # -------------------------------------------------------------------------------------------------
@@ -252,7 +253,7 @@ class server(asyncore.dispatcher):
 
     # create filenames for output
     def create_outfiles(self):
-    
+
         self.outfile    = self.folder_out + self.timestamp + '_rates.dat'
         self.lamfile    = self.folder_out + self.timestamp + '_lambdas.conf'
         self.vecfile    = self.folder_out + self.timestamp + '_stateVec.dat'
@@ -263,7 +264,7 @@ class server(asyncore.dispatcher):
             os.remove(self.folder_out + 'rates.dat')
         except:
             pass
-            
+
         try:
             os.symlink(self.timestamp + '_lambdas.conf', self.folder_out + 'lambdas.conf')
             os.symlink(self.timestamp + '_rates.dat', self.folder_out + 'rates.dat')
@@ -274,7 +275,7 @@ class server(asyncore.dispatcher):
 
     # create databases for data storage
     def create_dbs(self):
-    
+
         self.logger_freshs.debug(cc.c_magenta + __name__ + ': create_dbs' + cc.reset)
         try:
             if self.algo_name == 'ffs':
@@ -284,7 +285,7 @@ class server(asyncore.dispatcher):
                 # create instance of DB for configpoint-handling / open existing DB
                 confdbfile = self.timestamp + '_configpoints.sqlite'
                 self.storepoints=configpoints.configpoints(self, self.folder_db + confdbfile)
-                
+
                 # create instance of DB for pre-runs:
                 ghostdbfile = self.timestamp + '_ghost.sqlite'
                 self.ghostpoints=configpoints.configpoints(self, self.folder_db + ghostdbfile)
@@ -301,7 +302,7 @@ class server(asyncore.dispatcher):
                 except:
                     pass
 
-            elif self.algo_name == 'spres':  
+            elif self.algo_name == 'spres':
 
                 ##open or create a DB with the correct timepoint
                 confdbfile = self.timestamp + '_configpoints.sqlite'
@@ -314,23 +315,23 @@ class server(asyncore.dispatcher):
                     else:
                         import configpoints_spres
                         self.storepoints=configpoints_spres.configpoints(self,  self.folder_db + confdbfile)
-                       
+
                 else:
                     self.logger_freshs.warn(cc.c_red + 'No option use_multDB in spres_control!' + cc.reset)
                     self.logger_freshs.warn(cc.c_red + 'Defaulting to use multiple DBs anyway.' + cc.reset)
                     import configpoints_spres_multDB
                     self.storepoints=configpoints_spres_multDB.configpoints(self,  self.folder_db + confdbfile, self.epoch)
-                        
+
 
             elif self.algo_name == 'nsffs':
-            
+
                 import configpoints
 
                 # create instance of DB for configpoint-handling / open existing DB
                 confdbfile = self.timestamp + '_configpoints.sqlite'
                 self.storepoints=configpoints.configpoints(self, self.folder_db + confdbfile)
         except Exception as e:
-            self.logger_freshs.debug(cc.c_red + __name__ + 'Error!:' + str(e) + cc.reset) 
+            self.logger_freshs.debug(cc.c_red + __name__ + 'Error!:' + str(e) + cc.reset)
             raise SystemExit(1)
 
 # -------------------------------------------------------------------------------------------------
@@ -379,7 +380,7 @@ class server(asyncore.dispatcher):
         if self.configfile.has_option('general', 'folder_log'):
             self.folder_log = re.sub('/$','', str(self.configfile.get('general', 'folder_log')) )
         else:
-            self.folder_log = 'LOG' 
+            self.folder_log = 'LOG'
 
         self.create_filestruct()
 
@@ -395,7 +396,7 @@ class server(asyncore.dispatcher):
         # Choose the sampling algorithm
         self.logger_freshs.debug(cc.c_magenta + 'Server: repeat, Config file name is:' +\
                                                                       configfile_name + cc.reset)
-        
+
         if self.configfile.has_option('general', 'check_alive'):
             self.check_alive = self.configfile.getint('general', 'check_alive')
         else:
@@ -417,7 +418,7 @@ class server(asyncore.dispatcher):
                    cc.reset)
             self.logger_freshs.info(cc.c_red +'Case sensitivity issue maybe?'+cc.reset)
             raise SystemExit(8)
-            
+
 
         self.allow_race = True
         if self.configfile.has_option('general', 'allow_race'):
@@ -431,13 +432,13 @@ class server(asyncore.dispatcher):
             self.test_rc_every = self.configfile.getint('general', 'test_rc_every')
         else:
             self.test_rc_every = 1
-      
+
         self.auto_interfaces = 0
-        
-        if self.configfile.has_section('auto_interfaces'): 
+
+        if self.configfile.has_section('auto_interfaces'):
             if self.configfile.has_option('auto_interfaces', 'auto_interfaces'):
                 self.auto_interfaces = self.configfile.getint('auto_interfaces', 'auto_interfaces')
-    
+
         # use ghosts
         if self.configfile.has_option('general', 'use_ghosts'):
             self.use_ghosts = self.configfile.getint('general', 'use_ghosts')
@@ -466,7 +467,7 @@ class server(asyncore.dispatcher):
             self.clients_use_fs = self.configfile.getboolean('general', 'clients_use_filesystem')
         else:
             self.clients_use_fs = False
-        
+
         self.port = self.configfile.getint('general', 'listenport')
 
         # user-defined message string
@@ -479,16 +480,16 @@ class server(asyncore.dispatcher):
                                         ' in configfile has errors and will not be used.' + cc.reset)
                 self.user_msg = ''
         else:
-            self.user_msg = '' 
+            self.user_msg = ''
 
         ##Algo-specific setup
         if self.algo_name == "spres":
 
           try:
-            
+
             ##allow non-integer timesteps for event-driven MD
             self.tau               = self.configfile.getfloat('spres_control', 'tau')
-            if self.tau - int(self.tau) == 0.0: 
+            if self.tau - int(self.tau) == 0.0:
                        self.tau = int(self.tau)
 
             if self.configfile.has_option('spres_control', 'test_absorb_at_B_every'):
@@ -501,20 +502,20 @@ class server(asyncore.dispatcher):
             if self.configfile.has_option('spres_control', 'replace_flux_at_A'):
                 self.replace_flux_at_A =\
                    self.configfile.getboolean('spres_control', 'replace_flux_at_A')
-         
+
           except Exception as e:
             self.logger_freshs.warn(cc.c_red + 'Failed reading spres config, exception was:' +\
                      str(e) + cc.reset)
             pass
-                     
-         
+
+
 # -------------------------------------------------------------------------------------------------
 
     # create folders if they do not exist.
     def create_filestruct(self):
-    
+
         self.logger_freshs.debug(cc.c_magenta + __name__ + ': create_filestruct' + cc.reset)
-    
+
         # Create directories if they do not exist
         if not os.path.exists(self.folder_out):
             os.makedirs(self.folder_out)
@@ -537,9 +538,9 @@ class server(asyncore.dispatcher):
 
     # Fill lambdas list. # TODO: algorithmspecific
     def fill_lambdas(self):
-    
+
         self.logger_freshs.debug(cc.c_magenta + __name__ + ': fill_lambdas' + cc.reset)
-    
+
         lambdaload = True
         self.noi = 1
         while lambdaload:
@@ -548,7 +549,7 @@ class server(asyncore.dispatcher):
                 self.noi += 1
             except:
                 lambdaload = False
-                
+
         self.lambdas.append(self.B)
 
 # -------------------------------------------------------------------------------------------------
@@ -610,21 +611,21 @@ class server(asyncore.dispatcher):
 
     # set seed for master RNG
     def set_seed(self):
-    
+
         self.logger_freshs.debug(cc.c_magenta + __name__ + ': set_seed' + cc.reset)
-    
-        try: 
+
+        try:
             master_seed = self.configfile.getint('general', 'rng_seed')
         except:
             master_seed = int(time.time())
             self.logger_freshs.info(cc.c_green + 'Using seed from time.' + cc.reset)
 
         random.seed(master_seed)
-        
+
         self.myRandMax = pow(2,31) ##do not want to have a system-dependent RAND_MAX.
         self.logger_freshs.info(cc.c_green + 'Master RNG seed is: ' + str(master_seed)\
                            + cc.reset)
-                
+
     ## asyncore handlers
 # -------------------------------------------------------------------------------------------------
 
@@ -660,7 +661,7 @@ class server(asyncore.dispatcher):
     # close handle
     def handle_close(self):
         self.close()
-        
+
 # -------------------------------------------------------------------------------------------------
 
     # print status. This is e.g. called by the periodic threading function
@@ -703,16 +704,16 @@ class server(asyncore.dispatcher):
 
     # check if calculation job is available
     def check_for_job(self, client):
-    
+
         self.logger_freshs.debug(cc.c_magenta + __name__ + ': check_for_job' + cc.reset)
-    
+
         if not self.disable_runs:
             if self.algorithm == sampling_algorithm.FFS:
                 fsc = self.ffs_control
 
                 client.remove_from_ghost()
                 client.remove_from_explorer()
-                
+
                 if fsc.start_job(client):
                     # starting real run was successful
                     pass
@@ -721,7 +722,7 @@ class server(asyncore.dispatcher):
                         client.start_job_wait()
                 # If exploring mode
                 elif self.ai.exmode:
-                    # try to start explorer                
+                    # try to start explorer
                     if not self.ai.start_explorer(client):
                         # no exploring run on this lambda left, start parallel run
                         if self.ai.add_parallel_lambda():
@@ -763,9 +764,9 @@ class server(asyncore.dispatcher):
 
     # register client and add to client array, send timestamp, check for job
     def registerClient(self, client):
-    
+
         self.logger_freshs.debug(cc.c_magenta + __name__ + ': register_client' + cc.reset)
-    
+
         self.clients.append(client)
 
         # Send server's timestamp to client
@@ -777,11 +778,11 @@ class server(asyncore.dispatcher):
 
 # -------------------------------------------------------------------------------------------------
 
-    # clean client from all arrays (e.g. on disconnect) 
+    # clean client from all arrays (e.g. on disconnect)
     def cleanup_client(self, client):
-    
+
         self.logger_freshs.debug(cc.c_magenta + __name__ + ': cleanup_client' + cc.reset)
-    
+
         if client.name in self.clientnames:
             self.clientnames.remove(client.name)
         if client.name in self.ghostnames:
@@ -814,7 +815,7 @@ class server(asyncore.dispatcher):
     def deregisterClient(self, client):
 
         self.logger_freshs.debug(cc.c_magenta + __name__ + ': deregisterClient' + cc.reset)
-    
+
         was_active2 = 0
 
         if not self.disable_runs:
@@ -860,7 +861,7 @@ class server(asyncore.dispatcher):
                             self.logger_freshs.warn(cc.c_red + 'Could not decrease run_count, ' + str(exc) + cc.reset )
                     else:
                         # get index on which explorer was running
-                        
+
                         if self.ai.auto_histo:
                             self.ai.ex_launched[0] -= 1
                         else:
@@ -871,7 +872,7 @@ class server(asyncore.dispatcher):
                             except:
                                 self.logger_freshs.warn(cc.c_red + 'Could not decrease run_count of explorer array, index ' + \
                                                         str(ex_ind) + cc.reset )
-                    
+
                     self.logger_freshs.info(cc.c_blue + str(client.name) + \
                                             ' deregistered, runcount adjusted.' + cc.reset)
 
@@ -902,7 +903,7 @@ class server(asyncore.dispatcher):
             return False
 
 # -------------------------------------------------------------------------------------------------
-    
+
     def is_idle(self,client):
         if (client in self.idle_clients) and (client not in self.ghost_clients) and \
            (client not in self.explorer_clients) and (client in self.clients):
@@ -911,7 +912,7 @@ class server(asyncore.dispatcher):
             return False
 
 # -------------------------------------------------------------------------------------------------
-    
+
     def is_ghost(self,client):
         if (client not in self.idle_clients) and (client not in self.explorer_clients) and \
            (client in self.ghost_clients) and (client in self.clients):
@@ -920,7 +921,7 @@ class server(asyncore.dispatcher):
             return False
 
 # -------------------------------------------------------------------------------------------------
-            
+
     def is_explorer(self,client):
         if (client not in self.idle_clients) and (client in self.explorer_clients) and \
            (client not in self.ghost_clients) and (client in self.clients):
@@ -958,12 +959,12 @@ class server(asyncore.dispatcher):
 
         # Save the time when this client was last seen
         self.last_seen[client] = time.time()
-    
+
         if "request_alive" in data:
             self.last_seen[str(client)] = time.time()
             client.answer_alive()
             return
-    
+
         # Check if client sent result
         if "\"jobtype\":" in data:
             try:
@@ -972,34 +973,34 @@ class server(asyncore.dispatcher):
                 ddata = ast.literal_eval(data)
                 #ddata = eval(data)
             except:
-                self.logger_freshs.info(cc.c_red + 'Server: Warning! Could not parse data packet: ' + data + cc.reset) 
-                self.logger_freshs.info(cc.c_red + 'Server: Warning! Dropping packet.' + cc.reset) 
+                self.logger_freshs.info(cc.c_red + 'Server: Warning! Could not parse data packet: ' + data + cc.reset)
+                self.logger_freshs.info(cc.c_red + 'Server: Warning! Dropping packet.' + cc.reset)
                 return
 
-            self.logger_freshs.debug(cc.c_blue + 'Server: Analysing received job, giving id:' + str(runid) + cc.reset) 
+            self.logger_freshs.debug(cc.c_blue + 'Server: Analysing received job, giving id:' + str(runid) + cc.reset)
 
             # Analyze results
             if self.algorithm == sampling_algorithm.FFS:
                 # if auto_interfaces is on, pass results to this module.
                 if client in self.explorer_clients:
-                    self.logger_freshs.debug(cc.c_blue + 'Sending results to explorer module.' + cc.reset) 
+                    self.logger_freshs.debug(cc.c_blue + 'Sending results to explorer module.' + cc.reset)
                     self.ai.parse_message(data, ddata, client, runid)
                 elif client in self.ghost_clients:
-                    self.logger_freshs.debug(cc.c_blue + 'Sending results to ghost module.' + cc.reset) 
+                    self.logger_freshs.debug(cc.c_blue + 'Sending results to ghost module.' + cc.reset)
                     self.ghosts.parse_message(data, ddata, client, runid)
                 else:
-                    self.logger_freshs.debug(cc.c_blue + 'Sending results to ffs module.' + cc.reset) 
+                    self.logger_freshs.debug(cc.c_blue + 'Sending results to ffs module.' + cc.reset)
                     self.ffs_control.parse_message(data, ddata, client, runid)
-                                
+
             else:
                 ## Result 3: Fixed tau
                 if ddata['jobtype'] == 3:
-                    
+
                     ssc = self.spres_control
-                    
+
                     ##process the incoming info
                     ssc.analyze_job3_success(client, ddata, runid)
-                    ##del ddata 
+                    ##del ddata
                     ##del data
 
                     ##client should be ready for another job
@@ -1007,7 +1008,7 @@ class server(asyncore.dispatcher):
                         while ssc.try_launch_job3( client ) == False:
                             if ssc.test_epoch_complete():
                                 self.logger_freshs.info(cc.c_red + 'advancing epoch'+cc.reset)
-                                ssc.advance_epoch() 
+                                ssc.advance_epoch()
 
                                 self.logger_freshs.debug(cc.c_blue + 'Epoch up, waiters are: '+cc.reset)
                                 for idle_client in self.idle_clients:
@@ -1025,7 +1026,7 @@ class server(asyncore.dispatcher):
                         self.deregisterClient( client )
                         self.logger_freshs.info(cc.c_red + \
                              'Have: '+str(len(self.clients)) + ' remaining.' + cc.reset)
-                    
+
 # -------------------------------------------------------------------------------------------------
 
     # Start idle clients
@@ -1046,7 +1047,7 @@ class server(asyncore.dispatcher):
                 self.check_for_job(idle_client)
 
             elif self.algorithm == sampling_algorithm.SPRES:
-                
+
                 if not self.spres_control.try_launch_job3( idle_client ):
                     self.logger_freshs.info(cc.c_red +\
                            'Could not launch job on idle client:' +\
@@ -1057,23 +1058,23 @@ class server(asyncore.dispatcher):
                             idle_client.name + cc.reset)
 
         self.idle_start_in_progress = False
-                
-                    
+
+
 # -------------------------------------------------------------------------------------------------
 
     # End of simulation. Here the results are vacuumed and shampooed. Then the server exits.
     def end_simulation(self):
-    
+
         self.logger_freshs.debug(cc.c_magenta + __name__ + ': end_simulation' + cc.reset)
-    
+
         self.disable_runs = True
         # commit data in database
         self.storepoints.commit()
         self.ghostpoints.commit()
-        
+
         if self.algorithm == sampling_algorithm.FFS:
             self.ffs_control.arrived_in_B()
-        
+
         # Disable timer
         try:
             self.periodic.cancel()
@@ -1089,5 +1090,3 @@ class server(asyncore.dispatcher):
         raise SystemExit(0)
 
 # -------------------------------------------------------------------------------------------------
-
- 

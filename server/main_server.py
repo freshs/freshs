@@ -2,17 +2,17 @@
 # Copyright (c) 2013 Kai Kratzer, Universität Stuttgart, ICP,
 # Allmandring 3, 70569 Stuttgart, Germany; all rights
 # reserved unless otherwise stated.
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston,
@@ -64,7 +64,7 @@ parser.add_option("-d", "--debug", dest="debug", help="enable debug mode", metav
 
 (options, args) = parser.parse_args()
 
-##Args will hold positional arguments... 
+##Args will hold positional arguments...
 ##if there is any argument without a flag, assume that it is a control file:
 if len(args) > 0:
     if options.config == 'auto':
@@ -91,12 +91,9 @@ try:
     asyncore.loop()
 except Exception as e:
     signal.signal(signal.SIGINT, handle_sigint)
+    print("\nServer caught exception: "+str(e)+" and shut down safely.")
     a.storepoints.commit()
     a.ghostpoints.commit()
-    print("\nServer caught exception: "+str(e)+" and shut down safely.")
     sys.exit(0)
 finally:
     print("\nQuitting.")
-
-
-
