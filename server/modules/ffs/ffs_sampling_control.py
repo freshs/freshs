@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2013 Kai Kratzer, Universität Stuttgart, ICP,
-# Allmandring 3, 70569 Stuttgart, Germany; all rights
+# Copyright
+# (c) 2013 Kai Kratzer and Joshua Berryman, Universität Stuttgart, ICP,
+# Allmandring 3, 70569 Stuttgart, Germany;
+# (c) 2015 Joshua Berryman, University of Luxembourg,
+# Avenue de la Faiencerie, Luxembourg; all rights
 # reserved unless otherwise stated.
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston,
@@ -37,44 +40,44 @@ import configpoints
 
 #### FFS-SPECIFIC SERVER CLASS ####
 class ffs_sampling_control():
-  
-  
+
+
     ##init, saving a backpointer to the parent "server" class which handles comms.
     def __init__(self, server):
         self.server = server
-        
+
         self.read_config()
 
         # switch between real runs and exploring clients
         self.exmode = False             # exploring mode for interface placement
         # This is where the act_lam id starts. Should be larger than number of possible interfaces.
-        # TODO: warn/err, if num_interfaces >= 1337       
+        # TODO: warn/err, if num_interfaces >= 1337
         self.loffset = 1337
         # unique act_lam id for explorers
         self.ex_act_lambda = self.loffset
-        
+
         self.lamconf = ConfigParser.RawConfigParser()
-        
+
         self.escape_clients = {}
         # for parallel escape, points to exclude (e.g. if trace already exists)
         self.escape_exclude = []
         # for keeping the current trace in cache
         self.escape_trace = {}
-        
+
         # If there's no point in the escape trace, save the ctime and store it with the next point
         self.ctime_pending = 0.0
         self.calcsteps_pending = 0
-        
+
         self.last_added_point = ''
-        
+
         # counter for different origin points
         self.dorigins = 0
         self.dorigins_last = 0
         self.dorigins_count = 0
-        
+
         # dict for counting the escape skip per client
         self.escape_skip_count = {}
-       
+
 # -------------------------------------------------------------------------------------------------
 
     def option_in_configile(self,option):
@@ -87,14 +90,14 @@ class ffs_sampling_control():
 
     def read_config(self):
         ss = self.server
-        
+
         ss.logger_freshs.debug(cc.c_magenta + __name__ + ': read_config' + cc.reset)
-        
+
         if self.option_in_configile('reverse_direction'):
             self.reverse_direction = ss.configfile.getint('ffs_control', 'reverse_direction')
         else:
             self.reverse_direction = 0
-        
+
         if self.option_in_configile('reverse_forward_DB') and self.reverse_direction > 0:
             self.reverse_forward_DB = str(ss.configfile.get('ffs_control', 'reverse_forward_DB'))
             self.fwd_timestamp = re.sub('.*/','',re.sub('_configpoints.sqlite', '', self.reverse_forward_DB) )
@@ -154,7 +157,7 @@ class ffs_sampling_control():
             self.exit_after_escape = 0
         if self.option_in_configile('send_mean_steps'):
             self.send_mean_steps = ss.configfile.getint('ffs_control', 'send_mean_steps')
-        else:        
+        else:
             self.send_mean_steps = 0
         if self.option_in_configile('max_ghosts_between'):
             self.max_ghosts_between = ss.configfile.getint('ffs_control', 'max_ghosts_between')
@@ -183,13 +186,13 @@ class ffs_sampling_control():
 
     def load_from_db(self):
         ss = self.server
-        
+
         ss.logger_freshs.debug(cc.c_magenta + __name__ + ': load_from_db' + cc.reset)
-        
+
         try:
             ss.act_lambda = ss.storepoints.biggest_lambda()
         except Exception as e:
-            ss.logger_freshs.error(cc.c_red + __name__ + 'Error!: '+str(e) + cc.reset) 
+            ss.logger_freshs.error(cc.c_red + __name__ + 'Error!: '+str(e) + cc.reset)
             raise SystemExit(1)
 
         if ss.auto_interfaces:
@@ -197,7 +200,7 @@ class ffs_sampling_control():
                 loadfromdb = True
                 # read lamconf resume file anyway (because of ghosttimesave)
                 self.lamconf.read(ss.lamfile)
-                
+
                 if loadfromdb:
                     # load lambdas from DB
                     tmp_lamlist = ss.storepoints.return_lamlist()
@@ -260,8 +263,8 @@ class ffs_sampling_control():
             ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'borderA'))
             for act_entry in range(1,ss.noi):
                 ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'lambda' + str(act_entry)))
-            ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'borderB')) 
-            
+            ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'borderB'))
+
         if ss.act_lambda == 0:
             # read in ctime and successful runs
             ss.ctime = ss.storepoints.return_ctime()
@@ -284,12 +287,12 @@ class ffs_sampling_control():
                 ss.k_AB_part1 = 1.0
 
             ss.logger_freshs.info(cc.c_magenta + 'k_AB_part1 = ' + str(ss.k_AB_part1) + cc.reset)
-                
+
             for lmbd_tmp in range(ss.act_lambda+1):
                 ss.M_0.append(ss.storepoints.return_runcount(lmbd_tmp))
                 ss.run_count.append(ss.storepoints.return_nop(lmbd_tmp))
-           
-            
+
+
             if ss.auto_interfaces:
                 ss.M_0_runs = ss.run_count[:]
                 if ss.M_0_runs[-1] < ss.ai.auto_runs:
@@ -308,7 +311,7 @@ class ffs_sampling_control():
             # check if calculation is ready
             if (ss.lambdas[ss.act_lambda] >= ss.B) and (ss.storepoints.return_nop(ss.act_lambda) >= ss.M_0_runs[ss.act_lambda]):
                 ss.end_simulation()
-            
+
             ss.logger_freshs.info(cc.c_green + 'Checking, if interface is ok...' + cc.reset)
             self.check_run_required(ss.act_lambda)
             #if not self.interface_statistics_ok():
@@ -321,7 +324,7 @@ class ffs_sampling_control():
                 pts = ss.storepoints.return_configpoints_ids(ss.act_lambda-1)
                 ss.ghostpoints.build_ghost_exclude_cache(ss.act_lambda,pts)
             except Exception as e:
-                ss.logger_freshs.error(cc.c_red + __name__ + 'Error!: '+str(e) + cc.reset) 
+                ss.logger_freshs.error(cc.c_red + __name__ + 'Error!: '+str(e) + cc.reset)
 
             ss.logger_freshs.info(cc.c_green + 'Current interface index: ' + str(ss.act_lambda) + cc.reset)
 
@@ -335,9 +338,9 @@ class ffs_sampling_control():
 
     def launch_jobs(self):
         ss=self.server
-        
+
         ss.logger_freshs.debug(cc.c_magenta + __name__ + ': launch_jobs' + cc.reset)
-        
+
         ## Set initial parameters
         ss.M_0_runs = []
         if self.reverse_direction > 0:
@@ -354,9 +357,9 @@ class ffs_sampling_control():
         ss.k_AB_part1 = 0.0           # first part of the rate constant
 
         ss.ghosttimesave = 0.0        # time saved by the use of ghosts
-        ss.ghostcalcsave = 0          # calculation steps saved by the use of ghosts 
+        ss.ghostcalcsave = 0          # calculation steps saved by the use of ghosts
 
-               
+
         if ss.auto_interfaces and not ss.dbload:
             ss.logger_freshs.info(cc.c_green + 'Using automatic interface placement as requested.' + cc.reset)
             ss.run_count.append(0)
@@ -370,7 +373,7 @@ class ffs_sampling_control():
                 ss.ai.exmode_on()
 
         elif ss.dbload:
-            self.load_from_db()          
+            self.load_from_db()
         else:
             ss.run_count.append(0)
             ss.M_0.append(0)
@@ -381,7 +384,7 @@ class ffs_sampling_control():
             for act_entry in range(1,ss.noi):
                 ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'lambda' + str(act_entry)))
             ss.M_0_runs.append(ss.configfile.getint('runs_per_interface', 'borderB'))
-            
+
             ss.logger_freshs.info(cc.c_green + 'Interfaces read from file: ' + \
                                   str(ss.lambdas) + \
                                   cc.reset)
@@ -391,9 +394,9 @@ class ffs_sampling_control():
     # Fill lambdas list.
     def fill_lambdas(self):
         ss = self.server
-    
+
         ss.logger_freshs.debug(cc.c_magenta + __name__ + ': fill_lambdas' + cc.reset)
-    
+
         lambdaload = True
         ss.noi = 1
         while lambdaload:
@@ -405,7 +408,7 @@ class ffs_sampling_control():
                 ss.noi += 1
             except Exception as e:
                 lambdaload = False
-                
+
         ss.lambdas.append(ss.B)
 
 # -------------------------------------------------------------------------------------------------
@@ -413,9 +416,9 @@ class ffs_sampling_control():
     # Write to config file
     def append_to_lamconf(self,section, option, value):
         ss = self.server
-        
+
         ss.logger_freshs.debug(cc.c_magenta + __name__ + ': append_to_lamconf' + cc.reset)
-        
+
         try:
             self.lamconf.read(ss.lamfile)
         except:
@@ -423,13 +426,13 @@ class ffs_sampling_control():
 
         if not self.lamconf.has_section(section):
             self.lamconf.add_section(section)
-            
+
         self.lamconf.set(section, option, value)
-        
+
         fc = open(ss.lamfile,'w')
         self.lamconf.write(fc)
         fc.close()
-        
+
 # -------------------------------------------------------------------------------------------------
 
     # Change the interface to the next one
@@ -445,7 +448,7 @@ class ffs_sampling_control():
             pts = ss.storepoints.return_configpoints_ids(ss.act_lambda-1)
             ss.ghostpoints.build_ghost_exclude_cache(ss.act_lambda,pts)
         except Exception as e:
-            ss.logger_freshs.error(cc.c_red + __name__ + 'Error!: '+str(e) + cc.reset) 
+            ss.logger_freshs.error(cc.c_red + __name__ + 'Error!: '+str(e) + cc.reset)
         self.print_lambar('AB')
         ss.M_0.append(0)
         ss.run_count.append(0)
@@ -484,7 +487,7 @@ class ffs_sampling_control():
             esc_pts_ids = self.escape_trace.keys()
 
         ss.logger_freshs.debug(cc.c_magenta + "Candidate points for escape resume: " + str(esc_pts_ids) + cc.reset)
-        
+
         #ss.logger_freshs.debug(cc.c_magenta + "Removing points where we know that they are already in a trace." + cc.reset)
         #for pt in esc_pts_ids[::-1]:
         #    if pt in self.escape_exclude:
@@ -566,7 +569,7 @@ class ffs_sampling_control():
         ss.logger_freshs.debug(cc.c_magenta + 'M_0_runs: ' + str(ss.M_0_runs) + cc.reset)
         ss.logger_freshs.debug(cc.c_magenta + 'lambda: ' + str(ilam) + cc.reset)
         ss.logger_freshs.debug(cc.c_magenta + 'ESC_cl: ' + str(self.escape_clients)  + cc.reset)
-        
+
         # number of escape clients running
         nescape = len(self.escape_clients)
 
@@ -589,19 +592,19 @@ class ffs_sampling_control():
             # no escape trace must be continued at the moment, do something else.
             elif nescape_candidates > 0:
                 return False
-  
+
         if ncheck >= ss.M_0_runs[ilam]:
             self.print_lambar('inter',ncheck,ss.M_0_runs[ilam])
             # This interface is ready, switch to the next one
             # Make sure that we have not reached B yet
-            
+
             ncurrent_points = ss.storepoints.return_nop(ilam)
             if ncurrent_points < self.min_success:
                 ss.logger_freshs.warn(cc.c_red + 'Number of points collected is too low, increasing number of trials!' + cc.reset)
                 ss.M_0_runs[ilam] += 1
                 # check again
                 return self.check_run_required(ilam)
-                    
+
             if ss.lambdas[ilam] < ss.B:
 
                 if ilam == 0:
@@ -623,17 +626,17 @@ class ffs_sampling_control():
                     self.adjust_numruns(ilam)
                     # check again
                     return self.check_run_required(ilam)
-                
+
                 ss.logger_freshs.info(cc.c_green + cc.bold + 'Last interface was ' + \
                                       str(ss.act_lambda-1) + ', now calculating on interface ' + \
                                       str(ss.act_lambda) + cc.reset)
-                
+
                 # start all clients on new interface
                 #for cur_client in ss.clients:
                 #    ss.check_for_job(cur_client)
 
-                # Alternative: Start only this client and idle clients on new 
-                # interface, let ghost jobs run (-> less load on interface change, could 
+                # Alternative: Start only this client and idle clients on new
+                # interface, let ghost jobs run (-> less load on interface change, could
                 # crash or slow down server if too many clients)
 
                 ss.start_idle_clients()
@@ -650,9 +653,9 @@ class ffs_sampling_control():
 
     def start_job(self, client):
         ss = self.server
-        
+
         ss.logger_freshs.debug(cc.c_magenta + __name__ + ': start_job' + cc.reset)
-        
+
         lamtmp = ss.act_lambda
         if lamtmp == 0 and len(ss.lambdas) > 0:
             if self.check_run_required(lamtmp):
@@ -660,7 +663,7 @@ class ffs_sampling_control():
                 return True
         elif lamtmp >= 1 and len(ss.lambdas) > lamtmp:
             if ss.lambdas[lamtmp] <= ss.B and self.check_run_required(lamtmp):
-                client.start_job2()
+                client.start_job2( ss.algorithm )
                 return True
 
         # interface could have changed! Recursion.
@@ -719,16 +722,16 @@ class ffs_sampling_control():
         ss = self.server
 
         try:
-        
+
             ss.logger_freshs.debug(cc.c_magenta + __name__ + ': print_lambar' + cc.reset)
-            
+
             subdiv = 50
             percent = ''
-            
+
             if mode == 'AB':
                 scale = ss.B / float(subdiv)
                 margin = int(ss.lambdas[ss.act_lambda] / scale)
-                
+
             else:
                 scale = float(ndesired) / float(subdiv)
                 margin = int(float(ndone) / scale)
@@ -744,7 +747,7 @@ class ffs_sampling_control():
                         ir = str(ss.act_lambda)
                 else:
                     ir = str(ss.act_lambda)
-                
+
             for i in range(subdiv):
                 if(i < margin):
                     percent += '='
@@ -820,22 +823,22 @@ class ffs_sampling_control():
 
     def analyze_job_success(self, client, ddata, runid):
         ss = self.server
-        
+
         # clients are allowed to request no new job, because they are still calculating and delivering
         # points, e.g. on the first interface
         newjob = True
-        
+
         ss.logger_freshs.debug(cc.c_magenta + __name__ + ': analyze_job_success' + cc.reset)
-        
+
         deactivated = 0
-        
+
         if len(ddata['points']) < 1:
             ss.logger_freshs.warn(cc.c_red + 'Warning: Did not receive a configuration set from client.' + cc.reset)
 
         the_jobs_lambda = ddata['act_lambda']
-        
+
         client.remove_from_escape()
-        
+
         if the_jobs_lambda == 0:
 
             if self.escape_skip > 1:
@@ -843,11 +846,11 @@ class ffs_sampling_control():
                     self.escape_skip_count[client] += 1
                 else:
                     self.escape_skip_count[client] = self.escape_skip
-                
+
                 if not (self.escape_skip_count[client] % self.escape_skip) == 0:
                     ss.logger_freshs.info(cc.c_green + 'Storing point as DEACTIVATED point because of escape skip.' + cc.reset)
                     deactivated = 1
-        
+
         # get and save runtime
         if 'runtime' in ddata:
                 runtime = ddata['runtime']
@@ -893,7 +896,7 @@ class ffs_sampling_control():
 
         # only use point, if lambda is alright, but save all escape jobs
         if the_jobs_lambda == ss.act_lambda or the_jobs_lambda == 0:
-                    
+
             ss.logger_freshs.debug(cc.c_green + 'Run on ' + client.name + \
                                        ' succeeded.' + cc.reset)
                         #ss.logger_freshs.debug(cc.c_green + 'Saving point with ' + cc.bold + 'lambda ' + \
@@ -944,7 +947,7 @@ class ffs_sampling_control():
 
         if newjob:
             ss.check_for_job(client)
-        
+
         if ss.act_lambda == 0:
             ss.start_idle_clients()
 
@@ -966,7 +969,7 @@ class ffs_sampling_control():
             runtime = ddata['runtime']
         else:
             runtime = time.time() - ss.client_runtime[str(client)]
-            
+
         if 'calcsteps' in ddata:
             calcsteps = ddata['calcsteps']
         else:
@@ -1010,23 +1013,23 @@ class ffs_sampling_control():
             origin_point = 'escape'
 
         the_jobs_lambda = ddata['act_lambda']
- 
+
         if 'no_new_job' in ddata:
            if ddata['no_new_job'] == True:
                 ss.logger_freshs.debug(cc.c_magenta + 'Client requested not to bother him with a new job.' + \
                                   cc.reset)
                 newjob = False
-        
+
         # Should not be necessary, but safety first...
         client.remove_from_escape()
 
         if the_jobs_lambda == ss.act_lambda or the_jobs_lambda == 0:
-            
+
             # if client has no success on first interface
             # (this should only happen, if max_steps is set)
             if the_jobs_lambda == 0:
                 ctime = ddata['ctime']
-                
+
                 # count ctime in parallel run.
                 if self.parallel_escape > 0:
                     ss.ctime += ctime
@@ -1034,7 +1037,7 @@ class ffs_sampling_control():
                     if origin_point == 'escape':
                         self.ctime_pending += ctime
                         self.calcsteps_pending += calcsteps
-                        ss.logger_freshs.info(cc.c_green + 'ctime ' + str(ctime) + ' will be stored with the next valid point, ' + str(self.ctime_pending) + ' ctime pending.' + cc.reset) 
+                        ss.logger_freshs.info(cc.c_green + 'ctime ' + str(ctime) + ' will be stored with the next valid point, ' + str(self.ctime_pending) + ' ctime pending.' + cc.reset)
                     else:
                         if self.ctime_pending > 0.0:
                             ctime_save = ctime + self.ctime_pending
@@ -1054,9 +1057,9 @@ class ffs_sampling_control():
                     ss.logger_freshs.info(cc.c_magenta + 'Escape cache with runid: '+str(runid)+\
                                                                       ' and steps: '+str(ddata['calcsteps'])+\
                                                                       ' no success.'+cc.reset)
-            
+
                     self.build_escape_cache(origin_point, runid, ddata['calcsteps'],'nosuccess')
-            
+
             else:
                 try:
                     ss.storepoints.add_point(the_jobs_lambda, \
@@ -1080,13 +1083,13 @@ class ffs_sampling_control():
                     ss.logger_freshs.warn(cc.c_red + \
                                       'Not storing unsuccesful run in database because of incomplete data, ' + str(exc) + \
                                       cc.reset)
-                    ss.logger_freshs.debug(cc.c_red + 'Data was: ' + str(ddata) + cc.reset)                
+                    ss.logger_freshs.debug(cc.c_red + 'Data was: ' + str(ddata) + cc.reset)
 
             ss.logger_freshs.debug(cc.c_green + 'Run was not successful, not incrementing counter.' + cc.reset)
             if 'origin_points' in ddata:
                 ss.storepoints.queue_usecount_by_myid(ddata['origin_points'])
-                
-                
+
+
             else:
                 ss.logger_freshs.warn(cc.c_red + 'No origin point in data of ' + client.name + \
                                         ', not incrementing use-count' + cc.reset)
@@ -1111,9 +1114,9 @@ class ffs_sampling_control():
 # -------------------------------------------------------------------------------------------------
     def arrived_in_B(self):
         ss = self.server
-        
+
         ss.logger_freshs.debug(cc.c_magenta + __name__ + ': arrived_in_B' + cc.reset)
-        
+
         # commit data in database
         ss.storepoints.commit()
         ss.ghostpoints.commit()
@@ -1124,21 +1127,21 @@ class ffs_sampling_control():
         # add the calcsteps from the ghostDB, because the count for the computational cost
         sum_calcsteps += ss.ghostpoints.return_sum_calcsteps()
         ctime_db = ss.storepoints.return_ctime()
-        
+
         if abs(ctime_db - ss.ctime) > 1e-5:
             ss.logger_freshs.warn(cc.c_red + 'Calculation time from server (' + str(ss.ctime) + \
             ') and from DB (' + str(ctime_db) + ') differ!' + cc.reset)
-        
+
         # Probability list
         probi = [ss.k_AB_part1]
         interpoints = [ss.storepoints.return_nop(0)]
-        
+
         for i_ind in range(1,lambda_max+1):
             interpoints.append(ss.storepoints.return_nop(i_ind))
             probi.append(float(interpoints[i_ind])/float(ss.M_0[i_ind]))
-        
+
         rel_variance = 0.0
-        
+
         for i_ind in range(len(ss.lambdas)):
             qi = 1.0 - probi[i_ind]
             ki = float(ss.M_0[i_ind]) / float(interpoints[0])
@@ -1168,7 +1171,7 @@ class ffs_sampling_control():
             for j_ind in range(k_ind):
                 num += pj[j_ind]
             interf.append(num/denum)
-        
+
         # Write calculations to outfile
         h_f = open(ss.outfile,'w')
         h_f.write('# Transition rate from A to B: %.4e\n' % the_rate)
@@ -1187,16 +1190,11 @@ class ffs_sampling_control():
             idn = float(i_ind)/float(lambda_max)
             h_f.write('%d %f %d %d %f %f %f\n' % \
                      (i_ind, ss.lambdas[i_ind], interpoints[i_ind], ss.M_0[i_ind], probi[i_ind], interf[i_ind], idn))
-                     
+
         ss.logger_freshs.info(cc.c_magenta + 'Simulation details have been written to output file ' + \
                               str(ss.outfile) + cc.reset)
 
         h_f.close()
-        
-       
-        self.print_lambar('AB')       
 
 
-
-
-
+        self.print_lambar('AB')

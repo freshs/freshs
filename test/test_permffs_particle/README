@@ -1,0 +1,9 @@
+Single particle in a periodic potential FFS test case.
+
+1) Start the server in another terminal with the sample configuration file:
+
+    python main_server.py -c permffs_particle_server.conf
+
+2) Run 
+
+    python main_particle.py

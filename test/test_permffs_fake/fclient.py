@@ -92,7 +92,7 @@ class fclient(threading.Thread,asyncore.dispatcher):
             try:
                 parameterset=ast.literal_eval(data+"\n")
             except:
-                print('Warning! Could Not parse data packet: %s', data)
+                print('Warning! Could Not parse data packet: %s' % data)
                 print('Warning! Dropping packet.')
                 return
 

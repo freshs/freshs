@@ -86,14 +86,16 @@ else:   # if filename is not given
 
 ##Call the server
     print("Server: reading server config file: "+options.config)
-try:
-    a = ss.server( timestamp = options.timestamp, configfile_name = options.config, debugmode = options.debug  )
-    asyncore.loop()
-except Exception as e:
-    signal.signal(signal.SIGINT, handle_sigint)
-    print("\nServer caught exception: "+str(e)+" and shut down safely.")
-    a.storepoints.commit()
-    a.ghostpoints.commit()
-    sys.exit(0)
-finally:
-    print("\nQuitting.")
+#try:
+a = ss.server( timestamp = options.timestamp, configfile_name = options.config, debugmode = options.debug  )
+asyncore.loop()
+
+#
+#except Exception as e:
+#    signal.signal(signal.SIGINT, handle_sigint)
+    #print("\nServer caught exception: '"+str(e)+"' and shut down safely.")
+    #a.storepoints.commit()
+    #a.ghostpoints.commit()
+    #sys.exit(0)
+#finally:
+    #print("\nQuitting.")

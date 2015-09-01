@@ -1,0 +1,9 @@
+This is a fake FFS simulation test.
+
+The client monitors the results which can then be compared against the server's.
+
+Start the procedure via
+
+python main.py
+
+This loads the server in the background, waits a few seconds and then connects the fake client.

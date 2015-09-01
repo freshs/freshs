@@ -2,17 +2,17 @@
 # Copyright (c) 2013 Kai Kratzer, Universität Stuttgart, ICP,
 # Allmandring 3, 70569 Stuttgart, Germany; all rights
 # reserved unless otherwise stated.
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston,
@@ -33,10 +33,12 @@ import random
 # UUID
 import uuid
 
+##list of implemented algorithms
+import sampling_algorithm_enum as sampling_algorithm
 
 #### CLASS FOR HANDLING THE CLIENTS ####
 class ClientHandler(asyncore.dispatcher):
-  
+
 ## Init ##
     def __init__(self, server, sock, addr, name, received_count=0):
         asyncore.dispatcher.__init__(self, sock=sock)
@@ -66,18 +68,18 @@ class ClientHandler(asyncore.dispatcher):
         self.long_send(data)
 
     def handle_read(self):
-        
-        ##get some data from the socket 
-        self.save_bytes = self.save_bytes + self.recv(262144) 
+
+        ##get some data from the socket
+        self.save_bytes = self.save_bytes + self.recv(262144)
 
         while len(self.save_bytes) != 0 :
 
             ##left-over bytes after the seperator are saved to save_bytes.
             [line, sep, self.save_bytes] = self.save_bytes.partition('PKT_SEP')
- 
-            ##if there was a seperator, then process the line 
+
+            ##if there was a seperator, then process the line
             if len(sep) != 0:
-                [line, sep, self.save_bytes] = line.partition('WARN_TIMEOUT') 
+                [line, sep, self.save_bytes] = line.partition('WARN_TIMEOUT')
                 if len(sep) != 0:
                     self.timeout_warned = True
 
@@ -88,7 +90,7 @@ class ClientHandler(asyncore.dispatcher):
                                                           str(runid) +\
                                                           cc.reset)
 
-                self.server.analyze_recv( line.strip(), self, runid ) 
+                self.server.analyze_recv( line.strip(), self, runid )
             else:
                 ##otherwise, the packet fragment stays in self.save_bytes
                 ##for next time
@@ -102,8 +104,8 @@ class ClientHandler(asyncore.dispatcher):
 
         self.server.deregisterClient(self)
         self.close()
-        
- 
+
+
     def writable(self):
         response = bool(self.msg)
         return response
@@ -141,7 +143,7 @@ class ClientHandler(asyncore.dispatcher):
         if self in ss.ghost_clients:
             ss.ghost_clients.pop(self)
             ss.ghostnames.remove(self.name)
-            
+
     def remove_from_explorer(self):
         ss = self.server
         if self in ss.explorer_clients:
@@ -151,7 +153,7 @@ class ClientHandler(asyncore.dispatcher):
         ss = self.server
         if self in ss.ffs_control.escape_clients:
             ss.ffs_control.escape_clients.pop(self)
-          
+
 #    def find_client_by_key(self,key):
 #        for client in self.server.clients:
 #            if str(client) == key:
@@ -187,7 +189,7 @@ class ClientHandler(asyncore.dispatcher):
                 if str(tk) in sysmsg:
                     abort = True
                     ss.logger_freshs.warn(cc.c_red + 'A key of usr_msg is already in the system message! Not appending.' + cc.reset)
-                    
+
             if not abort:
                 sysmsg += ", " + ss.user_msg
 
@@ -209,9 +211,9 @@ class ClientHandler(asyncore.dispatcher):
 # FFS Escape flux
 # --------------------------------------------------------------------------
     def start_job1(self, ex_ind=-1):
-    
+
         ss = self.server
-        
+
         self.remove_from_idle()
         self.remove_from_ghost()
 
@@ -230,9 +232,9 @@ class ClientHandler(asyncore.dispatcher):
             # Normal case.
             next_interface = ss.lambdas[ss.act_lambda]
             current_lambda = ss.act_lambda
-            
+
             ncpoints = ss.storepoints.return_nop(ss.act_lambda)
-            
+
             # serial escape
             if ss.ffs_control.parallel_escape == 0:
                 if ncpoints > 0:
@@ -257,7 +259,7 @@ class ClientHandler(asyncore.dispatcher):
                         res_point_id = cand_pts[pt_sel]
                         # leftover steps from this point on as max_steps
                         max_steps = ss.ffs_control.escape_steps - max_steps_pts[pt_sel]
-                            
+
                         # get point and start run
                         last_escape_point, rp_id, rcval = ss.storepoints.return_escape_point_by_id(res_point_id)
                         self.add_as_escape(rp_id)
@@ -299,7 +301,7 @@ class ClientHandler(asyncore.dispatcher):
                     ", \"clientname\": \"" + self.name + "\"" + \
                     ", \"timestamp\": \"" + ss.timestamp + "\"" + \
                     ", \"uuid\": \"" + self.get_uuid() + "\""
-        
+
         # backward simulation. Need point in B from forward run
         if ss.ffs_control.reverse_direction > 0 and last_escape_point == 'None':
             # get configpoint from forward database
@@ -332,30 +334,38 @@ class ClientHandler(asyncore.dispatcher):
 # --------------------------------------------------------------------------
 # FFS Probabilities, monster task
 # --------------------------------------------------------------------------
-    def start_job2(self, ex_ind=-1):
+    def start_job2(self, algo, ex_ind=-1):
 
         ss = self.server
         self.remove_from_idle()
 
         max_steps = 0
-        
+
         # choose a seed for the client RNG, using the server RNG
         client_seed = random.randint(0, ss.myRandMax)
-        
+
         # only use the following if not in exploration mode
         if ex_ind == -1:
-        
+
             next_interface = ss.lambdas[ss.act_lambda]
             current_lambda = ss.act_lambda
             rp_lambda = current_lambda-1
-            
+
             self.remove_from_explorer()
-            
+
             # Get potential calculation point
             ss.logger_freshs.debug(cc.c_magenta + 'Obtaining random point from last interface.' + cc.reset)
+
             # get random point from last interface
-            random_point, rp_id = ss.storepoints.return_random_point(rp_lambda,'last_interface_complete')
-        
+            if algo == sampling_algorithm.FFS:
+                random_point, rp_id = ss.storepoints.return_random_point(rp_lambda,'last_interface_complete')
+            elif algo == sampling_algorithm.PERM_FFS:
+                random_point, rp_id = ss.storepoints.return_perm_point(rp_lambda,'last_interface_complete')
+            else:
+                ss.logger_freshs.error(cc.c_red + 'Client handler, unable to job2 for algorithm ' + str(algo) + \
+                                  cc.reset)
+
+
             self.incr_runcount(current_lambda)
             # Check if this point is in ghost database.
             ss.logger_freshs.debug(cc.c_magenta + 'Checking if point is in ghost DB.' + cc.reset)
@@ -364,7 +374,7 @@ class ClientHandler(asyncore.dispatcher):
             else:
                 no_ghosts_running = True
             indatabase = ss.ghostpoints.origin_point_in_database_and_active(rp_id, no_ghosts_running)
-            
+
         else:
             ai = self.server.ai
             indatabase = False
@@ -376,10 +386,22 @@ class ClientHandler(asyncore.dispatcher):
             # Get calculation point
             if len(ss.lambdas) == ss.act_lambda:
                 # last interface is complete but no new lambda is known
-                random_point, rp_id = ss.storepoints.return_random_point(ss.act_lambda-1,'last_interface_complete')
+                if algo == sampling_algorithm.FFS:
+                    random_point, rp_id = ss.storepoints.return_random_point(ss.act_lambda-1,'last_interface_complete')
+                elif algo == sampling_algorithm.PERM_FFS:
+                    random_point, rp_id = ss.storepoints.return_perm_point(ss.act_lambda-1,'last_interface_complete')
+                else:
+                    ss.logger_freshs.error(cc.c_red + 'Client handler, unable to job2 for algorithm ' + str(algo) + \
+                                      cc.reset)
             else:
                 # last interface is still in progress but pre-calculation is requested. Use points from current interface.
-                random_point, rp_id = ss.storepoints.return_random_point(ss.act_lambda)
+                # Apply correct reweighting later, after which the run
+                # may or may not be discarded.
+                if algo == sampling_algorithm.FFS or algo == sampling_algorithm.PERM_FFS:
+                    random_point, rp_id = ss.storepoints.return_random_point(ss.act_lambda)
+                else:
+                    ss.logger_freshs.error(cc.c_red + 'Client handler, unable to job2 for algorithm ' + str(algo) + \
+                                      cc.reset)
 
         ss.logger_freshs.debug(cc.c_magenta + 'Indatabase: ' + str(indatabase) + ', ghostcount = ' + str(self.ghostcount) + cc.reset)
 
@@ -405,17 +427,17 @@ class ClientHandler(asyncore.dispatcher):
                     ", \"seed\": " + str(ghostline[9]) + \
                     ", \"rcval\": " + str(ghostline[12]) + \
                     ", \"uuid\": \"" + str(ghostline[16]) + "\"" + \
-                    ", \"customdata\": \"" + str(ghostline[17]) + "\"" 
+                    ", \"customdata\": \"" + str(ghostline[17]) + "\""
 
             data = "{" + data + "}"
-            
+
             ss.ghostpoints.update_usecount_by_myid(str(ghostline[8]))
 
             ss.ghosttimesave += float(ghostline[5])
             ss.ghostcalcsave += int(ghostline[3])
 
             # TODO: Do this somewhere else!
-            try:            
+            try:
                 ss.ffs_control.append_to_lamconf('Resume_info', 'ghosttimesave', str(ss.ghosttimesave))
                 ss.ffs_control.append_to_lamconf('Resume_info', 'ghostcalcsave', str(ss.ghostcalcsave))
             except:
@@ -425,7 +447,7 @@ class ClientHandler(asyncore.dispatcher):
             self.received_count = self.received_count + 1
             runid               = self.name + "_" + str(self.received_count)
             ss.analyze_recv(data, self, runid)
-            
+
 
         else:
             # random point not in ghost database
@@ -456,12 +478,12 @@ class ClientHandler(asyncore.dispatcher):
                             #                                   'Could not remove ghost from name array.' + \
                             #                                   cc.reset)
                             # set done because we use only one client which calculates on this point
-                            done = 1                    
-            
+                            done = 1
+
             # Is there a random point left?
             if len(random_point) > 0:
                 # Start normal job2
-                
+
                 if ex_ind == -1:
                     ss.logger_freshs.info(cc.c_green + 'Starting job2 on ' + str(self.name) + \
                             ', run ' + str(ss.M_0[current_lambda]) + \
@@ -488,39 +510,39 @@ class ClientHandler(asyncore.dispatcher):
 
                 if ss.ffs_control.reverse_direction > 0:
                     job_string += ", \"reverse_direction\": 1"
-                
+
                 if ss.ffs_control.send_mean_steps > 0:
                     job_string += ", \"mean_steps\": " + str(ss.storepoints.return_mean_steps(current_lambda))
-                
+
                 job_string_complete = self.compose_message(job_string)
 
                 #ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' + job_string_complete + \
                 #                  cc.reset)
 
                 ss.client_runtime[str(self)] = time.time()
-                
+
                 # Send job string
                 self.long_send( job_string_complete )
-                
+
             else:
                 # No random point is left. Check if another run is necessary, if yes, recall this routine recursively
-                
+
                 # Are there currently enough runs launched?
                 ss.check_for_job(self)
 
-                
-# --------------------------------------------------------------------------                
+
+# --------------------------------------------------------------------------
 # FFS Ghost run for probabilities
 # --------------------------------------------------------------------------
     def start_ghost_job2(self, ex_ind=-1):
         ss = self.server
-        
+
         self.remove_from_explorer()
         self.remove_from_idle()
 
         # choose a seed for the client RNG, using the server RNG
         client_seed = random.randint(0, ss.myRandMax)
-            
+
         if ex_ind == -1:
             gp_lambda = ss.act_lambda
             next_lambda = ss.act_lambda + 1
@@ -531,18 +553,18 @@ class ClientHandler(asyncore.dispatcher):
             ai = self.server.ai
             next_lambda = ai.ex_lambdas[ex_ind]
             next_interface = ai.citeml(ex_ind)
-            
+
         selected_point, rp_id = ss.storepoints.select_ghost_point(gp_lambda)
-        
+
         self.add_as_ghost(rp_id)
-            
+
         # Send job string
         ss.logger_freshs.info(cc.c_magenta + 'Starting ghost job2 on ' + str(self.name) + \
                               ', ' + str(gp_lambda) + ' to ' + str(next_lambda) + \
                               cc.reset)
-        
+
         ss.client_runtime[str(self)] = time.time()
-        
+
         job_string = "\"jobtype\": 2 , \"A\": " + str(ss.A) + \
                     ", \"B\": "              + str(self.server.B) + \
                     ", \"random_points\": "  + str(selected_point)   + \
@@ -557,12 +579,12 @@ class ClientHandler(asyncore.dispatcher):
 
         if ss.ffs_control.reverse_direction > 0:
             job_string += ", \"reverse_direction\": 1"
-                    
+
         job_string_complete = self.compose_message(job_string)
 
         #ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' + job_string_complete + \
         #                       cc.reset)
-        
+
         self.long_send( job_string_complete )
 
 
@@ -570,7 +592,7 @@ class ClientHandler(asyncore.dispatcher):
 # SPRES fixed-tau run
 # --------------------------------------------------------------------------
     def start_job3_fixedtau(self):
-        
+
         ss=self.server
 
         ##choose the bin-pair that this shot must have in its recent history
@@ -585,13 +607,13 @@ class ClientHandler(asyncore.dispatcher):
         ###Logically we only need to search by id, but searching by t as well
         ###  gives SQLITE a chance to take advantage of indexes on the database.
         #random_point = self.server.storepoints.return_point_by_id( rp_id )
-        
+
         random_point = self.server.storepoints.return_point_by_id_t( rp_id, ss.epoch )
         if random_point == "[0.0, 0.0]":
-                random_point = [["0"]]    
+                random_point = [["0"]]
 
         if random_point != None:
-        
+
             # choose a seed for the client RNG, using the server RNG
             client_seed = random.randint(0,ss.myRandMax)
 
@@ -603,7 +625,7 @@ class ClientHandler(asyncore.dispatcher):
             # Send job string
             self.server.client_runtime[str(self)] = time.time()
 
-            
+
             job_string = "\"jobtype\": 3, \"parentlambda\": "  + str(fromRow) + \
                                  " , \"currentlambda\": " + str(row)+\
                                  " , \"rp_id\": \""       + str(rp_id) + "\""+\
@@ -615,11 +637,11 @@ class ClientHandler(asyncore.dispatcher):
                 job_string +=   " , \"halt_rc_upper\": " + str(ss.B) + \
                                 " , \"check_rc_every\": "+ str(1) + \
                                 " , \"absorb_at_B\": "   + str(abs_at_B)
-                
+
             if ss.clients_use_fs:
                 config_folder = ss.folder_conf+str(ss.epoch+ss.tau)
-                job_string   += " , \"save_configs\": \"" + config_folder +"\"" 
-                
+                job_string   += " , \"save_configs\": \"" + config_folder +"\""
+
 
 
             job_string_complete = self.compose_message(job_string)
@@ -627,7 +649,7 @@ class ClientHandler(asyncore.dispatcher):
             ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' +\
                                    job_string_complete[0:256] + " [...]" + \
                                    cc.reset)
-                               
+
             self.long_send( job_string_complete )
             ss.run_count[row] += 1
 
@@ -644,16 +666,15 @@ class ClientHandler(asyncore.dispatcher):
             return False # ?
 
 
-# --------------------------------------------------------------------------                    
+# --------------------------------------------------------------------------
 # SPRES fixed-tau run
 # --------------------------------------------------------------------------
     def start_job(self, config, config_id, branch_tau, check_rc_every, branch_rc_upper, branch_rc_lower ):
-        
+
         ss=self.server
 
         # choose a seed for the client RNG, using the server RNG
         client_seed = random.randint(0,ss.myRandMax)
-
 
         # Send job string
         self.server.logger_freshs.info(cc.c_blue + 'Starting job from ' +\
@@ -681,18 +702,18 @@ class ClientHandler(asyncore.dispatcher):
                                  ", \"absorb_at_B\": "   + str(check_rc_every) + \
                                  ", \"seed\": "          + str(client_seed) + \
                                  ", \"random_points\": " + str(config[0])
-        
+
         job_string_complete = self.compose_message(job_string)
 
         ss.logger_freshs.debug(cc.c_magenta + 'Sending job_string ' + job_string_complete + \
                                cc.reset)
-                               
+
         self.long_send( job_string_complete )
-        
+
         self.remove_from_idle()
 
         return True
-        
+
 
 
 # --------------------------------------------------------------------------
@@ -704,7 +725,7 @@ class ClientHandler(asyncore.dispatcher):
 
         self.server.logger_freshs.info(cc.c_green + 'Setting ' + str(self.name) + \
                                        ' into wait mode.' + cc.reset)
-        
+
         waits=[]
         for cli in self.server.idle_clients:
             waits.append(str(cli.name))
@@ -720,7 +741,7 @@ class ClientHandler(asyncore.dispatcher):
     def send_quit(self):
         self.server.logger_freshs.info(cc.c_blue + 'Sending quit to ' + str(self.name) + cc.reset)
         self.long_send("{\"jobtype\": -1 }PKT_SEP\n")
-        
+
     # answer, that we are alive
     def answer_alive(self):
         self.long_send("server_is_alivePKT_SEP\n")
@@ -735,5 +756,3 @@ class ClientHandler(asyncore.dispatcher):
         count      = 0
         while count < packet_len:
             count += self.send( data[count:packet_len] )
-
-

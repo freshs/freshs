@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2013 Kai Kratzer, Universität Stuttgart, ICP,
-# Allmandring 3, 70569 Stuttgart, Germany; all rights
-# reserved unless otherwise stated.
-# 
+# Allmandring 3, 70569 Stuttgart, Germany;
+# (c) 2015 Josh Berryman, University of Luxembourg, Luxembourg,
+# all rights reserved unless otherwise stated.
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston,
@@ -40,10 +41,22 @@ except:
 import ast
 import re
 
+##helper function to pick from points with different weights
+def weighted_choice(weightVec):
+   total   = np.sum(weightVec)
+   r       = random.uniform(0, total)
+   tWeight = 0.0
+   for i in range(len(weightVec)):
+      tWeight += weightVec[i]
+      if r <= tWeight:
+         return i
+   assert False, "Problem in PERM weights."
+
+
 #### CLASS FOR HANDLING CONFIG POINTS ON HYPERSURFACES ####
 class configpoints:
     def __init__(self, server, dbfile):
-    
+
         self.server = server
 
         # create sqlite table
@@ -59,22 +72,22 @@ class configpoints:
         self.ghostlastcount = 0
         self.ghostlastlam = -1
         self.noghostonpoint = []
-        
+
         # interface points cache
         self.realcache = {}
         self.realcachelambda = -1
-        
+
         # number of successful points cache.
         self.nop_cache = {}
-        
+
         # update usecount only on commit, store a queue
         self.usecountqueue = {}
-        
+
     # Connect to database
     def connect(self):
         ##may be called by postprocessing scripts, not server.
         ##in this case the logger may be absent.
-        self.haveLog = False 
+        self.haveLog = False
         try:
             self.server.logger_freshs.info(cc.c_green + 'Connecting to DB: ' + self.dbfile + cc.reset)
             haveLog = True
@@ -96,12 +109,13 @@ class configpoints:
     def close(self):
         self.con.close()
 
+
     def commit(self):
         try:
             if len(self.usecountqueue) > 0:
                 print("Updating usecounts in DB, "+str(len(self.usecountqueue))+" entries. Please wait.")
                 # construct queries with case statements for better performance
-                count = 0
+                count  = 0
                 tquery = "UPDATE configpoints SET usecount=usecount+ CASE myid "
                 processed_keys = []
                 for key in self.usecountqueue.keys():
@@ -115,7 +129,7 @@ class configpoints:
                         processed_keys = []
                         tquery = "UPDATE configpoints SET usecount=usecount+ CASE myid "
 
-                if len(processed_keys) > 1:    
+                if len(processed_keys) > 1:
                     # add a where clause that only lines with the candidate myids are considered
                     tquery += "END WHERE myid IN " + str(tuple(processed_keys))
                     print(count)
@@ -123,6 +137,9 @@ class configpoints:
                 elif len(processed_keys) == 1:
                     tquery += "END WHERE myid = '" + str(processed_keys[0]) + "'"
                     self.cur.execute(tquery)
+
+                for key in self.usecountqueue.keys():
+                    self.update_childpoint_weights(key, self.usecountqueue[key])
 
                 print("Ready.")
                 self.usecountqueue = {}
@@ -152,8 +169,8 @@ class configpoints:
                 else:
                     print("Error accessing database %s." % self.dbfile )
                 raise SystemExit(str(exc))
-            
-            
+
+
 
     # Add config point to database
     def add_point(self,interface, newpoint, originpoint, calcsteps, ctime, runtime, runcount,pointid=0, seed=0, rcval=0.0, lpos=0.0, usecount=0, deactivated=0,uuid='',customdata=''):
@@ -166,8 +183,9 @@ class configpoints:
             # incr cache if it exists already for this interface
             if self.nop_cache.has_key(interface):
                 self.nop_cache[interface] += 1
-        entries.append((interface, str(newpoint), str(originpoint), calcsteps, ctime, runtime, success, runcount, pointid, seed, 0, 0.0, rcval, lpos, usecount, deactivated, uuid, customdata))
-            
+
+        entries.append((interface, str(newpoint), str(originpoint), calcsteps, ctime, runtime, success, runcount, pointid, seed, 0, 0., rcval, lpos, usecount, deactivated, uuid, customdata))
+
         for t in entries:
             maxretry = 3
             attempt = 0
@@ -212,7 +230,7 @@ class configpoints:
 
         r = self.cur.fetchone()
         return r[0]
-        
+
 
     def return_last_received_count(self,clname):
         self.cur.execute('select myid from configpoints where myid like \'' + str(clname) + '%\'')
@@ -247,13 +265,13 @@ class configpoints:
         for row in self.cur:
             runcount = row[0]
         return runcount
-        
+
 
     def return_escape_point_list(self):
         """Return a list of points on the escape interface."""
         lop = []
         self.cur.execute('select configpoint from configpoints where success = 1 and lambda = 0')
-        
+
 
     def return_most_recent_escape_point(self):
         """Return the most recent sampled point from escape interface."""
@@ -266,7 +284,7 @@ class configpoints:
         n_points = self.cur.fetchone()[0]
         if n_points == 0:
             return 'None', 'escape', 0
-            
+
         # Get the point
         self.cur.execute('select configpoint, myid, rcval from configpoints where success = 1 and lambda = 0 order by rowid desc limit 1')
 
@@ -275,9 +293,9 @@ class configpoints:
         retpoints = ast.literal_eval(str(r[0]))
         retpoint_ids = str(r[1])
         rcval = float(r[2])
-            
-        return retpoints, retpoint_ids, rcval               
-    
+
+        return retpoints, retpoint_ids, rcval
+
     def random_point_B_fwd(self,offset=0):
         biglam = self.biggest_lambda() - offset
         return self.return_random_point(biglam)
@@ -295,14 +313,67 @@ class configpoints:
     # returns random value from list
     def random_list_entry(self,tarray):
         npoints = len(tarray)
-        
+
         # return if there are no points
         if npoints == 0:
             print("DANG! No point in list!")
             return None
         return tarray[random.randint(0, npoints - 1)]
-        
-        
+
+    # Return random point from interface using pruned-enriched-rosenbluth.
+    def return_perm_point(self,the_lambda,mode='default'):
+
+        # default action: get all points from DB and choose one
+        if mode == 'default':
+            self.cur.execute('select myid,configpoint,weight from configpoints where deactivated = 0 and success = 1 and lambda = ?',[the_lambda])
+            sumWeights = 0.
+
+            ##find normalised weights of the available configs
+            weights   = []
+            cfpList   = []
+            ret_idList= []
+            i         = 0
+            for row in self.cur:
+                ret_idList.append(str(row[0]))
+                cfpList.append(str(row[1]))
+                weights.append(float(row[2]))
+                i += 1
+            i       = weighted_choice( np.asarray(weights) )
+
+            return cfpList[i], ret_idList[i]
+        # last interface is complete but no cache has been built yet
+        elif mode == 'last_interface_complete' and self.realcachelambda != the_lambda:
+            #print("refresh cache")
+            self.realcache   = []
+            self.idcache     = []
+            self.weightcache = []
+            self.cur.execute('select myid,configpoint,weight from configpoints where deactivated = 0 and success = 1 and lambda = ?',[the_lambda])
+
+            i = 0
+            for row in self.cur:
+                self.idcache.append(str(row[0]))
+                self.realcache.append(str(row[1]))
+                self.weightcache.append(float(row[2]))
+                i += 1
+            self.realcachelambda = the_lambda
+            self.weightcache     = np.asarray(self.weightcache)
+
+            i       = weighted_choice( self.weightcache )
+            cfp     = str(self.realcache[i])
+            ret_id  = str(self.idcache[i])
+
+            return cfp, ret_id
+
+        # fastest: use point from cache dict
+        elif mode == 'last_interface_complete' and self.realcachelambda == the_lambda:
+            #print("using cache")
+            i = weighted_choice(self.weightcache )
+            return self.realcache[i],  self.idcache[i]
+        else:
+            print("Something went wrong while choosing point.")
+            return "",""
+
+
     # Return random point from interface
     def return_random_point(self,the_lambda,mode='default'):
         # default action: get all points from DB and choose one
@@ -328,7 +399,6 @@ class configpoints:
             #print("using cache")
             selptid = random.choice(self.realcache.keys())
             return self.realcache[selptid], selptid
-
         else:
             print("Something went wrong while choosing point.")
             return "",""
@@ -474,7 +544,7 @@ class configpoints:
     #            point = row[0]
     #        self.cur.execute("update configpoints set runcount=runcount+? where configpoint = ?", [str(nor), str(point)])
     #        #self.con.commit()
-        
+
     # Return number of runs performed on origin_point
     def runs_on_point(self, point):
         self.cur.execute("select count(*) from configpoints where origin_point = ?", [str(point)])
@@ -482,7 +552,7 @@ class configpoints:
         for row in self.cur:
             retval = int(row[0])
         return retval
-    
+
     # Return the biggest lambda in database
     def biggest_lambda(self):
         #self.cur.execute('select lambda from configpoints order by lambda desc limit 1')
@@ -492,7 +562,7 @@ class configpoints:
             biglam = row[0]
             if biglam == None:
                 biglam = 0
-        return biglam  
+        return biglam
 
     # return the maximum of the reaction coordinate
     def return_max_rc(self,ilam):
@@ -538,7 +608,7 @@ class configpoints:
         for row in self.cur:
             retval.append(str(row[0]))
         return retval
-        
+
     # Return all collected configpoints and ids from interface
     def return_configpoints_and_ids(self, interface):
         self.cur.execute('select configpoint, myid from configpoints where lambda = ? and deactivated = 0 and success = 1', [interface])
@@ -547,7 +617,7 @@ class configpoints:
         for row in self.cur:
             retconfigs.append(ast.literal_eval(str(row[0])))
             retids.append(str(row[1]))
-        return retconfigs, retids    
+        return retconfigs, retids
 
     # Return all collected configpoints and ids and rcval from interface
     def return_configpoints_and_ids_and_rcval(self, interface):
@@ -559,7 +629,7 @@ class configpoints:
             retconfigs.append(ast.literal_eval(str(row[0])))
             retids.append(str(row[1]))
             retrcs.append(float(row[2]))
-        return retconfigs, retids, retrcs 
+        return retconfigs, retids, retrcs
 
     # add ctime to point. Point can be found by comparing calcsteps * dt with ctime.
     def add_ctime_steps(self, point_id, ctime, calcsteps):
@@ -619,10 +689,23 @@ class configpoints:
 
         return tracesteps
 
-      
+
     def update_usecount(self,origin_point):
         self.cur.execute("update configpoints set usecount=usecount+1 where configpoint = ?", [str(origin_point)])
-        
+
+
+    def update_childpoint_weights(self, parentId, parentUC):
+
+        if str(parentId) == "escape":
+            weight = 1.0
+        else:
+            self.cur.execute('select weight from configpoints where myid = ?', [str(parentId)])
+            row = self.cur.fetchone()
+            parentWeight = float(row[0])
+            weight       = parentWeight / parentUC
+
+        self.cur.execute('update configpoints set weight=? where origin_point=?', [float(weight),str(parentId)] )
+
     def queue_usecount_by_myid(self,myid):
         # do update of usecount on commit, build queue:
         if self.usecountqueue.has_key(myid):
@@ -690,7 +773,7 @@ class configpoints:
             for i in range(lam-1):
                 #print("Processing lambda", lam-1-i, ", different ids left:", len(newids))
                 newids = list(set(self.return_origin_ids_by_ids(newids)))
-                
+
 
         return newids
 
@@ -699,7 +782,7 @@ class configpoints:
         retval = ''
         for row in self.cur:
             retval = str(row[0])
-        return retval 
+        return retval
 
 
     # ghost point helper function. Selects efficiently (hopefully) a good starting point for a ghost
@@ -740,7 +823,7 @@ class configpoints:
         return candidates, countdict
 
 
-    # Select ghost point for calculation 
+    # Select ghost point for calculation
     def select_ghost_point(self, interface):
 
         # helper variables which are reset for each interface
@@ -749,7 +832,7 @@ class configpoints:
             self.ghostcache = []
             self.ghostlastcount = 0
             self.ghostlastlam = interface
-        
+
         # get configpoints on current interface
         allpoints = self.return_configpoints_ids(interface)
 
@@ -786,7 +869,7 @@ class configpoints:
         for row in self.cur:
             retval.append(list(row))
         return retval
-        
+
     # Return all entries corresponding to one interface including deactivated points
     def return_interface_all(self, interface):
         self.cur.execute('select * from configpoints where lambda = ?', [interface])
@@ -977,7 +1060,7 @@ class configpoints:
         self.cur.execute('select * from configpoints')
         for row in self.cur:
             print(row)
-    
+
     def show_summary(self):
         self.cur.execute('select * from configpoints')
         tmp = -1
@@ -989,26 +1072,7 @@ class configpoints:
                 # new entry in dict
                 countdict[row[0]] = 0
                 tmp = row[0]
-                
+
             countdict[row[0]] += 1
-        if tmp != -1:     
+        if tmp != -1:
             print("Configpoints on lambda" + str(tmp) + ": " + str(countdict[tmp]))
-    
-    
-    
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-

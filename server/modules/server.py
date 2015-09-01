@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2013 Kai Kratzer, Universität Stuttgart, ICP,
-# Allmandring 3, 70569 Stuttgart, Germany; all rights
+# Allmandring 3, 70569 Stuttgart, Germany;
+# (c) 2015 Joshua Berryman, University of Luxembourg,
+# Avenue de la Faiencerie, Luxembourg; all rights
 # reserved unless otherwise stated.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -60,14 +62,8 @@ import concolors as cc
 import clienthandler
 import auto_interfaces
 import ghosting
+import sampling_algorithm_enum as sampling_algorithm
 
-####Helper class, roughly speaking an enumerator of algorithms available ####
-class sampling_algorithm:
-    FFS      = 0
-    SPRES    = 1
-    NSFFS    = 2  ##NSFFS not implemented yet.
-    PERM_FFS = 3
-    NUM_ALGS = 4
 
 
 #### MAIN SERVER CLASS ####
@@ -148,6 +144,12 @@ class server(asyncore.dispatcher):
             self.ffs_control   = ffs_sampling_control( self )
             self.create_dbs()
 
+        elif self.algo_name == 'perm_ffs':  ##use mostly the same code as for FFS.
+            from ffs_sampling_control import ffs_sampling_control
+            self.algorithm     = sampling_algorithm.PERM_FFS
+            self.ffs_control = ffs_sampling_control( self )
+            self.create_dbs()
+
         elif self.algo_name == 'spres':
             from spres_sampling_control import spres_sampling_control
             dirList=os.listdir(self.folder_db)
@@ -155,21 +157,19 @@ class server(asyncore.dispatcher):
                             self.folder_db + ' gives: '+ str(dirList)+cc.reset)
 
 
-            self.algorithm         = sampling_algorithm.SPRES
+            self.algorithm     = sampling_algorithm.SPRES
             self.absorb_at_B                = 0
             self.test_absorb_at_B_after_bin = 0
             self.spres_control = spres_sampling_control( self )
             self.create_dbs()
-
 
         elif self.algo_name == 'nsffs':
             from nsffs_sampling_control import nsffs_sampling_control
             self.algorithm     = sampling_algorithm.NSFFS
             self.nsffs_control = nsffs_sampling_control( self )
             self.create_dbs()
-
         else:
-            self.logger_freshs.info(cc.c_red + 'Error! Sampling Algorithm name not recognised: ' + algo_name + cc.reset)
+            self.logger_freshs.info(cc.c_red + 'Error! Sampling Algorithm name not recognised: ' + self.algo_name + cc.reset)
             self.create_dbs()
 
 # end
@@ -198,7 +198,7 @@ class server(asyncore.dispatcher):
 
 
         # Start sampling module
-        if self.algorithm == sampling_algorithm.FFS :
+        if self.algorithm == sampling_algorithm.FFS or self.algorithm == sampling_algorithm.PERM_FFS:
             self.logger_freshs.info(cc.c_green + cc.bold + 'Loading module FFS ' + cc.reset)
             self.ai     = auto_interfaces.auto_interfaces(self)
             self.ghosts = ghosting.ghosting(self)
@@ -278,7 +278,7 @@ class server(asyncore.dispatcher):
 
         self.logger_freshs.debug(cc.c_magenta + __name__ + ': create_dbs' + cc.reset)
         try:
-            if self.algo_name == 'ffs':
+            if self.algo_name == 'ffs' or self.algo_name == 'perm_ffs':
 
                 import configpoints
 
@@ -566,7 +566,7 @@ class server(asyncore.dispatcher):
                 '        | |    | | \ \| |____ ____) | |  | |____) |        \n' + \
                 '        |_|    |_|  \_\______|_____/|_|  |_|_____/         \n' + \
                 ' --------------------------------------------------------- \n' + \
-                ' (c) 2011,2012,2013,2014\n' + \
+                ' (c) 2011,2012,2013,2014,2015\n' + \
                 ' The FRESH System\n' + \
                 ' Uni Stuttgart, Uni Luxembourg\n' + \
                 '\n' + \
@@ -646,7 +646,7 @@ class server(asyncore.dispatcher):
         if name == '':
             self.logger_freshs.warn(cc.c_red + 'Failed giving name to client! Client not accepted.' + cc.reset)
         else:
-            if self.algorithm == sampling_algorithm.FFS:
+            if self.algorithm == sampling_algorithm.FFS or self.algorithm == sampling_algorithm.PERM_FFS:
                 last_received_count = max([self.storepoints.return_last_received_count(name), self.ghostpoints.return_last_received_count(name)])
             else:
                 last_received_count = self.storepoints.return_last_received_count(name)
@@ -667,7 +667,7 @@ class server(asyncore.dispatcher):
     # print status. This is e.g. called by the periodic threading function
     def print_status(self):
         try:
-            if self.algorithm == sampling_algorithm.FFS:
+            if self.algorithm == sampling_algorithm.FFS or self.algorithm == sampling_algorithm.PERM_FFS:
                 if self.act_lambda == 0:
                     self.logger_freshs.info(cc.c_magenta + cc.bold \
                     + self.timestamp + ': ' \
@@ -708,7 +708,7 @@ class server(asyncore.dispatcher):
         self.logger_freshs.debug(cc.c_magenta + __name__ + ': check_for_job' + cc.reset)
 
         if not self.disable_runs:
-            if self.algorithm == sampling_algorithm.FFS:
+            if self.algorithm == sampling_algorithm.FFS or self.algorithm == sampling_algorithm.PERM_FFS:
                 fsc = self.ffs_control
 
                 client.remove_from_ghost()
@@ -757,7 +757,7 @@ class server(asyncore.dispatcher):
                     self.logger_freshs.debug(cc.c_blue + 'asking client: '+client.name+' to wait.'+cc.reset)
                     client.start_job_wait()
             else:
-                self.logger_freshs.error(cc.c_red + 'Error, sampling algorithm not recognised' + cc.reset)
+                self.logger_freshs.error(cc.c_red + 'Error, sampling algorithm not recognised: ' + str(self.algorithm) + cc.reset)
 
 
 # -------------------------------------------------------------------------------------------------
@@ -803,7 +803,7 @@ class server(asyncore.dispatcher):
             self.explorer_clients.pop(client)
 
         # algorithm specific cleanup
-        if self.algorithm == sampling_algorithm.FFS:
+        if self.algorithm == sampling_algorithm.FFS or self.algorithm == sampling_algorithm.PERM_FFS:
             if client in self.ffs_control.escape_skip_count:
                 self.ffs_control.escape_skip_count.pop(client)
 
@@ -826,7 +826,7 @@ class server(asyncore.dispatcher):
             except:
                 self.logger_freshs.info(cc.c_green + 'Notice: Could not commit last state of configpoint DB during client disconnect.' + cc.reset )
 
-            if self.algorithm == sampling_algorithm.FFS:
+            if self.algorithm == sampling_algorithm.FFS or self.algorithm == sampling_algorithm.PERM_FFS:
                 try:
                     self.ghostpoints.commit()
                 except:
@@ -968,19 +968,17 @@ class server(asyncore.dispatcher):
         # Check if client sent result
         if "\"jobtype\":" in data:
             try:
-                # perhaps parsing would be better?.
-                #ddata = eval(data,{'__builtins__':{}},{'True': True, 'False': False})
                 ddata = ast.literal_eval(data)
-                #ddata = eval(data)
             except:
-                self.logger_freshs.info(cc.c_red + 'Server: Warning! Could not parse data packet: ' + data + cc.reset)
+                for k in keys(data):
+                    self.logger_freshs.info(cc.c_red + ('Server: Warning! Failed to parse data packet: %s', str(data[k])) + cc.reset)
                 self.logger_freshs.info(cc.c_red + 'Server: Warning! Dropping packet.' + cc.reset)
                 return
 
             self.logger_freshs.debug(cc.c_blue + 'Server: Analysing received job, giving id:' + str(runid) + cc.reset)
 
             # Analyze results
-            if self.algorithm == sampling_algorithm.FFS:
+            if self.algorithm == sampling_algorithm.FFS or self.algorithm == sampling_algorithm.PERM_FFS:
                 # if auto_interfaces is on, pass results to this module.
                 if client in self.explorer_clients:
                     self.logger_freshs.debug(cc.c_blue + 'Sending results to explorer module.' + cc.reset)
@@ -1042,7 +1040,7 @@ class server(asyncore.dispatcher):
         # loop backwards over a list if you are deleting values
         for idle_client in self.idle_clients[::-1]:
 
-            if self.algorithm == sampling_algorithm.FFS:
+            if self.algorithm == sampling_algorithm.FFS or self.algorithm == sampling_algorithm.PERM_FFS:
 
                 self.check_for_job(idle_client)
 
@@ -1072,7 +1070,7 @@ class server(asyncore.dispatcher):
         self.storepoints.commit()
         self.ghostpoints.commit()
 
-        if self.algorithm == sampling_algorithm.FFS:
+        if self.algorithm == sampling_algorithm.FFS or self.algorithm == sampling_algorithm.PERM_FFS:
             self.ffs_control.arrived_in_B()
 
         # Disable timer
