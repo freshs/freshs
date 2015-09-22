@@ -35,7 +35,7 @@ class auto_interfaces():
             return
 
         # This is where the act_lam id starts. Should be larger than number of possible interfaces.
-        self.loffset = 1337
+        self.loffset = 133737
 
         # unique act_lam id for explorers
         self.ex_act_lambda = self.loffset
