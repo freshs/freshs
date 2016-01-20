@@ -3,10 +3,11 @@
 #run the ffs calculation many times.
 
 rm -f ffs_bench.dat
-for i in `seq 1 1000`
+for i in `seq 1 1`
 do
 
 python ../../server/main_server.py -c ffs_particle_server.conf >c 2>&1 &
+sleep 1
 python main_particle.py 
 grep -A 1 "# k_AB" c | tail -n 1 >> ffs_bench.dat
 
