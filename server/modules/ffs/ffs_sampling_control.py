@@ -439,9 +439,9 @@ class ffs_sampling_control():
     def change_interface(self):
         ss = self.server
 
-        ss.logger_freshs.debug(cc.c_magenta + __name__ + ': change_interface' + cc.reset)
-
-        ss.storepoints.commit()
+        ss.logger_freshs.info(cc.c_magenta + __name__ + ': change_interface' + cc.reset)
+        ss.storepoints.commit(renorm_weights = True,\
+                              lambda_current = ss.act_lambda)
         ss.ghostpoints.commit()
         try:
             ss.ghostpoints.noghostonpoint = []
@@ -643,6 +643,8 @@ class ffs_sampling_control():
 
             else:
                 # Arrived in B
+                ss.storepoints.commit(renorm_weights = True,\
+                                      lambda_current = ss.act_lambda)
                 ss.end_simulation()
 
         self.print_lambar('inter',ncheck,ss.M_0_runs[ilam])

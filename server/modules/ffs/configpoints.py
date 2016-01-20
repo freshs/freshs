@@ -110,7 +110,15 @@ class configpoints:
         self.con.close()
 
 
-    def commit(self):
+    def commit(self, renorm_weights = False, lambda_current = None):
+
+
+        ##initialise the weights at A.
+        if renorm_weights == True and lambda_current == 0:
+            self.cur.execute('select count(*) from configpoints where lambda = 0')
+            count_A = int(self.cur.fetchone()[0])
+            self.cur.execute('update configpoints set weight=? where lambda = 0', [1./count_A])
+
         try:
             if len(self.usecountqueue) > 0:
                 print("Updating usecounts in DB, "+str(len(self.usecountqueue))+" entries. Please wait.")
@@ -118,6 +126,7 @@ class configpoints:
                 count  = 0
                 tquery = "UPDATE configpoints SET usecount=usecount+ CASE myid "
                 processed_keys = []
+
                 for key in self.usecountqueue.keys():
                     processed_keys.append(key)
                     tquery += "WHEN '" + str(key) + "' THEN " + str(self.usecountqueue[key]) + " "
@@ -134,17 +143,24 @@ class configpoints:
                     tquery += "END WHERE myid IN " + str(tuple(processed_keys))
                     print(count)
                     self.cur.execute(tquery)
+
                 elif len(processed_keys) == 1:
                     tquery += "END WHERE myid = '" + str(processed_keys[0]) + "'"
                     self.cur.execute(tquery)
-
-                for key in self.usecountqueue.keys():
-                    self.update_childpoint_weights(key, self.usecountqueue[key])
-
+                
                 print("Ready.")
                 self.usecountqueue = {}
+
+
         except Exception as e:
-            print(e)
+            print("Exception updating db:"+str(e))
+        
+        ##renorm weights once and once only per IF, when interface is definitely done.
+        if renorm_weights == True and lambda_current >= 1:
+            self.update_childpoint_weights(lambda_current)
+            self.renorm_childpoint_weights(lambda_current) 
+
+
         self.con.commit()
 
     # Create table layout
@@ -694,17 +710,31 @@ class configpoints:
         self.cur.execute("update configpoints set usecount=usecount+1 where configpoint = ?", [str(origin_point)])
 
 
-    def update_childpoint_weights(self, parentId, parentUC):
+    ##renormalise childpoints weights s.t. total weight is P(lambda | lambda_prev)
+    def renorm_childpoint_weights(self, lambda_current):
+        
+        if lambda_current >= 2:
+            self.cur.execute('select sum(weight) from configpoints where lambda = ?', [lambda_current-1])
+            total_weight_prev = float(self.cur.fetchone()[0])
+            self.cur.execute('update configpoints set weight=weight*? where lambda=?', [1./total_weight_prev,lambda_current] )
 
-        if str(parentId) == "escape":
-            weight = 1.0
-        else:
-            self.cur.execute('select weight from configpoints where myid = ?', [str(parentId)])
+        self.cur.execute('select sum(weight) from configpoints where lambda = ?', [lambda_current])
+        total_weight = float(self.cur.fetchone()[0])
+        print("renormed weights, total P(lambda = %i| lambda = %i) = %e" %\
+                       (lambda_current, lambda_current-1, total_weight))
+
+
+    def update_childpoint_weights(self, lambda_current):
+        
+        self.cur.execute('select origin_point from configpoints where lambda = ?', [lambda_current])
+        parent_states = []
+        for row in self.cur:
+            parent_states.append(row[0])
+        for pstate in parent_states:
+            self.cur.execute('select usecount, weight from configpoints where myid = ?', [pstate])
             row = self.cur.fetchone()
-            parentWeight = float(row[0])
-            weight       = parentWeight / parentUC
-
-        self.cur.execute('update configpoints set weight=? where origin_point=?', [float(weight),str(parentId)] )
+            new_weight = float(row[1])/float(row[0])
+            self.cur.execute('update configpoints set weight=? where origin_point = ?', [new_weight, pstate])
 
     def queue_usecount_by_myid(self,myid):
         # do update of usecount on commit, build queue:
