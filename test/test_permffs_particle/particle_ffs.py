@@ -40,13 +40,19 @@ class particle_ffs:
         next_interface = parameterset['next_interface']
         act_lambda = parameterset['act_lambda']
         seed       = parameterset['seed']
+        max_steps  = parameterset['max_steps']
+        parent_id  = parameterset['rp_id']
+ 
 
-        print('Calculating escape flux: ' + str(A) + ', ' + str(B))
+	print('inparams: '+str(parameterset))
+
+        print('Calculating escape flux: ' + str(A) + ', ' + str(B)+', max_steps: '+str(max_steps))
         
         rcvals = []
         points = []
         q      = 0
 
+	print('initting')
         x, v, a = self.init_particle(A)
 
         t = 0.0
@@ -55,7 +61,13 @@ class particle_ffs:
         no_point = 1
         ctime     = 0.0
         return_index = 0
+	print("starting loop: "+str([no_point, self.cli.abort]))
         while no_point and not self.cli.abort:
+            if max_steps != None:
+               if max_steps > 0 and calcsteps == max_steps:
+                  print("quitting at %i steps" % calcsteps)
+                  break
+	    
 
             if x >= A and comefromok == True:
                 points.append([x,v])
@@ -80,12 +92,24 @@ class particle_ffs:
                                                             self.cli.T)   
         ctime = t-self.cli.dt
         
-
-        results = "{\"jobtype\": 1, \"success\": True, \"ctime\": "       + str(ctime)      +\
+        if no_point:
+                results = "{\"jobtype\": 1, \"success\": False, \"ctime\": "       + str(ctime)      +\
                                                     ", \"seed\":  "       + str(seed)       + \
+                                                    ", \"rcval\":  "      + str(x)          + \
+                                                    ", \"act_lambda\": "  + str(act_lambda) +\
+                                                    ", \"origin_points\": \"" + str(parent_id)+"\""+\
+                                                    ", \"calcsteps\": "   + str(calcsteps)  + " }"
+	else:
+	        results = "{\"jobtype\": 1, \"success\": True, \"ctime\": "       + str(ctime)      +\
+                                                    ", \"seed\":  "       + str(seed)       + \
+                                                    ", \"rcval\":  "      + str(x)          + \
                                                     ", \"points\": "      + str(points[0])     +\
                                                     ", \"act_lambda\": "  + str(act_lambda) +\
+                                                    ", \"origin_points\": \"" + str(parent_id)+"\""+\
                                                     ", \"calcsteps\": "   + str(calcsteps)  + " }"
+
+	print("done: "+str(results))
+
         return results
 
     
@@ -119,6 +143,7 @@ class particle_ffs:
                 results="{\"jobtype\": 2, \"success\": True, \"points\": " + str(points)    +\
                                                       ", \"act_lambda\": "     + str(act_lambda)+\
                                                       ", \"seed\":  "          + str(seed)      +\
+                                                      ", \"rcval\":  "      + str(x)          + \
                                                       ", \"origin_points\": \""  + str(parent_id) +"\""+ \
                                                       ", \"calcsteps\": " + str(calcsteps) +\
                                                       ", \"ctime\": " + str(ctime) + " }"
