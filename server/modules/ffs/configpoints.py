@@ -118,6 +118,7 @@ class configpoints:
             self.cur.execute('select count(*) from configpoints where lambda = 0')
             count_A = int(self.cur.fetchone()[0])
             self.cur.execute('update configpoints set weight=? where lambda = 0', [1./count_A])
+            print("set all weights at A to 1/%i=%f" % (count_A,1./count_A))
 
         try:
             if len(self.usecountqueue) > 0:
@@ -159,9 +160,74 @@ class configpoints:
         if renorm_weights == True and lambda_current >= 1:
             self.update_childpoint_weights(lambda_current)
             self.renorm_childpoint_weights(lambda_current) 
-
+            
 
         self.con.commit()
+
+    ##(PERM) enrich and renormalise childpoints weights s.t. total weight is P(lambda | lambda_prev)
+    ##       call only after update update_childpoint_weights()
+    def renorm_childpoint_weights(self, lambda_current):
+        
+        E = 1.0
+        if lambda_current >= 1:
+            self.cur.execute('select sum(weight) from configpoints where lambda = ? and usecount != 0', [lambda_current-1])
+            used_weight_prev = float(self.cur.fetchone()[0])
+            self.cur.execute('select sum(weight) from configpoints where lambda = ? and success = 1', [lambda_current-1])
+            total_weight_prev = float(self.cur.fetchone()[0])
+
+            E = total_weight_prev / used_weight_prev
+            self.cur.execute('update configpoints set weight=weight*? where lambda=?', [E/total_weight_prev,lambda_current] )
+
+        self.cur.execute('select sum(weight) from configpoints where lambda = ?', [lambda_current])
+        total_weight = float(self.cur.fetchone()[0])
+        print("enriched and renormed weights, E was: %f total P(lambda = %i| lambda = %i) = %e" %\
+                       (E, lambda_current, lambda_current-1, total_weight))
+
+
+    ##(PERM) enrich childpoints weights s.t. total weight is P(lambda)
+    ##       call only after update update_childpoint_weights()
+    def enrich_childpoint_weights(self, lambda_current):
+        
+        if lambda_current >= 1:
+            lambda_prev = lambda_current - 1
+            ##weight of all previous interface points actually used to make new attempts (success is automatically 1 if usecount >=1)
+            self.cur.execute('select sum(weight) from configpoints where lambda = ? and usecount >= 1',\
+                                 [lambda_prev])
+            used_weight_prev  = float(self.cur.fetchone()[0])
+
+            ##weight of all previous interface points potentially used to make new attempts
+            self.cur.execute('select sum(weight) from configpoints where lambda = ? and success = 1',\
+                                 [lambda_prev])
+            total_weight_prev = float(self.cur.fetchone()[0])
+            
+            E = total_weight_prev / used_weight_prev
+            print("Enrichment factor: %.12e / %.12e = %.12e" % (total_weight_prev, used_weight_prev, E))
+            self.cur.execute('update configpoints set weight=weight*? where lambda=?', [E,lambda_current] )
+
+            self.cur.execute('select sum(weight) from configpoints where lambda = ?', [lambda_current])
+            total_weight = float(self.cur.fetchone()[0])
+            print("enriched weights prev used=%f prev total=%f, total P(lambda = %i) = %.12e" %\
+                       (used_weight_prev, total_weight_prev, lambda_current, total_weight))
+
+    ##(PERM) : update weights, but not doing enrichment step
+    def update_childpoint_weights(self, lambda_current):
+        
+        if lambda_current < 1:
+            return
+        
+        self.cur.execute('select myid,weight,usecount from configpoints where lambda = ? and usecount != 0', [lambda_current-1])
+        parent_states = []
+        for row in self.cur:
+            parent_states.append(row[:])
+
+        sum_w = 0.
+        for pstate, w, c in parent_states:
+            new_weight = float(w)/float(c)
+            self.cur.execute('update configpoints set weight=? where origin_point=? and lambda=?',\
+                             [new_weight, pstate, lambda_current])
+            sum_w += new_weight
+        return sum_w
+
 
     # Create table layout
     def init_table(self):
@@ -537,6 +603,7 @@ class configpoints:
             retval = int(r[0])
             return retval
         except Exception as e:
+            print("Exception getting nop_used: "+str(e))
             return 0
         if retval == None:
             return 0
@@ -710,57 +777,8 @@ class configpoints:
         self.cur.execute("update configpoints set usecount=usecount+1 where configpoint = ?", [str(origin_point)])
 
 
-    ##renormalise childpoints weights s.t. total weight is P(lambda | lambda_prev)
-    def renorm_childpoint_weights(self, lambda_current):
+
         
-        if lambda_current >= 1:
-            self.cur.execute('select sum(weight) from configpoints where lambda = ? and usecount != 0', [lambda_current-1])
-            used_weight_prev = float(self.cur.fetchone()[0])
-            self.cur.execute('select sum(weight) from configpoints where lambda = ?', [lambda_current-1])
-            total_weight_prev = float(self.cur.fetchone()[0])
-
-            E = total_weight_prev / used_weight_prev
-            self.cur.execute('update configpoints set weight=weight*? where lambda=?', [E/total_weight_prev,lambda_current] )
-
-        self.cur.execute('select sum(weight) from configpoints where lambda = ?', [lambda_current])
-        total_weight = float(self.cur.fetchone()[0])
-        print("enriched and renormed weights, total P(lambda = %i| lambda = %i) = %e" %\
-                       (lambda_current, lambda_current-1, total_weight))
-
-
-    ##enrich childpoints weights s.t. total weight is P(lambda)
-    def enrich_childpoint_weights(self, lambda_current):
-        
-        if lambda_current >= 1:
-            lambda_prev = lambda_current - 1
-            self.cur.execute('select sum(weight) from configpoints where lambda = ? and usecount >= 1', [lambda_prev])
-            used_weight_prev  = float(self.cur.fetchone()[0])
-            self.cur.execute('select sum(weight) from configpoints where lambda = ?', [lambda_prev])
-            total_weight_prev = float(self.cur.fetchone()[0])
-            
-            E = total_weight_prev / used_weight_prev
-            print("Enrichment factor: %.12e" % E)
-            self.cur.execute('update configpoints set weight=weight*? where lambda=?', [E,lambda_current] )
-
-        self.cur.execute('select sum(weight) from configpoints where lambda = ?', [lambda_current])
-        total_weight = float(self.cur.fetchone()[0])
-        print("enriched weights prev used=%f prev total=%f, total P(lambda = %i) = %.12e" %\
-                       (used_weight_prev, total_weight_prev, lambda_current, total_weight))
-
-    def update_childpoint_weights(self, lambda_current):
-        
-        if lambda_current < 1:
-            return
-
-        self.cur.execute('select origin_point from configpoints where lambda = ?', [lambda_current])
-        parent_states = []
-        for row in self.cur:
-            parent_states.append(row[0])
-        for pstate in parent_states:
-            self.cur.execute('select weight, usecount from configpoints where myid = ?', [pstate])
-            row = self.cur.fetchone()
-            new_weight = float(row[0])/float(row[1])
-            self.cur.execute('update configpoints set weight=? where origin_point = ? and lambda != 0', [new_weight, pstate])
 
     def queue_usecount_by_myid(self,myid):
         # do update of usecount on commit, build queue:

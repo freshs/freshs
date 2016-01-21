@@ -443,6 +443,12 @@ class ffs_sampling_control():
         ss.storepoints.commit(renorm_weights = True,\
                               lambda_current = ss.act_lambda)
         ss.ghostpoints.commit()
+
+        used_points = ss.storepoints.return_nop_used_from_interface(ss.act_lambda-1)
+        ss.logger_freshs.info(cc.c_magenta + __name__ +" "+\
+                               str(used_points) + " shots attempted from interface "+ str(ss.act_lambda-1) + cc.reset)
+        
+
         try:
             ss.ghostpoints.noghostonpoint = []
             pts = ss.storepoints.return_configpoints_ids(ss.act_lambda-1)
@@ -934,7 +940,11 @@ class ffs_sampling_control():
                                                              ' success.'+cc.reset)
                 self.build_escape_cache(origin_point, runid, ddata['calcsteps'], 'success')
 
-            ss.storepoints.queue_usecount_by_myid(origin_point)
+            ##only count type-2 (probability) jobs as "uses".  Type-1 (continuation of flux kA) 
+            ##is not a "use".
+            if the_jobs_lambda != 0:
+                ss.storepoints.queue_usecount_by_myid(origin_point)
+
             self.last_added_point = runid
 
         else:
@@ -1085,7 +1095,7 @@ class ffs_sampling_control():
                     ss.logger_freshs.warn(cc.c_red + \
                                       'Not storing unsuccesful run in database because of incomplete data, ' + str(exc) + \
                                       cc.reset)
-                    ss.logger_freshs.debug(cc.c_red + 'Data was: ' + str(ddata) + cc.reset)
+                    ss.logger_freshs.warn(cc.c_red + 'Data was: ' + str(ddata) + cc.reset)
 
             ss.logger_freshs.debug(cc.c_green + 'Run was not successful, not incrementing counter.' + cc.reset)
             if 'origin_points' in ddata:
