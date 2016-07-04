@@ -51,8 +51,8 @@ class ffs_sampling_control():
         # switch between real runs and exploring clients
         self.exmode = False             # exploring mode for interface placement
         # This is where the act_lam id starts. Should be larger than number of possible interfaces.
-        # TODO: warn/err, if num_interfaces >= 1337
-        self.loffset = 1337
+        # TODO: warn/err, if num_interfaces >= 133737
+        self.loffset = 133737
         # unique act_lam id for explorers
         self.ex_act_lambda = self.loffset
 
